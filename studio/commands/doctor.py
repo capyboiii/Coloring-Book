@@ -60,10 +60,24 @@ def run(args) -> int:
     info(f"  Sinh ảnh ở    : {config.GEN_W} x {config.GEN_H} px")
 
     info("")
+    info("Model workflow đang gọi")
+    try:
+        provider = get_provider(settings, "comfyui")
+        for label, name in provider.models().items():
+            info(f"  {label:<12}: {name}")
+        info(f"  Tham số dùng: {', '.join(sorted(provider.supported_params))}")
+    except Exception as exc:  # noqa: BLE001
+        info(f"  ✗ Không đọc được workflow — {exc}")
+        provider = None
+        ok = False
+
+    info("")
     info(f"ComfyUI ({settings.comfyui_url})")
 
     def _provider():
-        return get_provider(settings, "comfyui").healthcheck()
+        if provider is None:
+            raise RuntimeError("workflow lỗi, xem ở trên")
+        return provider.healthcheck()
 
     if not _check("Kết nối + workflow hợp lệ", _provider):
         ok = False

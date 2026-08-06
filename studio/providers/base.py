@@ -25,6 +25,11 @@ class ImageProvider(ABC):
 
     name: str = "base"
 
+    #: Tham số mà provider này thực sự áp dụng được. Ví dụ FLUX.1-schnell
+    #: không có guidance, nên 'guidance' sẽ vắng mặt và CLI biết mà bỏ qua
+    #: thay vì in ra một con số không có tác dụng gì.
+    supported_params: frozenset[str] = frozenset()
+
     @abstractmethod
     def healthcheck(self) -> str:
         """Ném lỗi nếu không kết nối được. Trả về mô tả ngắn khi thành công."""

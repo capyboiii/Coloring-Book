@@ -133,7 +133,9 @@ def load_settings() -> Settings:
         workflow=_path("STUDIO_WORKFLOW", "workflows/flux_lineart.api.json"),
         workflow_map=_path("STUDIO_WORKFLOW_MAP", "workflows/flux_lineart.map.json"),
         library=_path("STUDIO_LIBRARY", "library"),
-        steps=int(_env("STUDIO_STEPS", "20")),
+        # 4 bước là đúng cho FLUX.1-schnell (mô hình chưng cất).
+        # Đổi sang FLUX.1-dev thì phải nâng lên 20-25.
+        steps=int(_env("STUDIO_STEPS", "4")),
         guidance=float(_env("STUDIO_GUIDANCE", "3.5")),
         timeout=int(_env("STUDIO_TIMEOUT", "600")),
     )

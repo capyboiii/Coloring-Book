@@ -66,11 +66,18 @@ def run(args) -> int:
         print(f"LỖI: {exc}")
         return 1
 
+    uses_guidance = "guidance" in provider.supported_params
+
     info(f"ComfyUI  : {settings.comfyui_url} · {device}")
     info(f"Sách     : {slug}")
     info(f"Kích thước: {config.GEN_W}x{config.GEN_H} px "
          f"(tỉ lệ vùng vẽ {config.ART_W_IN}x{config.ART_H_IN} in)")
-    info(f"Sinh     : {len(plan)} ảnh · {steps} steps · guidance {guidance}")
+    info(f"Sinh     : {len(plan)} ảnh · {steps} steps"
+         + (f" · guidance {guidance}" if uses_guidance
+            else " · guidance: workflow không dùng"))
+    if args.guidance is not None and not uses_guidance:
+        warn("--guidance bị bỏ qua: workflow hiện tại không có node FluxGuidance "
+             "(FLUX.1-schnell không dùng guidance)")
     info("")
 
     # Ghi thông tin sách trước, để lỡ đứt giữa chừng vẫn còn dấu vết

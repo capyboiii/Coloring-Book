@@ -1,15 +1,19 @@
 {
   "_ghi_chu": [
     "File này nói cho studio biết tham số nằm ở node nào trong workflow.",
-    "Nếu ông thay workflow khác, chỉ cần sửa số node ở đây, không phải sửa code.",
+    "Thay workflow khác thì chỉ sửa số node ở đây, không phải sửa code.",
     "Cách tìm số node: mở file .api.json, tìm node có class_type tương ứng.",
-    "Flux là mô hình guidance-distilled nên KHÔNG có negative prompt.",
-    "Vì vậy khoá 'negative' cố tình để trống."
+    "",
+    "Workflow hiện tại chạy FLUX.1-schnell bản GGUF Q4_K_S.",
+    "Schnell là mô hình chưng cất 4 bước nên KHÔNG có node FluxGuidance,",
+    "vì vậy ở đây không có khoá 'guidance'. Studio tự nhận biết và bỏ qua",
+    "tham số --guidance thay vì báo lỗi.",
+    "",
+    "Flux là mô hình guidance-distilled nên cũng không có negative prompt."
   ],
-  "prompt":   { "node": "6",  "field": "text" },
-  "seed":     { "node": "25", "field": "noise_seed" },
-  "width":    { "node": "5",  "field": "width" },
-  "height":   { "node": "5",  "field": "height" },
-  "steps":    { "node": "17", "field": "steps" },
-  "guidance": { "node": "26", "field": "guidance" }
+  "prompt": { "node": "6",  "field": "text" },
+  "seed":   { "node": "25", "field": "noise_seed" },
+  "width":  { "node": "5",  "field": "width" },
+  "height": { "node": "5",  "field": "height" },
+  "steps":  { "node": "17", "field": "steps" }
 }

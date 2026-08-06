@@ -14,7 +14,8 @@ generate   xoá tay     build      chưa làm    chưa làm
 
 ## Cài đặt
 
-Cần Python 3.10+ và một ComfyUI đang chạy có model Flux.
+Cần Python 3.10+ và một ComfyUI đang chạy có model Flux
+(xem [Model và workflow](#model-và-workflow-comfyui)).
 
 ```bash
 pip install -r requirements.txt
@@ -124,26 +125,56 @@ nét mượt hơn nhiều.
 
 ---
 
-## Đổi workflow ComfyUI
+## Model và workflow ComfyUI
 
-Workflow phải là bản export **API format** (Settings → bật Dev mode → nút
-`Save (API Format)`), không phải file kéo thả thông thường.
+Workflow mặc định đã khớp sẵn với ComfyUI trên máy Bao:
 
-Thay workflow khác thì chỉ cần sửa số node trong
+| Vai trò | File | Node |
+|---|---|---|
+| UNET | `flux1-schnell-Q4_K_S.gguf` | `UnetLoaderGGUF` |
+| VAE | `ae.safetensors` | `VAELoader` |
+| CLIP | `t5xxl_fp8_e4m3fn.safetensors` + `clip_l.safetensors` | `DualCLIPLoader` |
+
+Cần custom node [ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) — đã cài sẵn.
+
+### Vì sao schnell chứ không phải dev
+
+**FLUX.1-schnell là Apache 2.0 — dùng thương mại thoải mái.**
+**FLUX.1-dev có giấy phép phi thương mại**, muốn bán sách phải mua giấy phép
+riêng từ Black Forest Labs. Với dự án bán sách thì schnell là lựa chọn đúng
+về mặt pháp lý, không chỉ vì nó nhanh hơn.
+
+Hệ quả kỹ thuật:
+
+- Schnell chưng cất còn **4 bước** — `STUDIO_STEPS=4`, đừng để 20.
+- Schnell **không dùng guidance**, nên workflow không có node `FluxGuidance`
+  và file map không có khoá `guidance`. Studio tự nhận biết, `--guidance`
+  sẽ bị bỏ qua kèm cảnh báo thay vì âm thầm không có tác dụng.
+- Bù lại schnell bám prompt kém hơn dev một chút. Nếu line art ra không ưng,
+  hãy chỉnh prompt và cấp `--subjects` trước khi nghĩ tới chuyện đổi model.
+
+### Thay workflow khác
+
+Chỉ cần sửa số node trong
 [`workflows/flux_lineart.map.json`](workflows/flux_lineart.map.json),
 không phải đụng vào code:
 
 ```json
 {
-  "prompt":   { "node": "6",  "field": "text" },
-  "seed":     { "node": "25", "field": "noise_seed" },
-  "width":    { "node": "5",  "field": "width" },
-  "height":   { "node": "5",  "field": "height" }
+  "prompt": { "node": "6",  "field": "text" },
+  "seed":   { "node": "25", "field": "noise_seed" },
+  "width":  { "node": "5",  "field": "width" },
+  "height": { "node": "5",  "field": "height" },
+  "steps":  { "node": "17", "field": "steps" }
 }
 ```
 
 Studio kiểm tra file map ngay lúc khởi động — sai node là báo lỗi luôn, không
-đợi chạy xong 40 ảnh mới biết.
+đợi chạy xong 40 ảnh mới biết. `studio.py doctor` in ra đúng tên model mà
+workflow đang gọi, đối chiếu với `ComfyUI/models/` là thấy ngay lệch chỗ nào.
+
+Workflow phải là bản export **API format** (Settings → bật Dev mode → nút
+`Save (API Format)`), không phải file kéo thả thông thường.
 
 > Flux là mô hình guidance-distilled nên **không dùng negative prompt**.
 > Chuỗi negative vẫn được ghi vào metadata để dùng nếu sau đổi sang SDXL.

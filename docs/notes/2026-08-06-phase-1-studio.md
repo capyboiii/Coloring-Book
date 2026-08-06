@@ -215,9 +215,9 @@ chứ không phải stack trace.
 ## Việc tiếp theo cho Bao
 
 1. `pip install -r requirements.txt` rồi `python studio.py doctor`
-2. Sửa `workflows/flux_lineart.api.json` cho khớp **tên model thật** trong
-   `ComfyUI/models/` của ông (`flux1-dev.safetensors`, `ae.safetensors`,
-   `t5xxl_fp16.safetensors`, `clip_l.safetensors`)
+2. ~~Sửa workflow cho khớp tên model thật~~ — **đã làm**, xem
+   [ghi chép khớp model](2026-08-06-khop-model-comfyui.md).
+   Workflow giờ chạy FLUX.1-schnell bản GGUF, 4 bước, không có FluxGuidance.
 3. Chạy thử `--count 4` trước để xem chất lượng line art ra sao, rồi mới chạy 40
 4. Duyệt tay và **bấm giờ thật**, chạy `approve <slug> --minutes <số>`
 5. `build`, mở `interior.pdf` phóng 100% xem nét có đủ dày không

@@ -54,8 +54,26 @@ class ComfyUIProvider(ImageProvider):
             k: v for k, v in raw_map.items() if not k.startswith("_")
         }
         self._validate_map()
+        self.supported_params = frozenset(self.node_map)
 
     # ---------------------------------------------------------------- setup
+
+    def models(self) -> dict[str, str]:
+        """Model nào đang được workflow tham chiếu — để doctor in ra."""
+        fields = {
+            "unet_name": "UNET",
+            "vae_name": "VAE",
+            "clip_name1": "CLIP 1",
+            "clip_name2": "CLIP 2",
+            "ckpt_name": "Checkpoint",
+        }
+        found: dict[str, str] = {}
+        for node in self.workflow.values():
+            for field, label in fields.items():
+                value = node.get("inputs", {}).get(field)
+                if isinstance(value, str):
+                    found[label] = value
+        return found
 
     def _validate_map(self) -> None:
         """Bắt lỗi map sai node NGAY, thay vì để chạy 40 ảnh xong mới biết."""
