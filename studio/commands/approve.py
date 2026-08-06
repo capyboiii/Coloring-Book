@@ -51,6 +51,15 @@ def run(args) -> int:
     book = read_json(config.book_dir(settings, slug) / "book.json", {}) or {}
     planned = book.get("planned_count") or len(kept)
 
+    # Chạy `generate` nhiều lần với --count khác nhau thì planned_count trong
+    # book.json là của lần CUỐI, không phải tổng. Giữ nguyên sẽ ra tỷ lệ giữ
+    # lại kiểu 250% — vô nghĩa. Lấy con số lớn hơn làm mẫu số.
+    if len(kept) > planned:
+        warn(f"raw/ có {len(kept)} ảnh nhưng book.json ghi chỉ sinh {planned}. "
+             f"Chắc ông chạy generate nhiều lần. Lấy {len(kept)} làm mẫu số, "
+             f"nên tỷ lệ giữ lại dưới đây là chặn dưới, không phải số thật.")
+        planned = len(kept)
+
     info(f"Sách    : {slug}")
     info(f"Đã sinh : {planned} ảnh")
     info(f"Giữ lại : {len(kept)} ảnh")

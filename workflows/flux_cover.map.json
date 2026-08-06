@@ -1,0 +1,28 @@
+{
+  "_ghi_chu": [
+    "Workflow sinh ANH BIA MAU. Cung model FLUX.1-schnell GGUF nhu line art,",
+    "khac o cho prompt bo rang buoc den trang va kich thuoc 896x1152.",
+    "",
+    "KHONG de Flux viet chu - no sai chinh ta. Studio ghep chu bang Pillow."
+  ],
+  "prompt": {
+    "node": "6",
+    "field": "text"
+  },
+  "seed": {
+    "node": "25",
+    "field": "noise_seed"
+  },
+  "width": {
+    "node": "5",
+    "field": "width"
+  },
+  "height": {
+    "node": "5",
+    "field": "height"
+  },
+  "steps": {
+    "node": "17",
+    "field": "steps"
+  }
+}

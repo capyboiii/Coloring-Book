@@ -78,6 +78,48 @@ assert abs(GEN_W / GEN_H - ART_W_IN / ART_H_IN) < 0.001, "Tỉ lệ sinh ảnh l
 
 
 # --------------------------------------------------------------------------
+# Bìa
+# --------------------------------------------------------------------------
+#
+# Bìa là MỘT trang PDF duy nhất trải ngang: bìa sau | gáy | bìa trước.
+#
+#   ┌────────────┬──┬────────────┐
+#   │  bìa sau   │gáy│  bìa trước │   cao = 11.25 in (đã gồm bleed)
+#   └────────────┴──┴────────────┘
+#    8.5 in      ↑   8.5 in
+#                └ dày theo số trang
+#
+# Công thức gáy của Lulu cho bìa mềm đóng keo:
+#     gáy = (số trang / 444) + 0.06 in
+# 444 là số trang trên mỗi inch của giấy tiêu chuẩn.
+# 0.06 in là phần keo gáy.
+#
+# Sách 80 trang -> gáy 0.24 in. Sai con số này là bìa lệch hẳn khi in.
+
+SPINE_PAGES_PER_INCH = 444.0
+SPINE_GLUE_IN = 0.06
+
+# Dưới ngưỡng này thì gáy quá mỏng, chữ in lên sẽ tràn sang mặt bìa
+SPINE_TEXT_MIN_IN = 0.25
+
+# Kích thước Flux sinh ảnh bìa màu (tỉ lệ xấp xỉ bìa trước có bleed)
+COVER_GEN_W = 896
+COVER_GEN_H = 1152
+
+
+def spine_width_in(page_count: int) -> float:
+    """Độ dày gáy theo số trang, đơn vị inch."""
+    return page_count / SPINE_PAGES_PER_INCH + SPINE_GLUE_IN
+
+
+def cover_size_in(page_count: int) -> tuple[float, float]:
+    """Khổ file bìa (rộng, cao) tính bằng inch, đã gồm bleed."""
+    width = 2 * TRIM_W_IN + spine_width_in(page_count) + 2 * BLEED_IN
+    height = TRIM_H_IN + 2 * BLEED_IN
+    return width, height
+
+
+# --------------------------------------------------------------------------
 # Xử lý ảnh
 # --------------------------------------------------------------------------
 
@@ -117,6 +159,8 @@ class Settings:
     comfyui_url: str
     workflow: Path
     workflow_map: Path
+    cover_workflow: Path
+    cover_workflow_map: Path
     library: Path
     steps: int
     guidance: float
@@ -132,6 +176,10 @@ def load_settings() -> Settings:
         comfyui_url=_env("COMFYUI_URL", "http://127.0.0.1:8188").rstrip("/"),
         workflow=_path("STUDIO_WORKFLOW", "workflows/flux_lineart.api.json"),
         workflow_map=_path("STUDIO_WORKFLOW_MAP", "workflows/flux_lineart.map.json"),
+        cover_workflow=_path(
+            "STUDIO_COVER_WORKFLOW", "workflows/flux_cover.api.json"),
+        cover_workflow_map=_path(
+            "STUDIO_COVER_WORKFLOW_MAP", "workflows/flux_cover.map.json"),
         library=_path("STUDIO_LIBRARY", "library"),
         # 4 bước là đúng cho FLUX.1-schnell (mô hình chưng cất).
         # Đổi sang FLUX.1-dev thì phải nâng lên 20-25.

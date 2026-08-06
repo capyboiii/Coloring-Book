@@ -15,12 +15,16 @@ __all__ = [
 ]
 
 
-def get_provider(settings: Settings, name: str = "comfyui") -> ImageProvider:
+def get_provider(settings: Settings, name: str = "comfyui", *,
+                 cover: bool = False) -> ImageProvider:
+    """cover=True dùng workflow sinh ảnh màu thay vì workflow line art."""
     if name == "comfyui":
         return ComfyUIProvider(
             base_url=settings.comfyui_url,
-            workflow_path=settings.workflow,
-            map_path=settings.workflow_map,
+            workflow_path=(
+                settings.cover_workflow if cover else settings.workflow),
+            map_path=(
+                settings.cover_workflow_map if cover else settings.workflow_map),
             timeout=settings.timeout,
         )
     raise ProviderError(

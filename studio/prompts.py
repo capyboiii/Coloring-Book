@@ -113,6 +113,28 @@ class PagePrompt:
         return asdict(self)
 
 
+# --------------------------------------------------------------------------
+# Prompt cho ảnh bìa
+# --------------------------------------------------------------------------
+
+COVER_STYLE = (
+    "book cover illustration, full color, vibrant saturated colors, "
+    "clean cartoon style, bold clear shapes, cheerful and inviting, "
+    "vertical composition with space at the top for a title, "
+    "no text, no letters, no words, no typography, no watermark"
+)
+
+
+def build_cover_prompt(scene: str) -> str:
+    """
+    Bìa KHÔNG bị ràng buộc đen trắng — đây là ảnh màu.
+
+    Chuỗi "no text, no letters" là bắt buộc: Flux viết chữ sai chính tả,
+    nên chữ tiêu đề do Pillow ghép vào sau.
+    """
+    return f"{COVER_STYLE}, {scene.strip().rstrip('.')}"
+
+
 def has_non_ascii(text: str) -> bool:
     """Dò dấu tiếng Việt — dấu hiệu chủ thể chưa dịch sang tiếng Anh."""
     return any(ord(c) > 127 for c in text)

@@ -173,6 +173,51 @@ def main() -> int:
               len(prev_reader.pages) == min(config.PREVIEW_PAGES, n_pages),
               f"{len(prev_reader.pages)} trang")
 
+    print("\n[6] Bìa")
+    # Công thức Lulu: gáy = (số trang / 444) + 0.06
+    check("Gáy sách 80 trang = 0.240 in",
+          abs(config.spine_width_in(80) - 0.2402) < 0.001,
+          f"{config.spine_width_in(80):.4f} in")
+    check("Gáy sách 200 trang = 0.510 in",
+          abs(config.spine_width_in(200) - 0.5104) < 0.001,
+          f"{config.spine_width_in(200):.4f} in")
+
+    cw, ch = config.cover_size_in(80)
+    # 8.5 + 8.5 + 0.2402 gáy + 0.25 bleed = 17.4902
+    check("Khổ bìa 80 trang = 17.490 x 11.250 in",
+          abs(cw - 17.4902) < 0.001 and abs(ch - 11.25) < 0.001,
+          f"{cw:.3f} x {ch:.3f} in")
+
+    from studio.commands import cover as cover_cmd
+    art = tmp / "fake-cover.png"
+    Image.new("RGB", (896, 1152), (200, 120, 60)).save(art)
+    rc = cover_cmd.run(Args(
+        slug=slug, scene=None, image=str(art), bg="#1B7A8C",
+        subtitle="Kiểm thử", seed=1, steps=None,
+    ))
+    check("cover trả về 0", rc == 0)
+    check("cover.pdf tồn tại", (out / "cover.pdf").exists())
+    check("web/cover.webp tồn tại", (out / "web" / "cover.webp").exists())
+
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        pass
+    else:
+        cr = PdfReader(str(out / "cover.pdf"))
+        check("cover.pdf có đúng 1 trang", len(cr.pages) == 1)
+        cbox = cr.pages[0].mediabox
+        pages_built = 2 + n_pages * 2
+        exp_w, exp_h = config.cover_size_in(pages_built)
+        check("Khổ cover.pdf khớp số trang thật của interior",
+              abs(float(cbox.width) / 72 - exp_w) < 0.02
+              and abs(float(cbox.height) / 72 - exp_h) < 0.02,
+              f"{float(cbox.width) / 72:.3f} x {float(cbox.height) / 72:.3f} in "
+              f"cho {pages_built} trang")
+        size_mb = (out / "cover.pdf").stat().st_size / 1e6
+        check("cover.pdf dưới 5 MB (dùng JPEG chứ không phải PNG)",
+              size_mb < 5, f"{size_mb:.1f} MB")
+
     print("\n" + "─" * 50)
     if FAILURES:
         print(f"HỎNG: {len(FAILURES)} mục không đạt")

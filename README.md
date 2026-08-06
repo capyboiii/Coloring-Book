@@ -168,6 +168,54 @@ Ra ba thứ trong `library/<slug>/out/`:
 | `preview.pdf` | 3 trang đầu, hạ DPI, đóng dấu. Phát tự do |
 | `web/*.webp` | Ảnh cho trang chi tiết sách |
 
+### ③b Dựng bìa
+
+```bash
+python studio.py cover dai-duong-ky-thu --subtitle "40 trang tô màu"
+```
+
+**Phải chạy sau `build`** — độ dày gáy tính từ số trang thật của `interior.pdf`.
+
+Bìa là **một trang PDF trải ngang**: bìa sau, gáy, bìa trước:
+
+```
+┌────────────┬──┬────────────┐
+│  bìa sau   │gáy│  bìa trước │   cao 11.25 in
+└────────────┴──┴────────────┘
+   8.5 in     ↑     8.5 in
+              └ dày theo số trang
+```
+
+Công thức gáy của Lulu cho bìa mềm đóng keo:
+
+```
+gáy = (số trang / 444) + 0.06 in
+```
+
+444 là số trang trên mỗi inch giấy tiêu chuẩn, `0.06` là phần keo gáy. Sách 80
+trang → gáy 0.240 in → khổ bìa 17.490 × 11.250 in.
+
+**Sửa ruột là phải dựng lại bìa.** Số trang đổi thì gáy đổi theo, dùng lại bìa
+cũ là hình tràn sang gáy khi in.
+
+| Tuỳ chọn | Ý nghĩa |
+|---|---|
+| `--scene "..."` | Mô tả ảnh bìa bằng tiếng Anh. Không có thì lấy cảnh đầu trong bộ chủ thể của sách |
+| `--image anh.png` | Dùng ảnh có sẵn thay vì để Flux vẽ |
+| `--bg "#1B7A8C"` | Màu nền bìa sau và dải chữ |
+| `--subtitle "..."` | Dòng nhỏ dưới tiêu đề |
+
+Ảnh bìa dùng workflow riêng
+([`flux_cover.api.json`](workflows/flux_cover.api.json)) — cùng model schnell
+nhưng bỏ ràng buộc đen trắng để ra ảnh màu.
+
+**Chữ do Pillow ghép, không phải Flux vẽ.** Flux viết chữ sai chính tả, nên
+prompt bìa có `no text, no letters, no words`. Font DejaVu hiển thị được dấu
+tiếng Việt.
+
+Gáy mỏng hơn 0.25 in thì bỏ chữ gáy — in lên sẽ tràn sang mặt bìa. Lệnh tự
+cảnh báo khi gặp.
+
 ---
 
 ## Spec in ấn
@@ -288,10 +336,12 @@ studio/
         base.py              giao diện chung
         comfyui.py           client HTTP nói chuyện với ComfyUI
     commands/
-        doctor.py  generate.py  approve.py  build.py
+        doctor.py  generate.py  approve.py  build.py  cover.py
 workflows/
-    flux_lineart.api.json    workflow Flux
+    flux_lineart.api.json    workflow Flux đen trắng (ruột)
     flux_lineart.map.json    tham số nằm ở node nào
+    flux_cover.api.json      workflow Flux màu (bìa)
+    flux_cover.map.json
 themes/                      bộ chủ thể dựng sẵn, tiếng Anh
     ocean.txt  mandala.txt  floral.txt  forest-animals.txt
 tests/smoke_test.py
@@ -305,8 +355,6 @@ library/                     thư viện sách — KHÔNG commit
 
 ## Chưa có ở Phase 1
 
-- Sinh bìa — làm tay: Flux vẽ bìa màu, ghép chữ bằng Canva.
-  **Không để Flux viết chữ**, nó sai chính tả.
 - Màn hình duyệt (Phase 2)
 - Storefront và API (Phase 4)
 - Thanh toán (Phase 5)
