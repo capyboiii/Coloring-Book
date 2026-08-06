@@ -13,10 +13,8 @@ from __future__ import annotations
 import shutil
 from datetime import datetime, timezone
 
-from PIL import Image
-
 from .. import config
-from ..imageops import measure
+from ..imageops import prepare_page
 from ..util import image_files, info, read_json, warn, write_json
 
 
@@ -58,12 +56,16 @@ def run(args) -> int:
     info(f"Giữ lại : {len(kept)} ảnh")
     info("")
 
-    # Soi chất lượng từng ảnh giữ lại
+    # Soi chất lượng từng ảnh giữ lại.
+    #
+    # Phải đo trên TRANG IN đã phóng to, không phải ảnh gốc. Ảnh gốc 928px có
+    # nét dày ~3px; bào mòn 1px là mất 2/3, ra điểm rất thấp và báo động giả.
+    # Cũng chính trang đó ở 2175px thì nét dày ~8px, bào mòn 1px chẳng hề gì.
+    # Dùng chung prepare_page với `build` để hai lệnh nói cùng một ngôn ngữ.
     flagged = 0
     report = []
     for path in kept:
-        with Image.open(path) as im:
-            m = measure(im.convert("L"))
+        _, m = prepare_page(path)
         problems = m.problems()
         report.append({"file": path.name, **m.to_dict()})
         if problems:
