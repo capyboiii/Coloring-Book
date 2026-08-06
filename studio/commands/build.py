@@ -27,6 +27,7 @@ from reportlab.pdfgen import canvas
 from .. import config
 from ..imageops import load_font, prepare_page, watermark, web_preview
 from ..util import image_files, info, read_json, warn, write_json
+from .cover import make_cover
 
 PAGE_W_PT = config.inch_to_pt(config.PAGE_W_IN)
 PAGE_H_PT = config.inch_to_pt(config.PAGE_H_IN)
@@ -48,6 +49,12 @@ def register(subparsers) -> None:
                         "Bật nếu ảnh Flux ra nền xám nhiều")
     p.add_argument("--black-point", type=int, default=config.LEVELS_BLACK)
     p.add_argument("--white-point", type=int, default=config.LEVELS_WHITE)
+    p.add_argument("--no-cover", action="store_true",
+                   help="Chỉ dựng ruột, không dựng bìa")
+    p.add_argument("--subtitle", default=None,
+                   help="Dòng chữ nhỏ dưới tiêu đề trên bìa")
+    p.add_argument("--bg", default=None,
+                   help="Màu nền bìa dạng #RRGGBB")
     p.set_defaults(func=run)
 
 
@@ -210,6 +217,23 @@ def run(args) -> int:
         "warnings": problems,
     }
     write_json(out / "build.json", manifest)
+
+    # ------------------------------------------------------------- bìa
+    # Dựng luôn ở đây thay vì bắt người dùng nhớ thêm một lệnh. Chỉ tới lúc
+    # này mới biết số trang cuối cùng, mà độ dày gáy thì phụ thuộc số trang.
+    if not args.no_cover:
+        info("")
+        info("── BÌA ──")
+        art = config.book_dir(settings, slug) / "cover-art.png"
+        if not art.exists():
+            warn("Chưa có cover-art.png. `generate` sẽ tự vẽ ảnh bìa; "
+                 "lần này để Flux vẽ ngay bây giờ.")
+        cover_kwargs = {"image": str(art) if art.exists() else None,
+                        "subtitle": args.subtitle}
+        if args.bg:
+            cover_kwargs["bg"] = args.bg
+        if make_cover(settings, slug, **cover_kwargs) != 0:
+            warn("Dựng bìa thất bại. Ruột vẫn ổn — chạy `cover` riêng để thử lại.")
 
     info("")
     info(f"Tất cả nằm ở: {out}")

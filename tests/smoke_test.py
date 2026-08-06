@@ -131,13 +131,19 @@ def main() -> int:
           len(approved) == n_pages, f"{len(approved)} ảnh")
 
     print("\n[4] Lệnh build")
+    # Ảnh bìa giả — thật ra do `generate` sinh ra ở bước ①
+    Image.new("RGB", (896, 1152), (200, 120, 60)).save(
+        tmp / slug / "cover-art.png")
     rc = build_cmd.run(Args(
         slug=slug, pages=None, no_title_page=False,
         autocontrast=False,
         black_point=config.LEVELS_BLACK,
         white_point=config.LEVELS_WHITE,
+        no_cover=False, subtitle="Kiểm thử", bg=None,
     ))
     check("build trả về 0", rc == 0)
+    check("build tự dựng luôn bìa, không cần lệnh riêng",
+          (tmp / slug / "out" / "cover.pdf").exists())
 
     out = tmp / slug / "out"
     interior = out / "interior.pdf"

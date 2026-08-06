@@ -10,6 +10,18 @@ generate   xoá tay     build      chưa làm    chưa làm
            + approve
 ```
 
+Cả cuốn sách — ruột lẫn bìa — ra bằng **ba lệnh**:
+
+```bash
+python studio.py generate "Đại dương kỳ thú" --theme ocean --count 40
+#   ... mở raw/ xoá ảnh xấu bằng tay, bấm giờ ...
+python studio.py approve dai-duong-ky-thu --minutes 95
+python studio.py build dai-duong-ky-thu --subtitle "40 trang tô màu"
+```
+
+`generate` vẽ luôn ảnh bìa màu cùng lúc với các trang ruột. `build` ghép nó
+thành `cover.pdf` hoàn chỉnh. Không cần lệnh bìa riêng.
+
 ---
 
 ## Cài đặt
@@ -168,13 +180,26 @@ Ra ba thứ trong `library/<slug>/out/`:
 | `preview.pdf` | 3 trang đầu, hạ DPI, đóng dấu. Phát tự do |
 | `web/*.webp` | Ảnh cho trang chi tiết sách |
 
-### ③b Dựng bìa
+### Bìa
+
+**`build` dựng bìa tự động**, không cần lệnh riêng:
 
 ```bash
-python studio.py cover dai-duong-ky-thu --subtitle "40 trang tô màu"
+python studio.py build dai-duong-ky-thu --subtitle "40 trang tô màu"
 ```
 
-**Phải chạy sau `build`** — độ dày gáy tính từ số trang thật của `interior.pdf`.
+Ảnh bìa màu đã được `generate` vẽ sẵn ở bước ① và nằm tại
+`library/<slug>/cover-art.png`. `build` chỉ việc ghép nó thành bìa hoàn chỉnh.
+
+Chia hai chỗ như vậy vì **độ dày gáy phụ thuộc số trang cuối cùng**, mà số
+trang thì phải duyệt xong mới biết. Ảnh vẽ được sớm; bìa thì không.
+
+Muốn dựng lại bìa mà không đụng ruột thì có lệnh riêng:
+
+```bash
+python studio.py cover dai-duong-ky-thu --bg "#8C1B4A"
+python studio.py cover dai-duong-ky-thu --image bia-tu-ve.png
+```
 
 Bìa là **một trang PDF trải ngang**: bìa sau, gáy, bìa trước:
 
@@ -198,12 +223,13 @@ trang → gáy 0.240 in → khổ bìa 17.490 × 11.250 in.
 **Sửa ruột là phải dựng lại bìa.** Số trang đổi thì gáy đổi theo, dùng lại bìa
 cũ là hình tràn sang gáy khi in.
 
-| Tuỳ chọn | Ý nghĩa |
-|---|---|
-| `--scene "..."` | Mô tả ảnh bìa bằng tiếng Anh. Không có thì lấy cảnh đầu trong bộ chủ thể của sách |
-| `--image anh.png` | Dùng ảnh có sẵn thay vì để Flux vẽ |
-| `--bg "#1B7A8C"` | Màu nền bìa sau và dải chữ |
-| `--subtitle "..."` | Dòng nhỏ dưới tiêu đề |
+| Tuỳ chọn | Thuộc lệnh | Ý nghĩa |
+|---|---|---|
+| `--cover-scene "..."` | `generate` | Mô tả ảnh bìa bằng tiếng Anh. Mặc định lấy cảnh đầu trong bộ chủ thể |
+| `--no-cover` | `generate`, `build` | Bỏ qua phần bìa |
+| `--subtitle "..."` | `build`, `cover` | Dòng nhỏ dưới tiêu đề |
+| `--bg "#1B7A8C"` | `build`, `cover` | Màu nền bìa sau và dải chữ |
+| `--image anh.png` | `cover` | Dùng ảnh có sẵn thay vì ảnh Flux đã vẽ |
 
 Ảnh bìa dùng workflow riêng
 ([`flux_cover.api.json`](workflows/flux_cover.api.json)) — cùng model schnell

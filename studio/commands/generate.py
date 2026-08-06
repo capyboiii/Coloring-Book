@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import random
 import time
 from datetime import datetime, timezone
 
 from .. import config
-from ..prompts import has_non_ascii, list_themes, load_subjects, make_prompts
+from ..prompts import (build_cover_prompt, has_non_ascii, list_themes,
+                       load_subjects, make_prompts)
 from ..providers import GenRequest, ProviderError, get_provider
 from ..util import human_duration, info, slugify, warn, write_json
 
@@ -83,6 +85,11 @@ def register(subparsers) -> None:
                    help="Sinh đè ảnh đã có (mặc định bỏ qua để chạy tiếp được)")
     p.add_argument("--force", action="store_true",
                    help="Bỏ qua cảnh báo chủ đề không phải tiếng Anh")
+    p.add_argument("--no-cover", action="store_true",
+                   help="Đừng sinh ảnh bìa màu (mặc định có sinh)")
+    p.add_argument("--cover-scene", default=None,
+                   help="Mô tả ảnh bìa bằng tiếng Anh. Mặc định lấy cảnh đầu "
+                        "trong bộ chủ thể")
     p.set_defaults(func=run)
 
 
@@ -232,9 +239,73 @@ def run(args) -> int:
     info(f"Xong sau {human_duration(time.time() - started)} — "
          f"{made} ảnh mới, {skipped} bỏ qua, {failed} lỗi")
     info(f"Ảnh nằm ở: {raw}")
+
+    if not args.no_cover:
+        info("")
+        _make_cover_art(settings, args, slug, subjects, steps)
+
     info("")
     info("Bước tiếp theo — DUYỆT BẰNG TAY:")
     info(f"  1. Mở thư mục {raw}")
     info("  2. Xoá những ảnh xấu. BẤM GIỜ từ lúc mở tới lúc xong.")
-    info(f"  3. Chạy: python studio.py approve {slug}")
+    info(f"  3. Chạy: python studio.py approve {slug} --minutes <số phút>")
+    info(f"  4. Chạy: python studio.py build {slug}")
+    info("     (build dựng luôn cả bìa từ ảnh vừa sinh, không cần lệnh riêng)")
     return 0 if failed == 0 else 2
+
+
+def _make_cover_art(settings, args, slug: str,
+                    subjects: list[str] | None, steps: int) -> None:
+    """
+    Sinh ảnh bìa MÀU ngay trong lượt gen sách, cùng lúc với các trang ruột.
+
+    Chỉ sinh phần ẢNH. Không dựng được cover.pdf ở đây vì độ dày gáy phụ
+    thuộc số trang cuối cùng, mà số trang thì phải duyệt xong mới biết.
+    `build` sẽ lấy ảnh này ghép thành bìa hoàn chỉnh.
+    """
+    art_path = config.book_dir(settings, slug) / "cover-art.png"
+    if art_path.exists() and not args.overwrite:
+        info(f"Bìa      : đã có {art_path.name}, bỏ qua (--overwrite để làm lại)")
+        return
+
+    scene = args.cover_scene
+    if not scene and subjects:
+        scene = subjects[0]
+    if not scene:
+        scene = args.topic
+        if has_non_ascii(scene):
+            warn(f"Cảnh bìa {scene!r} là tiếng Việt, Flux sẽ bỏ qua. "
+                 f'Dùng --cover-scene "<mô tả tiếng Anh>"')
+
+    prompt = build_cover_prompt(scene)
+    info(f"Bìa      : đang vẽ ảnh màu — {scene[:60]}...")
+
+    try:
+        provider = get_provider(settings, "comfyui", cover=True)
+        t0 = time.time()
+        data = provider.generate(GenRequest(
+            prompt=prompt,
+            negative="",
+            seed=(args.seed + 9999) if args.seed is not None
+            else random.randint(1, 2**31 - 1),
+            width=config.COVER_GEN_W,
+            height=config.COVER_GEN_H,
+            steps=steps,
+            guidance=settings.guidance,
+        ))
+    except ProviderError as exc:
+        warn(f"Không vẽ được bìa: {exc}")
+        warn("Các trang ruột vẫn ổn. Chạy `cover` riêng sau, hoặc dùng --image.")
+        return
+
+    art_path.write_bytes(data)
+    write_json(art_path.with_suffix(".json"), {
+        "scene": scene,
+        "prompt": prompt,
+        "steps": steps,
+        "width": config.COVER_GEN_W,
+        "height": config.COVER_GEN_H,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "seconds": round(time.time() - t0, 1),
+    })
+    info(f"Bìa      : xong sau {time.time() - t0:.0f}s → {art_path.name}")

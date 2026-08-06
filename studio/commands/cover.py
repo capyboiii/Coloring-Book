@@ -18,6 +18,7 @@ from __future__ import annotations
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 from PIL import Image, ImageDraw
 from reportlab.lib.utils import ImageReader
@@ -121,7 +122,9 @@ def _make_art(settings, args, book: dict) -> Image.Image:
         path = Path(args.image)
         if not path.exists():
             raise FileNotFoundError(f"Không thấy ảnh {path}")
-        info(f"Ảnh bìa   : {path} (do ông cấp)")
+        origin = ("Flux đã vẽ lúc generate" if path.name == "cover-art.png"
+                  else "do ông cấp")
+        info(f"Ảnh bìa   : {path.name} ({origin})")
         with Image.open(path) as im:
             return im.convert("RGB")
 
@@ -179,8 +182,23 @@ def _cover_fit(img: Image.Image, w: int, h: int) -> Image.Image:
 # --------------------------------------------------------------------------
 
 def run(args) -> int:
-    settings = config.load_settings()
-    slug = args.slug
+    return make_cover(
+        config.load_settings(), args.slug,
+        image=args.image, scene=args.scene, bg=args.bg,
+        subtitle=args.subtitle, seed=args.seed, steps=args.steps,
+    )
+
+
+def make_cover(settings, slug: str, *, image: str | None = None,
+               scene: str | None = None, bg: str = DEFAULT_BG,
+               subtitle: str | None = None, seed: int | None = None,
+               steps: int | None = None) -> int:
+    """
+    Dựng bìa. Tách khỏi `run` để `build` gọi lại được — người dùng không phải
+    nhớ chạy thêm một lệnh nữa.
+    """
+    args = SimpleNamespace(image=image, scene=scene, bg=bg,
+                           subtitle=subtitle, seed=seed, steps=steps)
     out = config.out_dir(settings, slug)
 
     pages = _page_count(settings, slug)
@@ -331,5 +349,5 @@ def run(args) -> int:
     info(f"✓ web/cover.webp")
     info("")
     info("⚠ Số trang đổi thì ĐỘ DÀY GÁY ĐỔI THEO. Sửa ruột xong phải chạy")
-    info("  lại `build` rồi `cover`, không dùng lại bìa cũ được.")
+    info("  lại `build` — nó dựng lại bìa luôn. Đừng dùng lại bìa cũ.")
     return 0
