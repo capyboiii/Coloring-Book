@@ -161,3 +161,15 @@ Phase 1 cố tình làm tay ở bốn trên năm bước. Nghe có vẻ lãng ph
 Rất có thể sau Phase 1 ông sẽ phát hiện bước Duyệt nhanh hơn dự đoán, còn bước sinh bìa mới là chỗ mất thời gian. Lúc đó Phase 2 và 3 đổi chỗ cho nhau — và ông đã tránh được việc xây một công cụ duyệt tinh vi cho vấn đề không tồn tại.
 
 **Việc nên làm ngay:** sinh 40 ảnh một chủ đề, duyệt bằng tay, bấm giờ. Con số đó định hình cả kế hoạch.
+
+---
+
+## Chi tiết từng phase
+
+Mỗi phase có file riêng kèm checklist việc cụ thể:
+
+- [Phase 1 — Đường ống mỏng](phases/phase-1.md)
+- [Phase 2 — Rút ngắn bước Duyệt](phases/phase-2.md)
+- [Phase 3 — Tự động Dựng + Đăng](phases/phase-3.md)
+- [Phase 4 — Storefront đúng nghĩa](phases/phase-4.md)
+- [Phase 5 — Ra tiền thật](phases/phase-5.md)
