@@ -6,9 +6,44 @@ import time
 from datetime import datetime, timezone
 
 from .. import config
-from ..prompts import load_subjects, make_prompts
+from ..prompts import has_non_ascii, list_themes, load_subjects, make_prompts
 from ..providers import GenRequest, ProviderError, get_provider
 from ..util import human_duration, info, slugify, warn, write_json
+
+
+def _check_language(args, subjects: list[str] | None) -> bool:
+    """
+    Chặn lỗi đắt nhất: chủ thể viết bằng tiếng Việt.
+
+    Flux không hiểu tiếng Việt. Nó không báo lỗi, chỉ lặng lẽ bỏ qua và vẽ
+    thứ gì đó ngẫu nhiên. Mẻ đầu tiên gõ "đại dương" ra toàn hoa lá đúng vì
+    lý do này. Chặn ở đây rẻ hơn nhiều so với để chạy hết 40 lượt GPU.
+    """
+    if subjects:
+        bad = [s for s in subjects if has_non_ascii(s)]
+        if bad:
+            warn(f"{len(bad)}/{len(subjects)} chủ thể có ký tự tiếng Việt. "
+                 f"Flux sẽ bỏ qua chúng. Ví dụ: {bad[0]!r}")
+        return True
+
+    if has_non_ascii(args.topic) and not args.force:
+        print(f"LỖI: chủ đề {args.topic!r} viết bằng tiếng Việt.\n")
+        print("Flux chỉ hiểu tiếng Anh. Nó sẽ không báo lỗi mà lặng lẽ vẽ bừa —")
+        print("đây đúng là lý do mẻ đầu ra toàn hoa lá thay vì cảnh biển.\n")
+        print("Cách sửa, chọn một:")
+        print("  1. Dùng bộ chủ thể dựng sẵn (nên làm):")
+        print(f"     python studio.py generate \"{args.topic}\" --theme ocean")
+        print(f"     Có sẵn: {', '.join(list_themes())}")
+        print("  2. Tự viết file chủ thể tiếng Anh rồi --theme <file>.txt")
+        print("  3. Đặt chủ đề bằng tiếng Anh")
+        print("  4. --force nếu vẫn muốn chạy (không khuyến khích)")
+        return False
+
+    if not subjects:
+        warn("Không có --theme: cả 40 ảnh dùng chung một chủ thể, chỉ khác "
+             "bố cục. Tỷ lệ giữ lại sẽ rất thấp.")
+        warn(f"Nên dùng: --theme {' | '.join(list_themes())}")
+    return True
 
 
 def register(subparsers) -> None:
@@ -27,26 +62,52 @@ def register(subparsers) -> None:
     p.add_argument("--complexity", default="medium",
                    choices=["simple", "medium", "detailed"],
                    help="simple cho trẻ nhỏ, detailed cho người lớn")
-    p.add_argument("--subjects", default=None,
-                   help="File .txt liệt kê chủ thể, mỗi dòng một cái")
+    p.add_argument("--theme", "--subjects", dest="theme", default=None,
+                   metavar="<tên|file>",
+                   help="Bộ chủ thể dựng sẵn (ocean, mandala, floral, "
+                        "forest-animals) hoặc đường dẫn file .txt. "
+                        "RẤT NÊN dùng — không có nó ảnh ra rất kém")
+    p.add_argument("--list-themes", action="store_true",
+                   help="Liệt kê các bộ chủ thể dựng sẵn rồi thoát")
     p.add_argument("--seed", type=int, default=None,
                    help="Seed khởi đầu. Đặt cố định để sinh lại y hệt mẻ cũ")
     p.add_argument("--steps", type=int, default=None)
     p.add_argument("--guidance", type=float, default=None)
     p.add_argument("--overwrite", action="store_true",
                    help="Sinh đè ảnh đã có (mặc định bỏ qua để chạy tiếp được)")
+    p.add_argument("--force", action="store_true",
+                   help="Bỏ qua cảnh báo chủ đề không phải tiếng Anh")
     p.set_defaults(func=run)
 
 
 def run(args) -> int:
     settings = config.load_settings()
+
+    if args.list_themes:
+        themes = list_themes()
+        info("Bộ chủ thể dựng sẵn:")
+        for name in themes:
+            count = len(load_subjects(name))
+            info(f"  {name:<16} {count} chủ thể")
+        info("")
+        info('Dùng: python studio.py generate "ocean" --theme ocean --count 40')
+        return 0
+
     slug = args.slug or slugify(args.topic)
     raw = config.raw_dir(settings, slug)
     raw.mkdir(parents=True, exist_ok=True)
 
-    subjects = load_subjects(args.subjects) if args.subjects else None
-    if subjects:
-        info(f"Đọc được {len(subjects)} chủ thể từ {args.subjects}")
+    subjects = None
+    if args.theme:
+        try:
+            subjects = load_subjects(args.theme)
+        except FileNotFoundError as exc:
+            print(f"LỖI: {exc}")
+            return 1
+        info(f"Đọc được {len(subjects)} chủ thể từ '{args.theme}'")
+
+    if not _check_language(args, subjects):
+        return 1
 
     plan = make_prompts(
         topic=args.topic,
@@ -88,6 +149,8 @@ def run(args) -> int:
             "title": args.title or args.topic,
             "topic": args.topic,
             "complexity": args.complexity,
+            "theme": args.theme,
+            "subject_count": len(subjects) if subjects else 0,
             "planned_count": args.count,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "gen": {

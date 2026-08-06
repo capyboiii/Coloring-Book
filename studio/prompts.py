@@ -1,72 +1,87 @@
 """
 Sinh prompt line art.
 
-Vấn đề cần giải: từ MỘT chủ đề ("đại dương") phải ra 40 prompt KHÁC NHAU.
-Nếu chỉ đổi seed, 40 ảnh sẽ na ná nhau và tỷ lệ giữ lại rất thấp.
+Khung prompt dưới đây KHÔNG phải tự nghĩ ra. Nó lấy từ prompt mà Bao đã chạy
+tay trong ComfyUI và cho ra ảnh đẹp (con rùa biển trong output/ocean/):
 
-Cách làm: ghép chủ đề với các trục biến thiên (chủ thể phụ, bố cục, hoạ tiết
-nền) theo thứ tự xoay vòng, cộng thêm seed khác nhau.
+    coloring book page for children, black and white line art,
+    clean bold uniform outlines, thick even line weight,
+    no shading, no grayscale, no color fill, no texture,
+    pure white background, simple cute cartoon style,
+    centered full-page composition,
+    a smiling sea turtle swimming, a few round bubbles around it
 
-Muốn kiểm soát chặt hơn thì dùng --subjects <file.txt>, mỗi dòng một chủ thể.
-Đó mới là cách cho ra cuốn sách có chủ đích. Bộ sinh tự động dưới đây chỉ để
-chạy nhanh mẻ đầu.
+Ba chữ quyết định chất lượng, rút ra từ prompt đó:
+
+  · "thick even line weight"      -> nét dày đều, in ra không mất
+  · "simple cute cartoon style"   -> neo phong cách, tránh ra kiểu phác thảo
+  · "centered full-page composition" -> hình chiếm hết trang, không thừa trắng
+
+Và điều kiện tiên quyết: **CHỦ THỂ PHẢI VIẾT BẰNG TIẾNG ANH VÀ CỤ THỂ.**
+"a smiling sea turtle swimming" ra ảnh đẹp. "đại dương" thì Flux không hiểu,
+nó bỏ qua và vẽ bừa — đó là lý do mẻ đầu ra toàn hoa lá.
 """
 
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+from pathlib import Path
 
 # --------------------------------------------------------------------------
 # Khung prompt
 # --------------------------------------------------------------------------
 
 BASE_STYLE = (
-    "black and white line art coloring book page, "
-    "clean bold uniform outlines, pure white background, "
-    "no shading, no grayscale, no hatching, no cross-hatching, no color, "
-    "high contrast, crisp vector-like linework"
+    "coloring book page, black and white line art, "
+    "clean bold uniform outlines, thick even line weight, "
+    "no shading, no grayscale, no color fill, no texture, "
+    "pure white background"
 )
 
 COMPLEXITY = {
     "simple": (
-        "very simple shapes, thick bold outlines, large open areas to color, "
-        "minimal detail, suitable for young children"
+        "simple cute cartoon style, very thick bold outlines, "
+        "large open areas to color, minimal detail, for young children"
     ),
     "medium": (
-        "moderate detail, balanced open areas and pattern, "
-        "consistent medium line weight"
+        "simple clean cartoon style, thick even outlines, moderate detail"
     ),
     "detailed": (
-        "intricate detailed linework, ornate decorative patterns, "
-        "many small areas to color, adult coloring book complexity"
+        "decorative illustration style, thick clear outlines, "
+        "intricate ornamental detail, many areas to color, "
+        "adult coloring book"
     ),
 }
 
-# Flux là mô hình guidance-distilled nên KHÔNG dùng negative prompt như SD.
-# Giữ lại chuỗi này để ghi vào metadata và để dùng nếu sau này đổi sang SDXL.
+# Flux là mô hình guidance-distilled nên KHÔNG dùng negative prompt.
+# Giữ lại để ghi vào metadata và để dùng nếu sau này đổi sang SDXL.
 NEGATIVE = (
     "shading, gradient, grayscale, gray fill, solid black fill, texture, "
     "photorealistic, 3d render, watermark, signature, text, letters, "
-    "thin faint lines, blurry, cropped, frame, border"
+    "thin faint lines, sketchy lines, blurry, cropped, empty space"
 )
 
+# Mọi mục đều nói "full-page" hoặc "filling". Bản cũ có
+# "generous negative space" và "balanced open areas" — chính hai chuỗi đó
+# đẻ ra mấy ảnh trống hơn nửa trang phía trên.
 COMPOSITIONS = [
-    "centered single subject filling the frame",
-    "full page scene with foreground and background",
-    "decorative circular mandala composition",
-    "symmetrical vertical composition",
-    "close-up detail view",
-    "wide panoramic scene",
-    "subject framed by a decorative botanical border",
-    "repeating pattern filling the whole page",
+    "centered full-page composition",
+    "full-page composition filling the frame",
+    "full page scene, subject large and centered",
+    "decorative circular composition filling the page",
+    "symmetrical full-page composition",
+    "close-up view filling the whole page",
+    "full-page scene with foreground and background",
+    "subject framed by a decorative border filling the page",
 ]
 
-ARRANGEMENTS = [
-    "arranged in a flowing organic layout",
-    "arranged in a balanced symmetrical layout",
-    "with generous negative space around the subject",
-    "densely filling the page edge to edge",
+# Thêm biến thiên mà không đụng tới bố cục
+EXTRAS = [
+    "with a few small decorative elements around it",
+    "with simple background elements",
+    "with a decorative patterned background",
+    "with no background, subject only",
 ]
 
 
@@ -82,14 +97,21 @@ class PagePrompt:
         return asdict(self)
 
 
+def has_non_ascii(text: str) -> bool:
+    """Dò dấu tiếng Việt — dấu hiệu chủ thể chưa dịch sang tiếng Anh."""
+    return any(ord(c) > 127 for c in text)
+
+
 def build_prompt(subject: str, complexity: str, composition: str,
-                 arrangement: str) -> str:
+                 extra: str) -> str:
+    # Thứ tự bám theo prompt đã chạy tốt: style -> phong cách -> bố cục ->
+    # CHỦ THỂ -> phụ kiện. Chủ thể nằm gần cuối, ngay trước phần phụ.
     parts = [
         BASE_STYLE,
         COMPLEXITY[complexity],
-        subject.strip().rstrip("."),
         composition,
-        arrangement,
+        subject.strip().rstrip("."),
+        extra,
     ]
     return ", ".join(p for p in parts if p)
 
@@ -104,8 +126,8 @@ def make_prompts(
     """
     Trả về `count` prompt khác nhau.
 
-    subjects  danh sách chủ thể do người dùng cấp. Nếu ngắn hơn count thì
-              phần còn lại lấy chủ đề gốc và biến thiên bằng bố cục.
+    subjects    danh sách chủ thể tiếng Anh. Thiếu thì lặp lại chủ đề gốc và
+                chỉ biến thiên bằng bố cục — cách này cho kết quả kém hơn hẳn.
     seed_start  cố định để tái tạo lại đúng mẻ ảnh cũ. None -> ngẫu nhiên.
     """
     if complexity not in COMPLEXITY:
@@ -120,18 +142,20 @@ def make_prompts(
 
     out: list[PagePrompt] = []
     for i in range(count):
-        if subjects:
-            subject = subjects[i % len(subjects)]
-        else:
-            subject = topic
-
+        subject = subjects[i % len(subjects)] if subjects else topic
         composition = COMPOSITIONS[i % len(COMPOSITIONS)]
-        arrangement = ARRANGEMENTS[(i // len(COMPOSITIONS)) % len(ARRANGEMENTS)]
+
+        # Chủ thể có dấu phẩy nghĩa là nó đã tự mang mệnh đề phụ
+        # ("..., a few round bubbles around it"). Thêm EXTRAS vào nữa
+        # thành thừa và làm loãng prompt.
+        extra = "" if "," in subject else EXTRAS[
+            (i // len(COMPOSITIONS)) % len(EXTRAS)
+        ]
 
         out.append(
             PagePrompt(
                 index=i + 1,
-                prompt=build_prompt(subject, complexity, composition, arrangement),
+                prompt=build_prompt(subject, complexity, composition, extra),
                 negative=NEGATIVE,
                 seed=seed_start + i,
                 subject=subject,
@@ -140,9 +164,40 @@ def make_prompts(
     return out
 
 
-def load_subjects(path) -> list[str]:
-    """Đọc file chủ thể: mỗi dòng một chủ thể, bỏ dòng trống và dòng bắt đầu #."""
-    from pathlib import Path
+# --------------------------------------------------------------------------
+# Bộ chủ thể dựng sẵn
+# --------------------------------------------------------------------------
 
-    lines = Path(path).read_text(encoding="utf-8").splitlines()
+THEMES_DIR = Path(__file__).resolve().parent.parent / "themes"
+
+
+def list_themes() -> list[str]:
+    if not THEMES_DIR.exists():
+        return []
+    return sorted(p.stem for p in THEMES_DIR.glob("*.txt"))
+
+
+def resolve_subjects_path(value: str) -> Path:
+    """
+    Nhận vào tên bộ dựng sẵn ('ocean') hoặc đường dẫn file.
+    Tên bộ được ưu tiên tra trong themes/ trước.
+    """
+    candidate = THEMES_DIR / f"{value}.txt"
+    if candidate.exists():
+        return candidate
+
+    path = Path(value)
+    if path.exists():
+        return path
+
+    available = ", ".join(list_themes()) or "(chưa có bộ nào)"
+    raise FileNotFoundError(
+        f"Không tìm thấy '{value}'. Bộ dựng sẵn: {available}"
+    )
+
+
+def load_subjects(value: str) -> list[str]:
+    """Đọc chủ thể: mỗi dòng một cái, bỏ dòng trống và dòng bắt đầu bằng #."""
+    path = resolve_subjects_path(value)
+    lines = path.read_text(encoding="utf-8").splitlines()
     return [ln.strip() for ln in lines if ln.strip() and not ln.startswith("#")]

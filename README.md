@@ -34,29 +34,81 @@ phải chạy 40 lượt GPU mới biết.
 ### ① Sinh ảnh
 
 ```bash
-python studio.py generate "đại dương kỳ thú" --count 40
+python studio.py generate "Đại dương kỳ thú" --theme ocean --count 40
 ```
 
 Ảnh ra ở `library/dai-duong-ky-thu/raw/`, kèm file `.json` ghi lại prompt và
 seed của từng ảnh để sinh lại y hệt khi cần.
 
-Muốn kiểm soát nội dung từng trang thì cấp danh sách chủ thể:
+> **`--theme` gần như bắt buộc.** Không có nó thì cả 40 ảnh dùng chung một
+> chủ thể, chỉ khác bố cục — tỷ lệ giữ lại sẽ rất thấp. Xem
+> [Vì sao ảnh xấu](#vì-sao-ảnh-xấu).
+
+Bộ chủ thể dựng sẵn trong [`themes/`](themes/):
 
 ```bash
-python studio.py generate "đại dương" --count 40 \
-    --subjects workflows/subjects.example.txt \
-    --complexity detailed
+python studio.py generate x --list-themes
+#   floral           24 chủ thể
+#   forest-animals   24 chủ thể
+#   mandala          24 chủ thể
+#   ocean            24 chủ thể
 ```
+
+`--theme` cũng nhận đường dẫn file `.txt` tự viết.
 
 | Tuỳ chọn | Ý nghĩa |
 |---|---|
-| `--complexity simple` | Nét dày, mảng lớn — cho trẻ nhỏ |
+| `--theme ocean` | Bộ chủ thể dựng sẵn, hoặc file `.txt` |
+| `--complexity simple` | Nét rất dày, mảng lớn — cho trẻ nhỏ |
 | `--complexity medium` | Mặc định |
-| `--complexity detailed` | Nhiều chi tiết — sách người lớn |
+| `--complexity detailed` | Nhiều chi tiết — sách người lớn, hợp với mandala và hoa lá |
 | `--seed 12345` | Cố định seed để tái tạo đúng mẻ cũ |
 | `--overwrite` | Sinh đè. Mặc định bỏ qua ảnh đã có nên chạy lại được sau khi đứt |
 
 Lệnh này **chạy tiếp được**. Đứt giữa chừng thì chạy lại, nó bỏ qua ảnh đã xong.
+
+Nếu chủ đề gõ bằng tiếng Việt mà không có `--theme`, lệnh **dừng lại** kèm
+hướng dẫn. Đây là chủ ý — xem mục dưới.
+
+---
+
+## Vì sao ảnh xấu
+
+Mẻ đầu tiên gõ `generate "đại dương"` ra toàn hoa lá, nét mảnh như sợi tóc,
+nửa trang trên trống trơn. Ba nguyên nhân, đã sửa hết:
+
+**1. Chủ thể viết bằng tiếng Việt.** Flux chỉ hiểu tiếng Anh. Nó không báo lỗi
+mà lặng lẽ bỏ qua rồi vẽ bừa. Giờ `generate` chặn thẳng và chỉ cách sửa.
+
+**2. Từ ngữ tả nét quá yếu.** `"consistent medium line weight"` cho ra nét mảnh
+đến mức in 300 DPI là mất. Đổi thành `"thick even line weight"` — chính chữ
+trong prompt đã chạy tốt.
+
+**3. Bố cục tự chống lại mình.** Danh sách bố cục cũ có
+`"generous negative space"` và `"balanced open areas"`. Đó chính là thứ đẻ ra
+mấy ảnh trống hơn nửa trang. Giờ mọi mục đều nói `"full-page"` hoặc
+`"filling the frame"`.
+
+Khung prompt hiện tại không phải tự nghĩ ra. Nó lấy từ prompt Bao đã chạy tay
+trong ComfyUI và cho ra ảnh đẹp — ComfyUI nhúng prompt vào file PNG nên đọc
+lại được:
+
+```
+coloring book page for children, black and white line art,
+clean bold uniform outlines, thick even line weight,
+no shading, no grayscale, no color fill, no texture,
+pure white background, simple cute cartoon style,
+centered full-page composition,
+a smiling sea turtle swimming, a few round bubbles around it
+```
+
+**Cách viết chủ thể cho đúng:** cụ thể, tiếng Anh, có hành động và một chi tiết
+phụ. `"a smiling sea turtle swimming, a few round bubbles around it"` ra ảnh
+đẹp. `"sea turtle"` thì nhạt. `"đại dương"` thì hỏng hẳn.
+
+Vẫn chưa ưng thì chỉnh `themes/*.txt` và `BASE_STYLE` trong
+[`studio/prompts.py`](studio/prompts.py) trước — **đừng đổi sang FLUX.1-dev**,
+vướng giấy phép thương mại.
 
 ### ② Duyệt bằng tay
 
@@ -210,7 +262,8 @@ studio/
 workflows/
     flux_lineart.api.json    workflow Flux
     flux_lineart.map.json    tham số nằm ở node nào
-    subjects.example.txt     mẫu danh sách chủ thể
+themes/                      bộ chủ thể dựng sẵn, tiếng Anh
+    ocean.txt  mandala.txt  floral.txt  forest-animals.txt
 tests/smoke_test.py
 library/                     thư viện sách — KHÔNG commit
 ```
