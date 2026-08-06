@@ -61,7 +61,13 @@ def register(subparsers) -> None:
                    help="Tên sách hiển thị. Mặc định lấy chủ đề")
     p.add_argument("--complexity", default="medium",
                    choices=["simple", "medium", "detailed"],
-                   help="simple cho trẻ nhỏ, detailed cho người lớn")
+                   help="Độ tinh xảo của NÉT. simple cho trẻ nhỏ, "
+                        "detailed cho người lớn")
+    p.add_argument("--density", default="rich",
+                   choices=["single", "normal", "rich"],
+                   help="Bao nhiêu ĐỐI TƯỢNG trên một trang. "
+                        "rich (mặc định) lấp đầy trang; "
+                        "single chỉ một chủ thể trên nền trắng")
     p.add_argument("--theme", "--subjects", dest="theme", default=None,
                    metavar="<tên|file>",
                    help="Bộ chủ thể dựng sẵn (ocean, mandala, floral, "
@@ -109,12 +115,17 @@ def run(args) -> int:
     if not _check_language(args, subjects):
         return 1
 
+    if args.theme == "mandala" and args.density == "rich":
+        warn("Mandala vốn đã đối xứng và lấp kín trang. --density rich sẽ "
+             "phá đối xứng, ra một mớ hỗn độn. Nên dùng --density normal.")
+
     plan = make_prompts(
         topic=args.topic,
         count=args.count,
         complexity=args.complexity,
         subjects=subjects,
         seed_start=args.seed,
+        density=args.density,
     )
 
     steps = args.steps if args.steps is not None else settings.steps
@@ -149,6 +160,7 @@ def run(args) -> int:
             "title": args.title or args.topic,
             "topic": args.topic,
             "complexity": args.complexity,
+            "density": args.density,
             "theme": args.theme,
             "subject_count": len(subjects) if subjects else 0,
             "planned_count": args.count,

@@ -32,11 +32,16 @@ from pathlib import Path
 # Khung prompt
 # --------------------------------------------------------------------------
 
+# Lưu ý: prompt gốc đã chạy tốt có chuỗi "pure white background". Chuỗi đó
+# vốn để chặn nền xám, nhưng Flux đọc nó thành "nền để TRỐNG" — góp phần
+# đẻ ra mấy trang có mỗi con sứa giữa khoảng trắng mênh mông.
+# Việc chặn nền xám giờ do bước khử xám trong imageops lo, nên ở đây nói
+# theo cách không hàm ý bỏ trống.
 BASE_STYLE = (
     "coloring book page, black and white line art, "
     "clean bold uniform outlines, thick even line weight, "
     "no shading, no grayscale, no color fill, no texture, "
-    "pure white background"
+    "white paper, unshaded"
 )
 
 COMPLEXITY = {
@@ -59,30 +64,41 @@ COMPLEXITY = {
 NEGATIVE = (
     "shading, gradient, grayscale, gray fill, solid black fill, texture, "
     "photorealistic, 3d render, watermark, signature, text, letters, "
-    "thin faint lines, sketchy lines, blurry, cropped, empty space"
+    "thin faint lines, sketchy lines, blurry, cropped, "
+    "empty space, blank margins, single isolated object"
 )
 
 # Mọi mục đều nói "full-page" hoặc "filling". Bản cũ có
 # "generous negative space" và "balanced open areas" — chính hai chuỗi đó
 # đẻ ra mấy ảnh trống hơn nửa trang phía trên.
 COMPOSITIONS = [
-    "centered full-page composition",
-    "full-page composition filling the frame",
-    "full page scene, subject large and centered",
+    "full-page scene filling the frame edge to edge",
+    "busy full-page composition, elements from top to bottom",
+    "layered scene with foreground, middle ground and background",
     "decorative circular composition filling the page",
-    "symmetrical full-page composition",
-    "close-up view filling the whole page",
-    "full-page scene with foreground and background",
-    "subject framed by a decorative border filling the page",
+    "symmetrical full-page composition filling the frame",
+    "wide scene spanning the full width of the page",
+    "densely packed composition filling every corner",
+    "scene framed by a decorative border filling the page",
 ]
 
-# Thêm biến thiên mà không đụng tới bố cục
-EXTRAS = [
-    "with a few small decorative elements around it",
-    "with simple background elements",
-    "with a decorative patterned background",
-    "with no background, subject only",
-]
+# Mật độ chi tiết — đây là cái cần chỉnh khi ảnh ra chỉ có một đối tượng
+# nằm giữa trang trống hoác.
+DENSITY = {
+    "single": (
+        "single subject, plain white background, no background elements"
+    ),
+    "normal": (
+        "with several background elements around the subject"
+    ),
+    "rich": (
+        "a rich detailed scene filling the entire page, "
+        "many different elements throughout the composition, "
+        "background filled with additional details, "
+        "no large empty white areas, "
+        "elements reaching the top and bottom edges of the page"
+    ),
+}
 
 
 @dataclass
@@ -103,15 +119,15 @@ def has_non_ascii(text: str) -> bool:
 
 
 def build_prompt(subject: str, complexity: str, composition: str,
-                 extra: str) -> str:
+                 density: str) -> str:
     # Thứ tự bám theo prompt đã chạy tốt: style -> phong cách -> bố cục ->
-    # CHỦ THỂ -> phụ kiện. Chủ thể nằm gần cuối, ngay trước phần phụ.
+    # CHỦ THỂ -> mật độ. Chủ thể nằm gần cuối, ngay trước phần mật độ.
     parts = [
         BASE_STYLE,
         COMPLEXITY[complexity],
         composition,
         subject.strip().rstrip("."),
-        extra,
+        DENSITY[density],
     ]
     return ", ".join(p for p in parts if p)
 
@@ -122,6 +138,7 @@ def make_prompts(
     complexity: str = "medium",
     subjects: list[str] | None = None,
     seed_start: int | None = None,
+    density: str = "rich",
 ) -> list[PagePrompt]:
     """
     Trả về `count` prompt khác nhau.
@@ -129,10 +146,15 @@ def make_prompts(
     subjects    danh sách chủ thể tiếng Anh. Thiếu thì lặp lại chủ đề gốc và
                 chỉ biến thiên bằng bố cục — cách này cho kết quả kém hơn hẳn.
     seed_start  cố định để tái tạo lại đúng mẻ ảnh cũ. None -> ngẫu nhiên.
+    density     single | normal | rich. Xem DENSITY ở trên.
     """
     if complexity not in COMPLEXITY:
         raise ValueError(
             f"complexity phải là một trong {list(COMPLEXITY)}, nhận '{complexity}'"
+        )
+    if density not in DENSITY:
+        raise ValueError(
+            f"density phải là một trong {list(DENSITY)}, nhận '{density}'"
         )
 
     if seed_start is None:
@@ -145,17 +167,10 @@ def make_prompts(
         subject = subjects[i % len(subjects)] if subjects else topic
         composition = COMPOSITIONS[i % len(COMPOSITIONS)]
 
-        # Chủ thể có dấu phẩy nghĩa là nó đã tự mang mệnh đề phụ
-        # ("..., a few round bubbles around it"). Thêm EXTRAS vào nữa
-        # thành thừa và làm loãng prompt.
-        extra = "" if "," in subject else EXTRAS[
-            (i // len(COMPOSITIONS)) % len(EXTRAS)
-        ]
-
         out.append(
             PagePrompt(
                 index=i + 1,
-                prompt=build_prompt(subject, complexity, composition, extra),
+                prompt=build_prompt(subject, complexity, composition, density),
                 negative=NEGATIVE,
                 seed=seed_start + i,
                 subject=subject,

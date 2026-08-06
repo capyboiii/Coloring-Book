@@ -1,29 +1,31 @@
-# Hoa lá — 24 chủ thể
+# Hoa lá — 24 cảnh
 #
-# Đây là thứ Flux vẽ giỏi nhất và cũng là ngách bán chạy nhất cho người lớn.
-# Dùng kèm --complexity detailed.
+# Đây là ngách bán chạy nhất cho người lớn, và cũng là thứ Flux vẽ giỏi nhất.
+# Dùng kèm --complexity detailed --density rich.
+#
+# Hoa lá dễ lấp đầy trang hơn động vật: cứ thêm lá, nụ, dây leo là kín.
 
-a large open rose with layered petals filling the page
-a bouquet of sunflowers with broad leaves
-a branch of cherry blossoms in full bloom
-a bunch of tulips tied with a ribbon
-a peony flower seen from above, petals filling the frame
-a wreath of wildflowers forming a full circle
-a single large hibiscus flower with bold petals
-a cluster of daisies with round centers
-a lavender bunch tied at the stem
-a magnolia branch with large open flowers
-a bouquet of poppies in a simple vase
-a climbing vine of morning glory flowers
-a lotus flower on water with broad leaves
-a bunch of hydrangea with rounded petal clusters
-a cactus in a patterned pot, one flower on top
-a monstera leaf with bold cut-outs filling the page
-a fern frond with symmetrical leaflets
-an orchid stem with several open blooms
-a bunch of grapes with curling vine tendrils
-a pineapple with a patterned skin and spiky crown
-a potted succulent arrangement seen from above
-a garland of leaves and small round berries
-a bouquet of dahlias with layered geometric petals
-a botanical arrangement of herbs tied in a bundle
+a large open rose surrounded by smaller roses, buds and leaves, curling stems filling every corner
+a bouquet of sunflowers with broad leaves, smaller blooms and seeds around them, stems filling the lower page
+a branch of cherry blossoms in full bloom, petals falling, more branches crossing the whole page
+a bunch of tulips tied with a ribbon, leaves fanning out on both sides, smaller flowers filling the gaps
+a peony seen from above with layered petals, more peonies and buds around it, leaves filling every gap
+a dense wreath of wildflowers forming a full circle, leaves and berries woven throughout, small flowers in the center
+a large hibiscus flower with several smaller ones, broad leaves and buds around them, stems filling the page
+a field of daisies with round centers, tall grass between them, more flowers reaching the top edge
+bunches of lavender tied at the stems, small flowers and leaves scattered around, more stalks filling the background
+a magnolia branch with large open flowers and buds, leaves throughout, smaller branches filling the corners
+a bouquet of poppies in a patterned vase, buds and seed pods around it, leaves filling the background
+a climbing vine of morning glory flowers covering a trellis, leaves and tendrils filling the whole page
+lotus flowers on water with broad leaves, buds rising between them, ripples and reeds filling the background
+clusters of hydrangea with rounded petals, leaves between the clusters, more blooms reaching all edges
+several cacti in patterned pots with flowers on top, small stones and succulents around them
+overlapping monstera and palm leaves filling the entire page, small flowers tucked between them
+a dense arrangement of fern fronds with symmetrical leaflets, smaller ferns filling every gap
+an orchid stem with several open blooms, leaves and roots around it, more stems filling the background
+bunches of grapes with curling tendrils, broad vine leaves throughout, smaller bunches filling the corners
+a pineapple with patterned skin, tropical leaves and flowers around it, more fruit filling the background
+a garden of succulents seen from above, dozens of rosettes packed edge to edge
+a garland of leaves and round berries spanning the page, small flowers woven throughout, ribbons at both ends
+a bouquet of dahlias with layered geometric petals, buds and leaves around them, stems filling the lower page
+a herb garden arrangement with bundles of rosemary, thyme and sage, small flowers and leaves filling the gaps

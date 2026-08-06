@@ -1,6 +1,11 @@
 # Mandala thư giãn — 24 chủ thể, cho người lớn
 #
-# Dùng kèm --complexity detailed.
+# Dùng kèm --complexity detailed --density normal
+#
+# Mandala là ngoại lệ: bản thân nó đã đối xứng và lấp kín trang rồi.
+# Đừng dùng --density rich ở đây — thêm "many different elements" vào sẽ
+# phá mất tính đối xứng, ra một mớ hỗn độn thay vì mandala.
+#
 # Mandala rất hợp với gen AI vì đối xứng và không cần đúng giải phẫu.
 
 a symmetrical mandala with layered flower petals

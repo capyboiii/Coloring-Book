@@ -1,30 +1,35 @@
-# Đại dương — 24 chủ thể
+# Đại dương — 24 cảnh
 #
-# Viết CỤ THỂ và bằng TIẾNG ANH. Mẫu chuẩn lấy từ prompt đã chạy tốt:
-#     a smiling sea turtle swimming, a few round bubbles around it
-# Có chủ thể + hành động + một chi tiết phụ. Đừng viết cụt lủn "sea turtle".
+# Đây là CẢNH, không phải chủ thể đơn lẻ. Mỗi dòng phải có:
+#   nhân vật chính + hành động + 2-3 thứ khác lấp phần còn lại của trang
+#
+# Đúng:  a smiling sea turtle swimming through a coral reef, schools of small
+#        fish above it, seaweed and starfish along the sea floor below
+# Sai:   a sea turtle          <- ra một con giữa trang trống hoác
+#
+# Dùng kèm --density rich (mặc định).
 
-a smiling sea turtle swimming, a few round bubbles around it
-a friendly dolphin leaping over a wave
-a curious octopus with curled tentacles, small shells around it
-a seahorse curled around a tall strand of seaweed
-a group of round jellyfish drifting upward
-a mother whale swimming beside her calf
-a starfish and seashells resting on the sea floor
-a manta ray gliding above a coral reef
-a clownfish peeking out of a sea anemone
-a school of round tropical fish swimming together
-a hermit crab carrying a decorated spiral shell
-a puffer fish surrounded by round bubbles
-a giant clam opening, small fish swimming nearby
-a coral reef full of rounded corals and small fish
-a lobster standing on a rocky sea bed
-a nautilus shell with a bold spiral pattern
-a sunken treasure chest covered in shells
-a smiling shark swimming past small fish
-a crab waving one claw on the sand
-a tall kelp forest with fish weaving between the strands
-a lighthouse on a rock seen from the water
-an anglerfish with a glowing lantern
-a pelican resting on a wooden post
-a wave curling over, with fish inside it
+a smiling sea turtle swimming through a coral reef, schools of small fish above it, seaweed and starfish along the sea floor below
+a group of dolphins leaping over waves, seabirds circling above, rocky islands and swirling water below
+a large octopus with curling tentacles among rocks, small crabs and shells around it, seaweed rising on both sides
+a seahorse family curled around tall seaweed stalks, tiny fish darting between them, coral and pebbles at the bottom
+a cluster of round jellyfish drifting upward, bubbles rising all around them, coral reef and swaying seaweed below
+a mother whale swimming with her calf, a school of fish following behind, seaweed forest and rocks in the background
+a sea floor covered with starfish, seashells, sand dollars and coral, small fish swimming just above
+a manta ray gliding over a busy coral reef, tropical fish everywhere, sea anemones and rocks below
+a clownfish family in a large sea anemone, coral branches around them, small fish and bubbles filling the water
+a big school of tropical fish swimming together, coral towers on both sides, seaweed and shells on the sea bed
+a hermit crab carrying a decorated shell, other shells and pebbles scattered around, seaweed and small crabs nearby
+a puffer fish surrounded by bubbles, coral reef behind it, small fish and sea plants filling the space
+a giant clam opening on the sea floor, fish swimming around it, coral and seaweed covering the background
+a busy coral reef packed with corals, sea fans, anemones and dozens of small fish
+a lobster on a rocky sea bed, crabs and shells around it, tall seaweed rising behind
+a nautilus shell with a bold spiral, smaller shells and coral around it, seaweed filling the background
+a sunken treasure chest covered in shells, fish swimming out of it, coral and seaweed surrounding the wreck
+a friendly shark swimming past a coral reef, small fish scattering around it, rocks and sea plants below
+a crab family on the sand, shells and starfish around them, seaweed and rocks behind
+a tall kelp forest with fish weaving between the strands, sea otters at the top, rocks and shells at the base
+a lighthouse on a rocky island seen from the water, waves and seabirds around it, fish swimming below the surface
+an underwater cave entrance with coral around it, fish swimming in and out, seaweed and shells covering the rocks
+a pod of seals resting on rocks, seabirds above them, waves and seaweed around the base
+a big curling wave with fish inside it, seabirds above, shells and starfish on the beach below

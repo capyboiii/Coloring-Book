@@ -59,11 +59,19 @@ python studio.py generate x --list-themes
 | Tuỳ chọn | Ý nghĩa |
 |---|---|
 | `--theme ocean` | Bộ chủ thể dựng sẵn, hoặc file `.txt` |
-| `--complexity simple` | Nét rất dày, mảng lớn — cho trẻ nhỏ |
-| `--complexity medium` | Mặc định |
-| `--complexity detailed` | Nhiều chi tiết — sách người lớn, hợp với mandala và hoa lá |
+| `--complexity` | Độ tinh xảo của **nét**: `simple` / `medium` / `detailed` |
+| `--density` | Số **đối tượng** trên trang: `single` / `normal` / `rich` (mặc định) |
 | `--seed 12345` | Cố định seed để tái tạo đúng mẻ cũ |
 | `--overwrite` | Sinh đè. Mặc định bỏ qua ảnh đã có nên chạy lại được sau khi đứt |
+
+`--complexity` và `--density` là hai trục khác nhau, dễ nhầm:
+
+- **complexity** = nét vẽ tinh xảo tới đâu. `simple` nét rất dày cho trẻ nhỏ.
+- **density** = trang có bao nhiêu thứ để tô. `rich` lấp kín, `single` một chủ thể trên nền trắng.
+
+Sách trẻ em nên là `--complexity simple --density rich`: nét to dễ tô, nhưng
+trang vẫn đầy. Ngoại lệ là mandala — dùng `--density normal`, vì `rich` sẽ phá
+mất tính đối xứng.
 
 Lệnh này **chạy tiếp được**. Đứt giữa chừng thì chạy lại, nó bỏ qua ảnh đã xong.
 
@@ -102,9 +110,31 @@ centered full-page composition,
 a smiling sea turtle swimming, a few round bubbles around it
 ```
 
-**Cách viết chủ thể cho đúng:** cụ thể, tiếng Anh, có hành động và một chi tiết
-phụ. `"a smiling sea turtle swimming, a few round bubbles around it"` ra ảnh
-đẹp. `"sea turtle"` thì nhạt. `"đại dương"` thì hỏng hẳn.
+**Cách viết chủ thể cho đúng:** cụ thể, tiếng Anh, mô tả cả **một cảnh** chứ
+không phải một vật.
+
+```
+Đúng:  a smiling sea turtle swimming through a coral reef,
+       schools of small fish above it,
+       seaweed and starfish along the sea floor below
+
+Nhạt:  a smiling sea turtle swimming, a few round bubbles around it
+Hỏng:  sea turtle
+Hỏng:  đại dương
+```
+
+### Ảnh chỉ có một đối tượng giữa trang trống
+
+Đợt sau vẫn còn: con sứa nằm giữa, quanh nó trống hoác. Ba chỗ đã sửa:
+
+1. **`--density rich` thành mặc định** — thêm chuỗi
+   `"many different elements throughout, no large empty white areas,
+   elements reaching the top and bottom edges"`.
+2. **Bỏ `"pure white background"` khỏi `BASE_STYLE`.** Chuỗi đó vốn để chặn nền
+   xám, nhưng Flux đọc thành *"nền để trống"*. Việc chặn nền xám giờ đã do bước
+   khử xám lo, nên không cần nói trong prompt nữa.
+3. **Viết lại `themes/*.txt` thành cảnh.** Đây là đòn bẩy lớn nhất — prompt
+   chung không cứu được một chủ thể viết cụt lủn.
 
 Vẫn chưa ưng thì chỉnh `themes/*.txt` và `BASE_STYLE` trong
 [`studio/prompts.py`](studio/prompts.py) trước — **đừng đổi sang FLUX.1-dev**,
