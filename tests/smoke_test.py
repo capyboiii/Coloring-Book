@@ -33,6 +33,16 @@ from studio.util import write_json  # noqa: E402
 FAILURES: list[str] = []
 
 
+def _erode(mask):
+    """Bào mòn 1 pixel, thuần numpy để khỏi thêm phụ thuộc scipy."""
+    import numpy as np
+    out = mask.copy()
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            out &= np.roll(np.roll(mask, dy, 0), dx, 1)
+    return out
+
+
 def check(label: str, condition: bool, detail: str = "") -> None:
     mark = "✓" if condition else "✗"
     print(f"  {mark} {label}" + (f" — {detail}" if detail else ""))
@@ -284,7 +294,13 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     # và >=2 dấu phẩy theo hình dạng của rác, kết quả là mandala rớt 24/24.
     # Lọc theo rác chứ không theo cảnh thật là sai.
     from studio.prompts import list_themes as _themes
+    from studio.prompts import load_template
     for name in _themes():
+        # Bộ có @template thì chủ thể cố tình chỉ là mảnh ngắn ("sunflowers
+        # with broad round petals") — khuôn mới là câu hoàn chỉnh. Luật hình
+        # dạng cảnh không áp cho loại này.
+        if load_template(name):
+            continue
         subs = load_subjects(name)
         kept_t, _ = clean_lines("\n".join(subs), 999)
         check(f"themes/{name}.txt qua bộ lọc nguyên vẹn",
@@ -451,6 +467,68 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     from studio.prompts import STYLE
     check("Có phong cách kawaii làm mặc định cho sách trẻ em",
           "kawaii" in STYLE and "chibi" in STYLE["kawaii"])
+
+    print("\n[13] Khuôn bố cục cố định (@template)")
+    from studio.prompts import load_template, make_prompts
+
+    tpl = load_template("hoa-trong-chau")
+    check("Đọc được @template từ file theme",
+          tpl and "{subject}" in tpl, (tpl or "")[:46])
+
+    subs = load_subjects("hoa-trong-chau")
+    with_tpl = make_prompts("x", 2, "medium", subs, seed_start=1,
+                            density="normal", template=tpl)
+    check("Chủ thể được ghép vào khuôn",
+          "wooden bucket" in with_tpl[0].prompt)
+    check("Hai trang khác nhau ở CHỦ THỂ, chung khuôn",
+          "sunflowers" in with_tpl[0].prompt
+          and "tulips" in with_tpl[1].prompt)
+    # Khuôn đã quyết định bố cục; để thêm COMPOSITIONS và DENSITY vào nữa là
+    # ba chỉ dẫn bố cục đánh nhau — đúng lỗi đã gặp ở COMPOSITIONS vs DENSITY
+    check("Có khuôn thì KHÔNG kèm COMPOSITIONS",
+          "centered composition" not in with_tpl[0].prompt)
+    check("Có khuôn thì KHÔNG kèm DENSITY",
+          "clear white space between every object"
+          not in with_tpl[0].prompt)
+
+    no_tpl = make_prompts("x", 1, "simple", load_subjects("giang-sinh"),
+                          seed_start=1, density="normal")
+    check("Không có khuôn thì vẫn dùng COMPOSITIONS + DENSITY",
+          "centered composition" in no_tpl[0].prompt
+          and "clear white space" in no_tpl[0].prompt)
+
+    # CẮT chữ cái lạc chứ không bỏ cả dòng — phần còn lại vẫn dùng được.
+    # File khung-long.txt của Bao hỏng 19/24 dòng đúng kiểu này, bỏ hết thì
+    # mất gần cả bộ.
+    stray, _ = clean_lines(
+        "e playful pteranodon soaring through the sky, "
+        "two round clouds beside it, a wide hill below", 5)
+    check("Cắt chữ cái lạc đầu dòng, giữ lại phần còn lại",
+          len(stray) == 1 and stray[0].startswith("playful pteranodon"),
+          repr(stray[0][:34]) if stray else "rỗng")
+    letter_num, _ = clean_lines("b) tiny pterodactyls flying overhead, "
+                                "a lake below, two hills behind", 5)
+    check("Cắt cả đánh số bằng chữ cái ('b) ...')",
+          len(letter_num) == 1 and letter_num[0].startswith("tiny"),
+          repr(letter_num[0][:30]) if letter_num else "rỗng")
+    check("Không loại nhầm mạo từ 'a'",
+          len(clean_lines(
+              "a playful pteranodon soaring through the sky, "
+              "two round clouds beside it, a wide hill below", 5)[0]) == 1)
+
+    print("\n[14] Độ dày nét")
+    check("Có bật làm dày nét",
+          config.LINE_THICKEN > 1, f"{config.LINE_THICKEN}px")
+    art = tmp / "line-test.png"
+    im = Image.new("L", (config.GEN_W, config.GEN_H), 255)
+    ImageDraw.Draw(im).ellipse((200, 300, 700, 900), outline=0, width=4)
+    im.save(art)
+    page, _ = prepare_page(art)
+    a = __import__("numpy").array(page) < 128
+
+    width_px = 2.0 * a.sum() / max(1, (a & ~_erode(a)).sum())
+    check("Nét sau xử lý dày 6-14 px @300dpi (sách trẻ em cần 6-10)",
+          6 <= width_px <= 14, f"{width_px:.1f} px")
 
     print("\n" + "─" * 50)
     if FAILURES:

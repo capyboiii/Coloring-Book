@@ -194,7 +194,8 @@ def has_non_ascii(text: str) -> bool:
 
 
 def build_prompt(subject: str, complexity: str, composition: str,
-                 density: str, style: str = "kawaii") -> str:
+                 density: str, style: str = "kawaii",
+                 density_text: str | None = None) -> str:
     # Thứ tự: nền tảng -> PHONG CÁCH -> độ tinh xảo -> bố trí -> CHỦ THỂ ->
     # mật độ. Phong cách đặt sớm vì nó là thứ định hình mạnh nhất; chủ thể
     # đặt gần cuối theo đúng prompt đã chứng minh chạy tốt.
@@ -204,7 +205,7 @@ def build_prompt(subject: str, complexity: str, composition: str,
         COMPLEXITY[complexity],
         composition,
         subject.strip().rstrip("."),
-        DENSITY[density],
+        DENSITY[density] if density_text is None else density_text,
     ]
     return ", ".join(p for p in parts if p)
 
@@ -217,6 +218,7 @@ def make_prompts(
     seed_start: int | None = None,
     density: str = "rich",
     style: str = "kawaii",
+    template: str | None = None,
 ) -> list[PagePrompt]:
     """
     Trả về `count` prompt khác nhau.
@@ -247,13 +249,24 @@ def make_prompts(
     out: list[PagePrompt] = []
     for i in range(count):
         subject = subjects[i % len(subjects)] if subjects else topic
-        composition = COMPOSITIONS[i % len(COMPOSITIONS)]
+
+        if template:
+            # Khuôn đã quyết định CẢ bố cục lẫn cách bày trang, nên bỏ hẳn
+            # COMPOSITIONS và DENSITY. Để cả ba là ba chỉ dẫn bố cục đánh
+            # nhau — đúng cái lỗi vừa sửa ở COMPOSITIONS vs DENSITY.
+            subject = template.replace("{subject}", subject)
+            composition = ""
+            page_density = ""
+        else:
+            composition = COMPOSITIONS[i % len(COMPOSITIONS)]
+            page_density = DENSITY[density]
 
         out.append(
             PagePrompt(
                 index=i + 1,
                 prompt=build_prompt(subject, complexity, composition,
-                                    density, style),
+                                    density, style,
+                                    density_text=page_density),
                 negative=NEGATIVE,
                 seed=seed_start + i,
                 subject=subject,
@@ -298,4 +311,40 @@ def load_subjects(value: str) -> list[str]:
     """Đọc chủ thể: mỗi dòng một cái, bỏ dòng trống và dòng bắt đầu bằng #."""
     path = resolve_subjects_path(value)
     lines = path.read_text(encoding="utf-8").splitlines()
-    return [ln.strip() for ln in lines if ln.strip() and not ln.startswith("#")]
+    return [ln.strip() for ln in lines
+            if ln.strip() and not ln.startswith(("#", "@"))]
+
+
+def load_template(value: str) -> str | None:
+    """
+    Đọc dòng `@template:` nếu file theme có khai báo.
+
+    KHUÔN BỐ CỤC — thứ rút ra từ sách mẫu Bao đưa.
+
+    Cuốn Flower Garden có 48 trang mà **cả 48 dùng chung một bố cục**: một bó
+    hoa cắm trong chậu gỗ, đặt giữa trang. Chỉ đổi loại hoa. Nó KHÔNG bắt
+    người vẽ nghĩ bố cục mới mỗi trang.
+
+    Đó là lý do sách mẫu trang nào cũng hợp lý và cân đối, còn ảnh của mình
+    thì trang lệch trang trống — vì mỗi dòng chủ thể của mình mô tả một cảnh
+    khác nhau, và Flux phải tự dựng bố cục 24 lần, hỏng lúc nào không biết.
+
+    Cú pháp trong file theme:
+
+        @template: {subject} arranged in a wooden bucket, centered
+
+    Rồi mỗi dòng chủ thể chỉ cần ghi ngắn gọn: `sunflowers`, `tulips`, `roses`.
+
+    Có khuôn thì studio bỏ luôn phần xoay vòng COMPOSITIONS — khuôn đã quyết
+    định bố cục rồi, thêm "close-up view" vào nữa là đánh nhau.
+    """
+    path = resolve_subjects_path(value)
+    for ln in path.read_text(encoding="utf-8").splitlines():
+        ln = ln.strip()
+        if ln.lower().startswith("@template:"):
+            tpl = ln.split(":", 1)[1].strip()
+            if "{subject}" not in tpl:
+                raise ValueError(
+                    f"@template trong {path.name} phải chứa {{subject}}")
+            return tpl
+    return None

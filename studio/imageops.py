@@ -214,6 +214,13 @@ def prepare_page(
         k = config.CLOSE_GAPS
         art = art.filter(ImageFilter.MinFilter(k)).filter(ImageFilter.MaxFilter(k))
 
+    # 5. Làm dày nét — chỉ giãn, không co lại.
+    #    MinFilter lấy giá trị nhỏ nhất trong cửa sổ, nên vùng tối (nét) nở
+    #    ra. Đây là cách duy nhất chắc chắn ăn: không phụ thuộc Flux vẽ nét
+    #    dày hay mảnh.
+    if config.LINE_THICKEN > 1:
+        art = art.filter(ImageFilter.MinFilter(config.LINE_THICKEN))
+
     metrics = measure(art)
     metrics.colour_ratio = colour_ratio
 

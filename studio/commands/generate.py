@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from .. import config
 from ..prompts import (build_cover_prompt, has_non_ascii, list_themes,
-                       load_subjects, make_prompts)
+                       load_subjects, load_template, make_prompts)
 from ..providers import GenRequest, ProviderError, get_provider
 from ..util import human_duration, info, slugify, warn, write_json
 
@@ -115,6 +115,7 @@ def run(args) -> int:
     raw.mkdir(parents=True, exist_ok=True)
 
     subjects = None
+    template = None
     if args.theme:
         try:
             subjects = load_subjects(args.theme)
@@ -122,6 +123,13 @@ def run(args) -> int:
             print(f"LỖI: {exc}")
             return 1
         info(f"Đọc được {len(subjects)} chủ thể từ '{args.theme}'")
+        try:
+            template = load_template(args.theme)
+        except ValueError as exc:
+            print(f"LỖI: {exc}")
+            return 1
+        if template:
+            info(f"Khuôn bố cục: {template}")
 
     if not _check_language(args, subjects):
         return 1
@@ -138,6 +146,7 @@ def run(args) -> int:
         seed_start=args.seed,
         density=args.density,
         style=args.style,
+        template=template,
     )
 
     steps = args.steps if args.steps is not None else settings.steps

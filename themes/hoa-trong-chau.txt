@@ -1,0 +1,37 @@
+# Hoa trong chậu — 24 loại hoa
+#
+# Bộ này làm theo đúng cách cuốn Flower Garden mẫu được dựng: cả 48 trang
+# dùng CHUNG một bố cục, chỉ đổi loại hoa. Nhờ vậy trang nào cũng hợp lý và
+# cân đối, và cả cuốn nhìn thống nhất như một bộ.
+#
+# Dòng @template dưới đây là khuôn bố cục. Mỗi dòng chủ thể chỉ cần ghi tên
+# hoa, studio tự ghép vào khuôn.
+#
+# Có @template thì studio bỏ phần xoay vòng bố cục — khuôn đã quyết định rồi.
+
+@template: a bouquet of {subject} arranged in a wooden bucket with metal bands, standing on a plain surface, centered on the page and filling most of the frame
+
+sunflowers with broad round petals
+tulips with smooth closed buds
+open roses with layered petals
+daisies with round centers
+hibiscus flowers with wide petals
+peonies with many rounded petals
+lilies with long pointed petals
+carnations with ruffled edges
+poppies with round open cups
+lavender stems with small buds
+chrysanthemums with narrow petals
+magnolia blooms with thick petals
+orchids with curved petals
+marigolds with dense round heads
+irises with three falling petals
+anemones with round dark centers
+dahlias with pointed geometric petals
+camellias with even rounded petals
+gerbera daisies with long thin petals
+zinnias with layered flat petals
+hydrangea clusters of small flowers
+cherry blossom branches with small flowers
+water lilies with broad flat petals
+cosmos flowers with eight wide petals

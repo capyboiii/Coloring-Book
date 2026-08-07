@@ -1,0 +1,28 @@
+# Công thức sách — khung-long
+#
+# Sửa file này rồi chạy:  python studio.py make khung-long
+# Mọi tham số đều ghi ở đây để ba tuần sau còn tái tạo lại được đúng cuốn này.
+
+title: "Khủng long của bé"
+subtitle: ""
+
+# ---- Nội dung ----
+
+style: kawaii         # kawaii | cartoon | decorative — PHONG CÁCH vẽ
+               # để trống là ngẫu nhiên. Điền số để sinh lại y hệt
+theme: khung-long     # trùng tên file trong themes/
+pages: 40
+complexity: simple    # trẻ em
+density: normal
+# ---- Bìa ----
+cover:
+  scene:              # để trống là lấy cảnh đầu trong theme
+  bg: "#1B7A8C"
+
+# ---- Thông tin bán hàng (web đọc từ đây) ----
+collection: relaxation
+audience: all         # kids | adults | all
+price_usd: 14.99
+tags: []
+description: |
+  Viết mô tả bán hàng ở đây.

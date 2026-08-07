@@ -156,6 +156,18 @@ SMOOTH_RADIUS = 2.5
 # 0 = tắt. 3 hoặc 5 là hợp lý; lớn hơn thì mảng nhỏ bị lấp.
 CLOSE_GAPS = 3
 
+# Làm DÀY nét lên (chỉ giãn, không co lại).
+#
+# Đây là chỗ duy nhất chắc chắn ăn. Đo trên ảnh thật: bào mòn nét 1 pixel là
+# nét biến mất gần hết (điểm 0.00-0.04), tức nét chỉ dày 1-2 px ở khổ in —
+# in ra sẽ mảnh như sợi tóc. Prompt có ghi "thick bold outlines" nhưng Flux
+# schnell 4 bước vẽ sao thì ra vậy, chữ trong prompt không cãi lại được.
+#
+# Phép giãn thì không phụ thuộc model: nét bao nhiêu cũng dày thêm đúng
+# ngần ấy pixel. 3 = dày thêm 1px mỗi bên. 5 thì rất đậm, hợp sách trẻ nhỏ.
+# 0 hoặc 1 = tắt.
+LINE_THICKEN = 3
+
 # Ngưỡng cảnh báo tự động (Phase 2 sẽ dùng để lọc trước khi mắt người nhìn)
 INK_RATIO_MIN = 0.005  # dưới 0.5% -> trang gần như trắng
 INK_RATIO_MAX = 0.40   # trên 40%  -> trang đen kịt

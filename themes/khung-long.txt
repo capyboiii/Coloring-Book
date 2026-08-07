@@ -1,0 +1,35 @@
+# Khủng long — 24 cảnh
+#
+# Sinh tự động bằng `studio.py subjects` ngày 2026-08-07
+# Model local: qwen2.5-7b-instruct-1m
+# Sửa tay thoải mái — đây là file văn bản thuần, mỗi dòng một trang.
+#
+# Công thức mỗi dòng: nhân vật chính + hành động + 2-3 thứ lấp phần còn lại.
+# Viết bằng tiếng Anh, vì Flux không hiểu tiếng Việt.
+#
+# Dùng: python studio.py generate "Khủng long" --theme khung-long --count 40
+
+a small brontosaurus munching on tall grass, sunshine filtering through trees behind it, a big scarf flapping in the breeze
+tiny pterodactyls flying overhead, a family of dinosaurs walking near a lake, reeds swaying gently by the water's edge
+two stegosaurs sharing a rock as a seat, a patchwork quilt spread out nearby, fluffy clouds floating in the sky above them
+cute ankylosaurus grazing on bushes, a butterfly landing on its back, boulders scattered around the area
+playful tyrannosaurus chasing after a small velociraptor, trees with wide branches swaying behind it, patches of soft moss underfoot
+friendly diplodocus laying eggs in a clearing, dandelion fluff floating above the nest, sunflowers growing all around
+brachiosaurus standing next to a tall waterfall, birds flying around its neck, ferns and flowers growing beside the water
+majestic allosaurus walking through a meadow of wildflowers, dragonflies perched on its tail, sky and fluffy clouds above
+a friendly triceratops munching leaves from a tree branch, rabbits hopping nearby, fallen logs strewn in the forest
+tiny baby velociraptor playing with pebbles by the edge of a river, ducks swimming downstream, tall reeds rustling gently
+two diplodocuses sharing a tree as their shade, dandelion seeds floating lazily overhead, wildflowers dotting the meadow
+cute stegosaurus resting its head on a rock, butterflies fluttering near its tail spikes, patches of soft moss covering the ground
+a playful pteranodon soaring through the sky, two round clouds beside it, a wide hill below
+friendly brachiosaurus browsing leaves high in a tree canopy, birds nesting among its branches, fluffy clouds drifting peacefully overhead
+ankylosaurus walking slowly over flat rocks, tortoises basking nearby, tall grass swaying softly with the breeze
+cheerful allosaurus digging for roots near a stream, dragonflies resting on its snout, flowers blooming in the foreground
+a triceratops grazing on soft grass, rabbits nibbling at clover beside it, wildflowers scattered across the meadow
+young stegosaurus walking toward a pool of water, butterflies fluttering around its tail spikes, tall trees lining the path
+a playful pteranodon gliding over a lake, one large rock at the shore, a tall fern beside it
+friendly brachiosaurus munching on leaves from an ancient tree, birds nesting high up among its branches, sunflowers dotting the landscape below
+majestic allosaurus walking gracefully across a grassy plain, dragonflies perched on its tail, sky and fluffy clouds stretching overhead
+cheetaceous diplodocus standing proudly next to a tall cliff, dandelion seeds floating lazily above, wildflowers thriving at its feet
+cute ankylosaurus resting in the shade of a large tree, tortoises basking nearby, ferns and flowers growing around it
+a gentle brachiosaurus reaching for leaves on a tall tree, one large rock beside it, a wide hill behind

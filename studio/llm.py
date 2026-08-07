@@ -307,8 +307,15 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
         if not line or line.startswith("#"):
             continue
 
-        # Bỏ "1. ", "- ", "* " nếu mô hình vẫn đánh số dù đã dặn
-        line = re.sub(r"^\s*(?:\d+[.)]\s*|[-*•]\s*)", "", line)
+        # Bỏ đánh số và gạch đầu dòng nếu mô hình vẫn làm dù đã dặn.
+        #
+        # Có cả ĐÁNH SỐ BẰNG CHỮ CÁI: "a) ...", "b. ...". Qwen2.5-7B hay dùng
+        # kiểu này, và tệ hơn là nhả ra không có dấu chấm — "b tiny
+        # pterodactyls flying overhead". Lúc đó chỉ còn mỗi chữ cái lạc dính
+        # vào đầu câu, mà dòng thì vẫn dài và có dấu phẩy nên mọi luật khác
+        # đều cho qua. Một file 24 cảnh của Bao hỏng 19 dòng đúng kiểu này.
+        line = re.sub(r"^\s*(?:\d+[.)]\s*|[a-z][.)]\s+|[-*•]\s*)", "", line,
+                      flags=re.IGNORECASE)
         line = line.strip().strip('"').rstrip(".")
         if not line:
             continue
@@ -342,6 +349,15 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
         if "+" in line:
             warnings.append(f"bỏ ghi chú dạng công thức: {line[:50]!r}")
             continue
+
+        # Chữ cái lạc ở đầu dòng, không có dấu chấm nên luật trên không bắt.
+        # CẮT chữ cái đó chứ không bỏ cả dòng — phần còn lại thường vẫn là
+        # một cảnh hoàn chỉnh dùng được. Mạo từ hợp lệ dài một chữ chỉ có "a".
+        stray = re.match(r"^([b-z])\s+(.*)", line, re.IGNORECASE)
+        if stray:
+            line = stray.group(2)
+            warnings.append(
+                f"cắt chữ cái lạc {stray.group(1)!r} ở đầu: {line[:44]!r}")
 
         # Ngưỡng 6 từ, KHÔNG đặt ngưỡng dấu phẩy.
         #
