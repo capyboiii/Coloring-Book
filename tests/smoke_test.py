@@ -349,6 +349,45 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
           bad(theme="mandala", density="rich"))
     check("Công thức hợp lệ thì không chặn", not bad())
 
+    kid = Recipe(slug="x", title="X", audience="kids",
+                 complexity="detailed", density="rich")
+    check("Góp ý khi sách trẻ em mà nét tinh xảo + trang rối",
+          len(kid.hints()) == 2, f"{len(kid.hints())} góp ý")
+    ok_kid = Recipe(slug="x", title="X", audience="kids",
+                    complexity="simple", density="normal")
+    check("Không góp ý khi công thức trẻ em đã đúng",
+          not ok_kid.hints())
+
+    print("\n[9] Chống ảnh bị tô màu sẵn")
+    from studio.imageops import colour_amount
+    from studio.llm import scrub_colour_and_light
+
+    check("Ảnh đen trắng -> 0% màu",
+          colour_amount(Image.new("RGB", (64, 64), (255, 255, 255))) == 0.0)
+    check("Ảnh có màu -> phát hiện được",
+          colour_amount(Image.new("RGB", (64, 64), (230, 90, 60))) == 1.0)
+
+    # Đúng câu đã làm ảnh 002 bị tô màu
+    fixed, notes = scrub_colour_and_light(
+        "an elf decorating a tree with colorful ornaments, "
+        "fairy lights twinkling all around")
+    check("Cắt được từ chỉ màu khỏi mô tả cảnh",
+          "colorful" not in fixed, fixed[:50])
+    check("Báo còn từ tả ánh sáng",
+          any("ánh sáng" in n for n in notes))
+    # Trạng từ phải cắt cùng, nếu không câu bị què
+    fixed2, _ = scrub_colour_and_light("a flock of brightly colored penguins")
+    check("Cắt cả trạng từ đi kèm, không để câu què",
+          fixed2 == "a flock of penguins", repr(fixed2))
+
+    for name in _themes():
+        subs = load_subjects(name)
+        dirty = [s for s in subs
+                 if scrub_colour_and_light(s)[0] != s
+                 or scrub_colour_and_light(s)[1]]
+        check(f"themes/{name}.txt không còn từ chỉ màu / ánh sáng",
+              not dirty, f"{len(dirty)} dòng: {dirty[:1]}")
+
     print("\n" + "─" * 50)
     if FAILURES:
         print(f"HỎNG: {len(FAILURES)} mục không đạt")

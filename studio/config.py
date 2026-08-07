@@ -133,6 +133,12 @@ INK_RATIO_MIN = 0.005  # dưới 0.5% -> trang gần như trắng
 INK_RATIO_MAX = 0.40   # trên 40%  -> trang đen kịt
 THIN_LINE_MAX = 0.55   # tỉ lệ nét biến mất sau khi bào mòn 1px
 
+# Trang ruột phải TRẮNG HOÀN TOÀN để trẻ tô. Flux đôi khi trả về ảnh đã tô
+# sẵn, nhất là khi chủ thể có từ chỉ màu ("with colorful ornaments").
+# Ngưỡng 1% để bỏ qua vài pixel nhiễu ở viền nét.
+# Bìa thì ngược lại — bìa phải có màu, nên không áp ngưỡng này cho bìa.
+COLOUR_RATIO_MAX = 0.01
+
 
 # --------------------------------------------------------------------------
 # Ảnh xem trước cho web

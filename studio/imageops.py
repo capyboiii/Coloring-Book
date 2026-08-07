@@ -71,9 +71,15 @@ class Metrics:
     border_touch: bool      # nét có chạm vùng ngoài safety margin không
     width: int
     height: int
+    colour_ratio: float = 0.0  # tỉ lệ pixel CÓ MÀU — trang ruột phải bằng 0
 
     def problems(self) -> list[str]:
         out = []
+        # Đặt đầu tiên vì đây là lỗi nặng nhất: trang ruột mà đã tô sẵn thì
+        # trẻ không còn gì để tô.
+        if self.colour_ratio > config.COLOUR_RATIO_MAX:
+            out.append(f"ẢNH ĐÃ BỊ TÔ MÀU ({self.colour_ratio:.1%} pixel có "
+                       f"màu) — trang ruột phải để trắng cho trẻ tô")
         if self.ink_ratio < config.INK_RATIO_MIN:
             out.append(f"gần như trắng (ink {self.ink_ratio:.2%})")
         if self.ink_ratio > config.INK_RATIO_MAX:
@@ -88,11 +94,39 @@ class Metrics:
         return {
             "ink_ratio": round(self.ink_ratio, 5),
             "thin_line_score": round(self.thin_line_score, 3),
+            "colour_ratio": round(self.colour_ratio, 5),
             "border_touch": self.border_touch,
             "width": self.width,
             "height": self.height,
             "problems": self.problems(),
         }
+
+
+def colour_amount(img: Image.Image, threshold: int = 30) -> float:
+    """
+    Tỉ lệ pixel thực sự có màu.
+
+    Đo bằng độ lệch giữa ba kênh RGB: ảnh đen trắng thì R=G=B nên lệch bằng 0.
+    Vùng được tô màu thì lệch lớn.
+
+    Cần thiết vì `prepare_page` chuyển sang thang xám ngay từ đầu — lúc đó
+    quả cầu màu vàng thành xám nhạt rồi thành trắng, nhìn PDF không thấy gì
+    lạ. Nhưng ảnh gốc thì đã hỏng, và mấy ảnh khác trong cùng mẻ cũng vậy.
+    Phải bắt TRƯỚC khi khử màu.
+    """
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    small = img.resize((256, 256), Image.BILINEAR)
+    r, g, b = small.split()
+    px_r, px_g, px_b = r.load(), g.load(), b.load()
+
+    coloured = 0
+    for y in range(256):
+        for x in range(256):
+            vals = (px_r[x, y], px_g[x, y], px_b[x, y])
+            if max(vals) - min(vals) > threshold:
+                coloured += 1
+    return coloured / (256 * 256)
 
 
 def _ink_ratio(img: Image.Image, threshold: int = 128) -> float:
@@ -155,7 +189,10 @@ def prepare_page(
     và số đo chất lượng của phần hình.
     """
     with Image.open(path) as src:
-        gray = src.convert("L")
+        rgb = src.convert("RGB")
+        # Đo màu TRƯỚC khi chuyển thang xám — sau đó là không còn dấu vết
+        colour_ratio = colour_amount(rgb)
+        gray = rgb.convert("L")
 
     if autocontrast:
         gray = ImageOps.autocontrast(gray, cutoff=1)
@@ -167,6 +204,7 @@ def prepare_page(
     art = apply_levels(art, black_point, white_point)
 
     metrics = measure(art)
+    metrics.colour_ratio = colour_ratio
 
     # 3. Dán vào trang trắng đủ khổ, canh giữa vùng vẽ
     page = Image.new("L", (config.PAGE_W_PX, config.PAGE_H_PX), 255)

@@ -79,6 +79,10 @@ RULES
 6. Only things that can be drawn with outlines. Avoid fog, light rays,
    reflections, shadows.
 7. Never use copyrighted characters such as Disney, Pokemon, Sanrio or Sonic.
+8. NEVER name a colour. No red, green, blue, golden, colourful, rainbow.
+   The child chooses the colours. Say "a scarf", never "a red scarf".
+9. NEVER describe light. No glowing, twinkling, shining, sparkling, gleaming.
+   An outline cannot draw light.
 
 Write the lines directly. Do not plan, do not draft, do not check your work.
 
@@ -86,9 +90,13 @@ GOOD EXAMPLES (topic: ocean)
 a smiling sea turtle swimming through a coral reef, schools of small fish above it, seaweed and starfish along the sea floor below
 a cluster of round jellyfish drifting upward, bubbles rising all around them, coral reef and swaying seaweed below
 
-BAD EXAMPLES (too short, will produce one object on an empty page)
+BAD EXAMPLE (too short, will produce one object on an empty page)
 a sea turtle
-jellyfish
+
+BAD EXAMPLE (names colours and light, the picture comes out already coloured)
+an elf decorating a tree with colorful ornaments, fairy lights twinkling all around
+FIXED
+an elf decorating a tree with round ornaments, paper garlands looping around the branches
 
 OUTPUT FORMAT
 Start every line with a lowercase letter.
@@ -150,6 +158,47 @@ REASONING_MARKERS = (
 def looks_like_reasoning(text: str) -> bool:
     head = text[:400].lower()
     return any(m in head for m in REASONING_MARKERS)
+
+
+# Từ chỉ MÀU và ÁNH SÁNG trong mô tả cảnh là nguyên nhân trực tiếp khiến
+# Flux trả về ảnh ĐÃ TÔ MÀU. Prompt ảnh có "no color fill" nhưng chủ thể lại
+# nói "with colorful ornaments" — hai chỉ dẫn đánh nhau, và chủ thể thắng vì
+# nó cụ thể hơn.
+# Trạng từ đi kèm phải cắt cùng, nếu không "brightly colored penguins" thành
+# "brightly penguins" — câu què.
+COLOUR_WORDS = re.compile(
+    r"\b(?:(?:brightly|richly|vividly|deeply|softly)\s+)?"
+    r"(red|green|blue|yellow|orange|purple|pink|golden|gold|silver|"
+    r"brown|grey|gray|colou?rful|colou?red|rainbow|scarlet|crimson|"
+    r"turquoise|violet)\b", re.IGNORECASE)
+
+LIGHT_WORDS = re.compile(
+    r"\b(glow\w*|twinkl\w*|shin\w*|shimmer\w*|sparkl\w*|gleam\w*|"
+    r"light rays?|sunlight|moonlight|reflection\w*)\b", re.IGNORECASE)
+
+
+def scrub_colour_and_light(line: str) -> tuple[str, list[str]]:
+    """
+    Bỏ từ chỉ màu, và báo nếu có từ chỉ ánh sáng.
+
+    Màu thì cắt được sạch: "a red scarf" -> "a scarf", nghĩa không đổi.
+    Ánh sáng thì không, vì nó thường là cả mệnh đề ("lights twinkling all
+    around") — cắt một từ sẽ làm câu què. Chỉ cảnh báo để người sửa tay.
+    """
+    notes = []
+
+    found_colour = set(m.group(0).lower() for m in COLOUR_WORDS.finditer(line))
+    if found_colour:
+        line = COLOUR_WORDS.sub("", line)
+        line = re.sub(r"\s{2,}", " ", line).strip()
+        notes.append(f"bỏ từ chỉ màu ({', '.join(sorted(found_colour))})")
+
+    found_light = set(m.group(0).lower() for m in LIGHT_WORDS.finditer(line))
+    if found_light:
+        notes.append(f"còn từ tả ánh sáng ({', '.join(sorted(found_light))}) "
+                     f"— nét viền không vẽ được ánh sáng, nên sửa tay")
+
+    return line, notes
 
 
 def looks_like_scene(line: str) -> bool:
@@ -242,6 +291,10 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
         if any(ord(c) > 127 for c in line):
             warnings.append(f"bỏ dòng có ký tự ngoài ASCII: {line[:50]!r}")
             continue
+
+        line, notes = scrub_colour_and_light(line)
+        for n in notes:
+            warnings.append(f"{n}: {line[:45]!r}")
 
         key = line.lower()
         if key in seen:

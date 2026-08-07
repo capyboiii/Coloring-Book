@@ -1,0 +1,30 @@
+# Công thức sách — giang-sinh
+#
+# Sách cho trẻ 4-8 tuổi: nét dày tròn, mảng lớn, bố cục thoáng.
+
+title: "Giáng sinh của bé"
+subtitle: "40 trang tô màu cho bé 4-8 tuổi"
+
+# ---- Nội dung ----
+theme: giang-sinh
+pages: 40
+generate: 60
+complexity: simple    # nét rất dày, bo tròn, mảng lớn — cho trẻ nhỏ
+density: normal       # một chủ thể rõ ràng, vài chi tiết nền. KHÔNG rich
+seed:
+
+# ---- Bìa ----
+cover:
+  scene:
+  bg: "#C0392B"
+
+# ---- Thông tin bán hàng ----
+collection: for-kids
+audience: kids
+price_usd: 12.99
+tags: [christmas, kids, holiday]
+description: |
+  Bốn mươi trang tô màu Giáng sinh cho bé 4-8 tuổi. Nét dày, hình to,
+  mảng rộng — bé cầm bút sáp cũng tô gọn trong nét.
+
+  In một mặt trên giấy dày, bút màu không lem sang trang sau.

@@ -39,18 +39,23 @@ from pathlib import Path
 # theo cách không hàm ý bỏ trống.
 BASE_STYLE = (
     "coloring book page, black and white line art, "
-    "clean bold uniform outlines, thick even line weight, "
+    "smooth rounded outlines, fully closed shapes, no broken or open lines, "
+    "thick even line weight, "
+    "completely uncolored, blank white shapes for a child to fill in, "
     "no shading, no grayscale, no color fill, no texture, "
     "white paper, unshaded"
 )
 
 COMPLEXITY = {
     "simple": (
-        "simple cute cartoon style, very thick bold outlines, "
-        "large open areas to color, minimal detail, for young children"
+        "simple cute cartoon style, very thick rounded outlines, "
+        "big chunky shapes with soft curved edges, "
+        "large open areas to color, very few details, "
+        "no tiny elements, no fine patterns, "
+        "for young children aged 4 to 8"
     ),
     "medium": (
-        "simple clean cartoon style, thick even outlines, moderate detail"
+        "simple clean cartoon style, thick rounded outlines, moderate detail"
     ),
     "detailed": (
         "decorative illustration style, thick clear outlines, "
@@ -89,7 +94,9 @@ DENSITY = {
         "single subject, plain white background, no background elements"
     ),
     "normal": (
-        "with several background elements around the subject"
+        "one clear main subject filling most of the page, "
+        "a few large background elements around it, "
+        "uncluttered composition with room to breathe"
     ),
     "rich": (
         "a rich detailed scene filling the entire page, "

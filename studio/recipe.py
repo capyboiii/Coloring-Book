@@ -79,6 +79,23 @@ class Recipe:
     description: str = ""
     path: Path | None = None
 
+    def hints(self) -> list[str]:
+        """Góp ý, không chặn — chỉ là kinh nghiệm hay sai."""
+        out = []
+        if self.audience == "kids" and self.complexity != "simple":
+            out.append(
+                f"audience=kids nhưng complexity={self.complexity}. "
+                f"Trẻ 4-8 tuổi cần nét dày, mảng lớn — dùng complexity=simple")
+        if self.audience == "kids" and self.density == "rich":
+            out.append(
+                "audience=kids nhưng density=rich. Trang quá rối, trẻ nhỏ khó "
+                "tô — dùng density=normal")
+        if self.audience == "adults" and self.complexity == "simple":
+            out.append(
+                "audience=adults với complexity=simple sẽ ra sách quá đơn "
+                "giản so với kỳ vọng — cân nhắc detailed")
+        return out
+
     def sale_info(self) -> dict[str, Any]:
         """Phần web cần. Tách riêng để `book.json` không lẫn tham số kỹ thuật."""
         return {

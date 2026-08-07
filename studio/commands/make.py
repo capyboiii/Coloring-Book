@@ -193,7 +193,10 @@ def run(args) -> int:
     info(f"Sách      : {r.title}")
     info(f"Chủ đề    : {r.theme} · {r.complexity} · density {r.density}")
     info(f"Trang      : {r.pages} hình (sinh {r.generate} để còn chỗ loại)")
+    info(f"Đối tượng  : {r.audience}")
     info(f"Trạng thái : {state}")
+    for h in r.hints():
+        warn(h)
     info("")
 
     if state == "xong" and not args.force:
