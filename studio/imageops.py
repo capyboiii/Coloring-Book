@@ -200,8 +200,19 @@ def prepare_page(
     # 1. Phóng to vào vùng vẽ an toàn
     art = fit_within(gray, config.ART_W_PX, config.ART_H_PX)
 
-    # 2. Khử xám sau khi phóng
+    # 2. Làm mịn viền. Phải làm SAU khi phóng: cái gợn chỉ lộ ra ở khổ lớn,
+    #    làm mịn trước khi phóng thì phóng xong nó lại lồi lõm như cũ.
+    if config.SMOOTH_RADIUS > 0:
+        art = art.filter(ImageFilter.GaussianBlur(config.SMOOTH_RADIUS))
+
+    # 3. Khử xám sau cùng, ép lại thành nét đen dứt khoát chứ không mờ
     art = apply_levels(art, black_point, white_point)
+
+    # 4. Đóng khe hở: giãn nét rồi co lại. Nối được chỗ đứt nhỏ mà không
+    #    làm nét dày thêm.
+    if config.CLOSE_GAPS > 1:
+        k = config.CLOSE_GAPS
+        art = art.filter(ImageFilter.MinFilter(k)).filter(ImageFilter.MaxFilter(k))
 
     metrics = measure(art)
     metrics.colour_ratio = colour_ratio

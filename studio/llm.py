@@ -85,6 +85,7 @@ RULES
    An outline cannot draw light.
 
 Write the lines directly. Do not plan, do not draft, do not check your work.
+{extra}
 
 GOOD EXAMPLES (topic: ocean)
 a smiling sea turtle swimming through a coral reef, schools of small fish above it, seaweed and starfish along the sea floor below
@@ -118,9 +119,28 @@ Do not repeat any of these scenes, which already exist:
 """
 
 AUDIENCE = {
-    "kids": "children aged 4 to 8 — cheerful, cute, easy to recognise",
+    "kids": "children aged 3 to 7 — cheerful, cute, easy to recognise",
     "adults": "adults — intricate, decorative, relaxing",
     "all": "all ages",
+}
+
+# Luật riêng cho sách trẻ em. Rút từ nhận xét thật khi Bao xem mẻ ảnh đầu:
+# quá nhiều nhân vật chồng chéo, dơi và sói làm trẻ sợ, khung viền hoa văn
+# rối mắt, đuôi và chân bị cắt cụt.
+AUDIENCE_EXTRA = {
+    "kids": """
+EXTRA RULES FOR YOUNG CHILDREN
+- Exactly ONE main character. At most one small companion. Never a crowd.
+- Characters must never overlap or hide each other.
+- Only two or three background things, each one large and simple.
+- Show the whole animal. Never cut off a tail, a leg or a wing.
+- No frightening animals. No bats, wolves, spiders, snakes, owls at night.
+- No ornate frames, no decorative borders, no swirling patterns.
+- Every shape must be big enough for a small hand to colour inside.
+- Keep the scene sensible. Do not put objects where they do not belong.
+""",
+    "adults": "",
+    "all": "",
 }
 
 
@@ -199,6 +219,52 @@ def scrub_colour_and_light(line: str) -> tuple[str, list[str]]:
                      f"— nét viền không vẽ được ánh sáng, nên sửa tay")
 
     return line, notes
+
+
+# Sách trẻ em có thêm ràng buộc mà sách người lớn không có
+# Dùng biên từ chặt. Bản đầu viết `monster\w*` nên khớp luôn "monstera"
+# (cây trầu bà) trong themes/floral.txt — báo động giả.
+SCARY = re.compile(
+    r"\b(bats?|wolf|wolves|spiders?|snakes?|skeletons?|ghosts?|"
+    r"witch(?:es)?|monsters?)\b", re.IGNORECASE)
+
+# Chỉ bắt hoa văn trang trí, không bắt chuyển động tự nhiên. Bản đầu viết
+# `swirl\w*` nên "swirling water" trong themes/ocean.txt cũng dính.
+ORNATE = re.compile(
+    r"\b(ornate|intricate|filigree|elaborate|framed by|"
+    r"(?:decorative|patterned|swirling)\s+(?:border|frame|pattern)s?)\b",
+    re.IGNORECASE)
+
+
+def lint_for_kids(line: str) -> list[str]:
+    """
+    Soi một cảnh theo tiêu chuẩn sách trẻ em. Cảnh báo, không loại.
+
+    Ba thứ hay hỏng, rút từ nhận xét thật khi xem mẻ ảnh đầu:
+    quá nhiều thứ trên một trang, con vật đáng sợ, khung viền hoa văn.
+    """
+    notes = []
+
+    # Đếm mạo từ để ước lượng số đối tượng riêng lẻ. Đếm dấu phẩy không ăn
+    # thua: "a deer, a fawn, a sheep, a fox and a rabbit" chỉ có 3 dấu phẩy
+    # nhưng tới 5 con vật — đúng kiểu trang mà Bao chê là chồng chéo.
+    things = len(re.findall(r"\b(?:a|an)\s+\w", line, re.IGNORECASE))
+    if things > 4:
+        notes.append(f"khoảng {things} đối tượng riêng lẻ — trang sẽ chồng "
+                     f"chéo, trẻ không biết tô cái nào trước")
+
+    if line.count(",") > 3:
+        notes.append(f"{line.count(',') + 1} mệnh đề — nhiều thứ quá cho trẻ nhỏ")
+
+    scary = {m.group(0).lower() for m in SCARY.finditer(line)}
+    if scary:
+        notes.append(f"con vật có thể làm trẻ sợ ({', '.join(sorted(scary))})")
+
+    ornate = {m.group(0).lower() for m in ORNATE.finditer(line)}
+    if ornate:
+        notes.append(f"hoa văn/khung viền rối mắt ({', '.join(sorted(ornate))})")
+
+    return notes
 
 
 def looks_like_scene(line: str) -> bool:
@@ -503,7 +569,8 @@ def generate_subjects(topic: str, count: int = 24, audience: str = "all",
 
         ask = min(batch, missing)
         base = INSTRUCTIONS.format(
-            topic=topic, count=ask, audience=AUDIENCE[audience])
+            topic=topic, count=ask, audience=AUDIENCE[audience],
+            extra=AUDIENCE_EXTRA[audience])
 
         if collected:
             # Chỉ đưa lại 12 cảnh gần nhất — đủ để tránh lặp mà không phình

@@ -16,7 +16,8 @@ from __future__ import annotations
 
 from datetime import date
 
-from ..llm import LLMError, base_url, generate_subjects, list_models
+from ..llm import (LLMError, base_url, generate_subjects, lint_for_kids,
+                   list_models)
 from ..prompts import THEMES_DIR, list_themes
 from ..util import info, slugify, warn
 
@@ -146,6 +147,19 @@ def run(args) -> int:
         info("")
         for w in warnings:
             warn(w)
+
+    # Soi thêm theo tiêu chuẩn sách trẻ em. Cảnh báo chứ không loại —
+    # ông đọc rồi tự sửa, file .txt sửa tay dễ hơn gen lại nhiều.
+    if args.audience == "kids":
+        flagged = [(i, ln, lint_for_kids(ln))
+                   for i, ln in enumerate(lines, start=1)]
+        flagged = [f for f in flagged if f[2]]
+        if flagged:
+            info("")
+            info(f"── {len(flagged)}/{len(lines)} cảnh nên sửa cho hợp trẻ nhỏ ──")
+            for i, ln, notes in flagged:
+                warn(f"{i:>2}. {ln[:58]}...")
+                warn(f"    {'; '.join(notes)}")
 
     if len(lines) < args.count:
         info("")

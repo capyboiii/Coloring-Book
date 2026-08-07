@@ -388,6 +388,52 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
         check(f"themes/{name}.txt không còn từ chỉ màu / ánh sáng",
               not dirty, f"{len(dirty)} dòng: {dirty[:1]}")
 
+    print("\n[10] Tiêu chuẩn sách trẻ em")
+    from studio.llm import lint_for_kids
+
+    cases = [
+        ("a wolf howling on a rock at night", True, "con vật đáng sợ"),
+        ("bats hanging from a branch", True, "con vật đáng sợ"),
+        ("a fox framed by an ornate decorative border", True, "khung viền"),
+        ("a cat with a swirling pattern border", True, "hoa văn"),
+        ("a deer, a fawn, a sheep, a fox and a rabbit in a meadow", True,
+         "quá nhiều nhân vật"),
+        # Hai câu này TỪNG bị báo động giả
+        ("overlapping monstera and palm leaves filling the page", False,
+         "monstera không phải monster"),
+        ("a group of dolphins leaping over waves, swirling water below", False,
+         "swirling water là chuyển động thật"),
+        ("a smiling fox sitting in tall grass, two mushrooms beside it", False,
+         "cảnh hợp lệ"),
+    ]
+    for text, should_flag, why in cases:
+        flagged = bool(lint_for_kids(text))
+        check(f"{'Bắt' if should_flag else 'Tha'}: {why}",
+              flagged == should_flag, text[:44])
+
+    for name in _themes():
+        bad = [s for s in load_subjects(name) if lint_for_kids(s)]
+        check(f"themes/{name}.txt đạt tiêu chuẩn trẻ em",
+              not bad, f"{len(bad)} dòng: {bad[:1]}")
+
+    print("\n[11] Làm mịn nét")
+    check("Có bật làm mịn trước khi khử xám",
+          config.SMOOTH_RADIUS > 0, f"bán kính {config.SMOOTH_RADIUS}")
+    check("Có bật nối khe hở trên nét",
+          config.CLOSE_GAPS > 1, f"{config.CLOSE_GAPS}px")
+    check("Sinh ảnh ở độ phân giải đủ cao (nét dày, ít phải phóng)",
+          config.GEN_W >= 1200,
+          f"{config.GEN_W}x{config.GEN_H}, phóng "
+          f"{config.ART_W_PX / config.GEN_W:.2f} lần")
+    # COMPOSITIONS phải nói về BỐ TRÍ, không nói mật độ — nếu không nó đánh
+    # nhau với DENSITY. Đây từng là lỗi thật.
+    from studio.prompts import COMPOSITIONS
+    clash = [c for c in COMPOSITIONS
+             if any(w in c.lower()
+                    for w in ("filling", "densely", "packed", "edge to edge"))]
+    check("COMPOSITIONS không nói về mật độ (tránh đánh nhau với DENSITY)",
+          not clash, f"{len(clash)} mục: {clash[:1]}")
+
     print("\n" + "─" * 50)
     if FAILURES:
         print(f"HỎNG: {len(FAILURES)} mục không đạt")

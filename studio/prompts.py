@@ -39,8 +39,9 @@ from pathlib import Path
 # theo cách không hàm ý bỏ trống.
 BASE_STYLE = (
     "coloring book page, black and white line art, "
+    "thick clean outlines, bold continuous lines, no thin details, "
     "smooth rounded outlines, fully closed shapes, no broken or open lines, "
-    "thick even line weight, "
+    "uniform line weight throughout, "
     "completely uncolored, blank white shapes for a child to fill in, "
     "no shading, no grayscale, no color fill, no texture, "
     "white paper, unshaded"
@@ -48,14 +49,17 @@ BASE_STYLE = (
 
 COMPLEXITY = {
     "simple": (
-        "simple cute cartoon style, very thick rounded outlines, "
+        "simple cute cartoon style, very thick bold rounded outlines, "
         "big chunky shapes with soft curved edges, "
         "large open areas to color, very few details, "
-        "no tiny elements, no fine patterns, "
-        "for young children aged 4 to 8"
+        "no tiny elements, no fine patterns, no fur texture, no small leaves, "
+        "whole subject fully visible, nothing cut off at the edges, "
+        "simple natural pose, "
+        "for young children aged 3 to 7"
     ),
     "medium": (
-        "simple clean cartoon style, thick rounded outlines, moderate detail"
+        "simple clean cartoon style, thick rounded outlines, moderate detail, "
+        "whole subject fully visible, nothing cut off at the edges"
     ),
     "detailed": (
         "decorative illustration style, thick clear outlines, "
@@ -69,22 +73,28 @@ COMPLEXITY = {
 NEGATIVE = (
     "shading, gradient, grayscale, gray fill, solid black fill, texture, "
     "photorealistic, 3d render, watermark, signature, text, letters, "
-    "thin faint lines, sketchy lines, blurry, cropped, "
-    "empty space, blank margins, single isolated object"
+    "thin faint lines, sketchy lines, broken lines, blurry, "
+    "cluttered, busy background, tiny details, fine patterns, "
+    "overlapping characters, cropped limbs, cut off at the edge, "
+    "ornate decorative frame, empty space, blank margins"
 )
 
-# Mọi mục đều nói "full-page" hoặc "filling". Bản cũ có
-# "generous negative space" và "balanced open areas" — chính hai chuỗi đó
-# đẻ ra mấy ảnh trống hơn nửa trang phía trên.
+# CHỈ nói về GÓC NHÌN và BỐ TRÍ, tuyệt đối không nói tới mật độ.
+#
+# Bản trước mọi mục đều có "filling the frame edge to edge" hoặc "densely
+# packed" — hợp với density=rich nhưng đánh nhau trực tiếp với density=normal
+# ("clear white space, uncluttered"). Prompt tự mâu thuẫn thì Flux chọn bừa.
+#
+# Giờ hai trục tách bạch: COMPOSITIONS lo bố trí, DENSITY lo mật độ.
 COMPOSITIONS = [
-    "full-page scene filling the frame edge to edge",
-    "busy full-page composition, elements from top to bottom",
-    "layered scene with foreground, middle ground and background",
-    "decorative circular composition filling the page",
-    "symmetrical full-page composition filling the frame",
-    "wide scene spanning the full width of the page",
-    "densely packed composition filling every corner",
-    "scene framed by a decorative border filling the page",
+    "centered composition",
+    "wide composition spanning the width of the page",
+    "vertical composition",
+    "close-up view of the subject",
+    "scene with a clear foreground and background",
+    "symmetrical composition",
+    "circular composition",
+    "subject seen slightly from the side",
 ]
 
 # Mật độ chi tiết — đây là cái cần chỉnh khi ảnh ra chỉ có một đối tượng
@@ -95,8 +105,10 @@ DENSITY = {
     ),
     "normal": (
         "one clear main subject filling most of the page, "
-        "a few large background elements around it, "
-        "uncluttered composition with room to breathe"
+        "only two or three large simple background elements, "
+        "each object well separated with clear white space between them, "
+        "main subject clearly standing apart from the background, "
+        "uncluttered composition, nothing overlapping the main subject"
     ),
     "rich": (
         "a rich detailed scene filling the entire page, "

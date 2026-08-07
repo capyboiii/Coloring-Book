@@ -70,11 +70,26 @@ ART_H_PX = inch_to_px(ART_H_IN)     # 3000
 # --------------------------------------------------------------------------
 
 # Tỉ lệ đúng bằng vùng vẽ an toàn (7.25:10 = 0.725) và chia hết cho 16
-# để Flux không phải nội suy. Sinh ở đây rồi upscale lên 2175x3000 sau.
-GEN_W = 928
-GEN_H = 1280
+# để Flux không phải nội suy.
+#
+# 1392x1920 thay cho 928x1280 cũ. Lý do: nét ở khổ in bị gợn sóng và dày mỏng
+# không đều. Đo ra thì nét KHÔNG đứt — cả trang chỉ 4 đầu mút — mà là viền
+# lồi lõm. Nguyên nhân: nét sinh ra chỉ dày ~3 px, phóng 2.34 lần lên 2175 px
+# thì mọi gợn ở mức pixel bị khuếch đại thành cục.
+#
+# Ở 1392 px nét dày ~4-5 px và chỉ còn phóng 1.56 lần, gợn đỡ lộ hẳn.
+# Đổi lại số pixel gấp 2.25 lần nên mỗi ảnh lâu hơn khoảng gấp đôi.
+#
+# GPU yếu thì hạ lại trong .env:
+#     STUDIO_GEN_WIDTH=928
+#     STUDIO_GEN_HEIGHT=1280
+GEN_W = int(os.environ.get("STUDIO_GEN_WIDTH", "1392"))
+GEN_H = int(os.environ.get("STUDIO_GEN_HEIGHT", "1920"))
 
-assert abs(GEN_W / GEN_H - ART_W_IN / ART_H_IN) < 0.001, "Tỉ lệ sinh ảnh lệch vùng vẽ"
+assert abs(GEN_W / GEN_H - ART_W_IN / ART_H_IN) < 0.005, (
+    f"Tỉ lệ sinh ảnh {GEN_W}x{GEN_H} lệch vùng vẽ "
+    f"{ART_W_IN}x{ART_H_IN} in. Phải giữ đúng 0.725.")
+assert GEN_W % 16 == 0 and GEN_H % 16 == 0, "Kích thước phải chia hết cho 16"
 
 
 # --------------------------------------------------------------------------
@@ -127,6 +142,19 @@ def cover_size_in(page_count: int) -> tuple[float, float]:
 # nhưng vẫn ép nền về trắng tinh và nét về đen tuyền.
 LEVELS_BLACK = 80    # <= giá trị này -> đen tuyền
 LEVELS_WHITE = 200   # >= giá trị này -> trắng tinh
+
+# Làm mịn TRƯỚC khi khử xám, để viền nét bớt lồi lõm.
+#
+# Thứ tự: phóng to -> làm mịn -> khử xám. Làm mịn trên ảnh đã phóng thì mới
+# xoá được cái gợn bị khuếch đại; làm trước khi phóng thì gợn vẫn còn nguyên.
+# Khử xám sau cùng để ép lại thành nét đen dứt khoát, không bị mờ.
+#
+# 0 = tắt. Trên 3.5 thì chi tiết nhỏ bắt đầu dính vào nhau.
+SMOOTH_RADIUS = 2.5
+
+# Nối khe hở nhỏ trên nét bằng phép đóng hình thái (giãn rồi co).
+# 0 = tắt. 3 hoặc 5 là hợp lý; lớn hơn thì mảng nhỏ bị lấp.
+CLOSE_GAPS = 3
 
 # Ngưỡng cảnh báo tự động (Phase 2 sẽ dùng để lọc trước khi mắt người nhìn)
 INK_RATIO_MIN = 0.005  # dưới 0.5% -> trang gần như trắng
