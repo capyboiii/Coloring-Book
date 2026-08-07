@@ -238,9 +238,19 @@ class Settings:
     cover_workflow: Path
     cover_workflow_map: Path
     library: Path
-    steps: int
-    guidance: float
+    steps: int | None
+    guidance: float | None
     timeout: int
+
+
+def _opt_int(key: str) -> int | None:
+    v = os.environ.get(key, "").strip()
+    return int(v) if v else None
+
+
+def _opt_float(key: str) -> float | None:
+    v = os.environ.get(key, "").strip()
+    return float(v) if v else None
 
 
 def load_settings() -> Settings:
@@ -257,10 +267,13 @@ def load_settings() -> Settings:
         cover_workflow_map=_path(
             "STUDIO_COVER_WORKFLOW_MAP", "workflows/flux_cover.map.json"),
         library=_path("STUDIO_LIBRARY", "library"),
-        # 4 bước là đúng cho FLUX.1-schnell (mô hình chưng cất).
-        # Đổi sang FLUX.1-dev thì phải nâng lên 20-25.
-        steps=int(_env("STUDIO_STEPS", "4")),
-        guidance=float(_env("STUDIO_GUIDANCE", "3.5")),
+        # Để TRỐNG trong .env thì dùng nguyên giá trị của workflow.
+        #
+        # Cần vậy vì mỗi model một kiểu: schnell chạy 4 bước CFG 1, còn SDXL
+        # cần 28 bước CFG 7. Nhét một con số cố định vào .env là đổi workflow
+        # xong lại quên sửa, rồi chạy SDXL với 4 bước ra ảnh nhiễu.
+        steps=_opt_int("STUDIO_STEPS"),
+        guidance=_opt_float("STUDIO_GUIDANCE"),
         timeout=int(_env("STUDIO_TIMEOUT", "600")),
     )
 

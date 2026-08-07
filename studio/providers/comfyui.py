@@ -136,7 +136,9 @@ class ComfyUIProvider(ImageProvider):
             "guidance": req.guidance,
         }
         for key, ref in self.node_map.items():
-            if key not in values:
+            # None nghĩa là "giữ nguyên giá trị trong workflow". Cần vậy vì
+            # mỗi model một kiểu: schnell 4 bước CFG 1, SDXL 28 bước CFG 7.
+            if key not in values or values[key] is None:
                 continue
             wf[str(ref["node"])]["inputs"][ref["field"]] = values[key]
         return wf

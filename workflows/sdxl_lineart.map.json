@@ -1,0 +1,24 @@
+{
+  "_ghi_chu": [
+    "Workflow SDXL. Khác Flux ở một điểm quyết định:",
+    "",
+    "  SDXL chạy CFG THẬT (7.0), nên NEGATIVE PROMPT CÓ TÁC DỤNG.",
+    "",
+    "Flux schnell là mô hình guidance-distilled chạy ở CFG = 1, phần negative",
+    "bị bỏ qua hoàn toàn. Toàn bộ 'no thin lines, no shading, no gray' mà ta",
+    "viết bấy lâu đang bị Flux vứt đi. Với SDXL thì chúng mới thật sự chặn.",
+    "",
+    "Vì vậy map này có thêm khoá 'negative' — Flux không có.",
+    "",
+    "SDXL cần 25-30 bước và CFG 6-8, khác hẳn schnell chạy 4 bước CFG 1.",
+    "Hai con số đó đã đặt sẵn trong file .api.json. Để trống STUDIO_STEPS và",
+    "STUDIO_GUIDANCE trong .env thì studio dùng nguyên giá trị của workflow."
+  ],
+  "prompt":   { "node": "6", "field": "text" },
+  "negative": { "node": "7", "field": "text" },
+  "seed":     { "node": "3", "field": "seed" },
+  "width":    { "node": "5", "field": "width" },
+  "height":   { "node": "5", "field": "height" },
+  "steps":    { "node": "3", "field": "steps" },
+  "guidance": { "node": "3", "field": "cfg" }
+}

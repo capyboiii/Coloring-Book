@@ -598,6 +598,45 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
         check(f"themes/{name}.txt không có cảnh chồng chéo",
               not dirty, f"{len(dirty)} dòng: {dirty[:1]}")
 
+    print("\n[17] Workflow SDXL (negative prompt có tác dụng)")
+    import studio.providers.comfyui as cu
+    from studio.providers.base import GenRequest
+
+    sdxl = cu.ComfyUIProvider(
+        "http://x", ROOT / "workflows/sdxl_lineart.api.json",
+        ROOT / "workflows/sdxl_lineart.map.json")
+    flux = cu.ComfyUIProvider(
+        "http://x", ROOT / "workflows/flux_lineart.api.json",
+        ROOT / "workflows/flux_lineart.map.json")
+
+    check("SDXL điều khiển được negative prompt",
+          "negative" in sdxl.supported_params)
+    # Flux chay CFG=1 nen negative bi bo qua - map co tinh khong khai bao
+    check("Flux KHÔNG có negative (CFG=1 nên vô tác dụng)",
+          "negative" not in flux.supported_params)
+    check("SDXL điều khiển được CFG",
+          "guidance" in sdxl.supported_params)
+
+    # steps=None nghia la "giu nguyen gia tri trong workflow". Can vay vi
+    # schnell chay 4 buoc con SDXL can 28 - nhet so co dinh vao .env la doi
+    # workflow xong lai quen sua.
+    req = GenRequest(prompt="p", negative="n", seed=1, width=832, height=1152,
+                     steps=None, guidance=None)
+    patched = sdxl._patch(req)
+    check("steps=None thì giữ nguyên 28 bước của workflow SDXL",
+          patched["3"]["inputs"]["steps"] == 28,
+          str(patched["3"]["inputs"]["steps"]))
+    check("guidance=None thì giữ nguyên CFG 7 của workflow",
+          patched["3"]["inputs"]["cfg"] == 7.0)
+    check("Negative prompt được ghi vào workflow",
+          patched["7"]["inputs"]["text"] == "n")
+
+    req2 = GenRequest(prompt="p", negative="n", seed=1, width=832, height=1152,
+                      steps=12, guidance=5.0)
+    p2 = sdxl._patch(req2)
+    check("Truyền steps thì ghi đè được",
+          p2["3"]["inputs"]["steps"] == 12)
+
     print("\n[15] Lệnh measure")
     from studio.commands.measure import measure_image
 
