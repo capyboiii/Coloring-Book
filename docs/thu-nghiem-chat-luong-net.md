@@ -199,3 +199,41 @@ tôi tự đặt.
 
 Kiểm thử giờ chặn cả hai: prompt phải dưới 100 từ, và độ phân giải phải nằm
 trong 0.7–1.6 MP.
+
+---
+
+## Cập nhật — nhấn mạnh nét, và một hiểu lầm về negative prompt
+
+Bao đề nghị ba nhóm từ khoá. Đã đưa hết vào, nhưng **chỗ đưa vào khác với chỗ
+Bao nghĩ.**
+
+### Flux bỏ qua negative prompt
+
+Schnell là mô hình **guidance-distilled**, workflow chạy ở **CFG = 1.0**. Ở
+CFG = 1 thì phần negative không tham gia vào phép tính — nó bị bỏ qua hoàn
+toàn. Kể cả workflow Bao chạy tay trong giao diện cũng vậy.
+
+Đó chính là lý do prompt tay của Bao viết `No color / No shading / No
+gradients` **trong phần positive**. Cách đó đúng, và là cách duy nhất chạy
+được với Flux.
+
+Nên cả ba nhóm từ khoá đều gộp vào `BASE_STYLE`:
+
+```
+professional children's coloring book page, clean vector style,
+extremely thick uniform black outlines, heavy solid black lines,
+bold black outlines only,
+no gray, no shading, no gradients, no thin or broken lines
+```
+
+Chuỗi `NEGATIVE` vẫn giữ, nhưng chỉ để ghi vào metadata từng ảnh và để dùng
+ngay nếu sau này đổi sang SDXL hay model nào có CFG > 1. Đã sắp lại cho nhóm
+lỗi nét đứng đầu.
+
+### Vẫn giữ prompt ngắn
+
+Prompt lên 86 từ, vẫn dưới ngưỡng 100 mà kiểm thử chặn. Chủ thể vẫn đứng đầu.
+
+Đây là chỗ phải cân: thêm từ nhấn mạnh nét thì mạnh hơn, nhưng thêm quá thì
+loãng và chủ thể chìm — đúng cái đã làm hỏng bản 163 từ. Nếu sau này muốn thêm
+nữa thì phải bớt chỗ khác, đừng nối thêm.

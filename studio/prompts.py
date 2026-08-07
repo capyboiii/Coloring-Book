@@ -46,9 +46,20 @@ from pathlib import Path
 #   STYLE       phong cách vẽ
 #   COMPLEXITY  mức độ chi tiết
 #   DENSITY     bố trí trên trang
+# FLUX KHÔNG DÙNG NEGATIVE PROMPT.
+#
+# Schnell là mô hình guidance-distilled, workflow chạy ở CFG = 1.0, nên khối
+# negative bị bỏ qua hoàn toàn — kể cả workflow Bao chạy tay trong giao diện.
+#
+# Vì vậy mọi thứ muốn CẤM đều phải viết ở đây, trong phần positive, dưới dạng
+# "no X". Đúng như prompt tay của Bao: "No color / No shading / No gradients".
+# Chuỗi NEGATIVE bên dưới chỉ để ghi vào metadata và để dùng nếu sau này đổi
+# sang SDXL — nó không có tác dụng gì với Flux.
 BASE_STYLE = (
-    "black and white coloring book page, clean bold black outlines, "
-    "no color, no shading, no gradients, no texture"
+    "professional children's coloring book page, clean vector style, "
+    "extremely thick uniform black outlines, heavy solid black lines, "
+    "bold black outlines only, "
+    "no gray, no shading, no gradients, no thin or broken lines"
 )
 
 # --------------------------------------------------------------------------
@@ -79,16 +90,20 @@ COMPLEXITY = {
     "intricate": "intricate decorative detail, adult coloring book",
 }
 
-# Flux là mô hình guidance-distilled nên KHÔNG dùng negative prompt.
-# Giữ lại để ghi vào metadata và để dùng nếu sau này đổi sang SDXL.
+# ⚠ FLUX BỎ QUA CHUỖI NÀY. Xem chú thích ở BASE_STYLE.
+#
+# Giữ lại vì hai lý do: ghi vào metadata từng ảnh để sau truy được, và dùng
+# ngay nếu đổi sang SDXL hay model nào có CFG > 1.
+#
+# Nhóm nét đứng đầu vì đó là thứ hỏng nhiều nhất.
 NEGATIVE = (
-    "shading, gradient, gray, shadows, solid black fill, "
-    "fur texture, hatching, cross-hatching, stippling, scribbles, "
-    # Nhóm này là guideline 12: mấy chữ "chất lượng cao" quen tay lại chính
-    # là thứ kéo Flux sang phía kết cấu, lông, ánh sáng và đổ bóng.
+    "thin lines, uneven lines, broken lines, sketchy, soft edges, "
+    "light lines, hatching, gray, shading, gradient, shadows, "
+    "fur texture, cross-hatching, stippling, scribbles, "
+    # Mấy chữ "chất lượng cao" quen tay lại chính là thứ kéo Flux sang phía
+    # kết cấu, lông, ánh sáng và đổ bóng.
     "realistic, photorealistic, high quality, 8k, detailed illustration, "
     "3d render, watermark, signature, text, letters, "
-    "thin faint lines, sketchy lines, broken lines, uneven line weight, "
     "cluttered, busy background, tiny details, dense forest, hundreds of leaves, "
     "scattered pebbles, grass blades, "
     "overlapping subjects, touching limbs, cropped limbs, cut off at the edge, "

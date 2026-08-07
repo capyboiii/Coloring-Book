@@ -464,6 +464,17 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
           words < 100, f"{words} từ")
     check("Chủ thể đứng ĐẦU prompt, không bị chìm ở giữa",
           pr.startswith("a smiling fox"), pr[:34])
+
+    # Flux chay CFG=1 nen BO QUA negative prompt. Moi thu muon cam phai nam
+    # trong positive duoi dang "no X" - dung nhu prompt tay cua Bao.
+    for must in ("extremely thick uniform black outlines",
+                 "heavy solid black lines", "clean vector style",
+                 "no gray", "no shading", "no thin or broken lines"):
+        check(f"Positive prompt có {must!r}", must in pr)
+
+    from studio.prompts import NEGATIVE
+    check("NEGATIVE đặt nhóm lỗi nét lên đầu",
+          NEGATIVE.startswith("thin lines"), NEGATIVE[:28])
     # Bản trước độ dày nét được nhắc ở cả 4 khối, prompt phình lên 180 từ.
     # Mỗi ý phải nói đúng một lần.
     for phrase, limit in (("line weight", 1), ("no shading", 1),
