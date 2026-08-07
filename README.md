@@ -105,27 +105,53 @@ Ba chỗ sửa vì chuyện đó:
 3. **Chia nhỏ** — hỏi 8 cảnh mỗi mẻ thay vì 24. Yêu cầu ngắn thì model nhỏ làm
    chắc tay hơn nhiều, và một mẻ hỏng chỉ mất mẻ đó.
 
+#### Phải tắt Reasoning ở LM Studio
+
+Gửi cờ qua API **không đủ** — LM Studio không phải lúc nào cũng chuyển tiếp
+`chat_template_kwargs` xuống chat template. Phải tắt tại nguồn:
+
+- Cột cấu hình model bên phải → tắt **Reasoning**
+- Hoặc đặt system prompt của model thành đúng một dòng `/no_think`
+- Hoặc nạp bản **Instruct** (không có reasoning)
+
+Kiểm tra trong 10 giây thay vì chờ 10 phút:
+
+```bash
+python -c "import requests; r=requests.post('http://localhost:1234/v1/chat/completions', json={'model':'qwen/qwen3.5-9b','messages':[{'role':'user','content':'Say hello in 5 words.'}],'max_tokens':200}).json()['choices'][0]['message']; print('content:', repr(r.get('content'))); print('reasoning:', len(r.get('reasoning_content') or ''), 'ky tu')"
+```
+
+`reasoning` phải bằng 0.
+
+Nếu chưa tắt, lệnh **báo lỗi to và dừng hẳn**. Nó cố tình không cố cứu vãn —
+xem mục dưới.
+
 #### Lọc kết quả
 
-- **LM Studio để phần suy nghĩ ở trường riêng `reasoning_content`**, không phải
-  thẻ `<think>` trong `content`. Nếu suy luận vẫn chạy tràn, lệnh **vớt cảnh từ
-  trường đó** kèm cảnh báo — còn hơn mất trắng cả lượt.
+- **Không vớt nội dung từ `reasoning_content`.** Bản trước có làm, và đó là
+  sai lầm: khi mô hình bị cắt trước lúc kịp viết cảnh, thứ vớt được chỉ là ghi
+  chú kế hoạch — tức prompt bị nhại lại. Mấy dòng đó bị lưu như cảnh, rồi vòng
+  sau đưa lại vào prompt làm danh sách "đã viết", khiến mô hình đọc thấy số đếm
+  mâu thuẫn và đốt sạch token để phân vân. Thà hỏng to còn hơn ghi rác vào file.
 - Bỏ hàng rào ```` ``` ````, số thứ tự, gạch đầu dòng
 - **Bỏ mọi dòng kết thúc bằng `:`** — tiêu đề và câu dẫn không bao giờ là cảnh.
   Luật này chắc hơn dò danh sách từ khoá; bản trước dò `here/below/sure/...`
   nên vẫn để lọt `Thinking Process:`
+- **Bỏ mọi dòng còn sót dấu sao** sau khi đã cắt gạch đầu dòng — markdown nhấn
+  mạnh chỉ có trong ghi chú của mô hình (`**Task:**`, `*Idea 1:*`)
 - Bỏ hẳn dòng dưới 6 từ, bỏ dòng trùng, bỏ dòng lọt tiếng Việt
-- `finish_reason == "length"` thì cảnh báo rõ thay vì im lặng trả về thiếu
 
-#### Vẫn hỏng thì làm gì
+#### Đọc tiến độ
 
-Theo thứ tự:
+```
+mẻ 2: đã có 8/24, xin thêm 8...
+       xin 8, dùng được 6  (1 trùng, 1 bị loại)
+```
 
-1. **Tắt Reasoning trong LM Studio** — cột cấu hình model bên phải. Chắc ăn
-   nhất, vì tắt ở nguồn.
-2. `--batch 4`
-3. `--max-tokens 8000`
-4. Nạp bản **Instruct** thay vì bản có suy luận
+Mẻ sau thường ít hơn mẻ trước, và đó là **bình thường**: mô hình dần cạn ý cho
+một chủ đề nên bắt đầu lặp lại, mà cảnh trùng thì bị loại. Hai mẻ liên tiếp
+không ra cảnh mới thì lệnh dừng sớm thay vì chờ thêm vài phút vô ích.
+
+Ra thiếu thì hạ `--batch 4`, hoặc tự thêm vào file cho đủ — nó là file văn bản.
 
 > **Đọc lướt file một lượt trước khi chạy 40 ảnh.** File `.txt` sửa tay thoải
 > mái — sửa một dòng rẻ hơn nhiều so với gen lại 40 ảnh rồi mới thấy sai.

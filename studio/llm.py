@@ -96,11 +96,14 @@ No numbering. No bullets. No blank lines. No headings. No explanation.
 Do not write anything before or after the {count} lines.\
 """
 
+# Chỉ nối thêm danh sách cần tránh. KHÔNG nhắc lại số lượng ở đây — bản trước
+# vừa nhúng cả INSTRUCTIONS (đã có "Write exactly N") vừa nói "Write N NEW
+# scenes", nên prompt có số đếm ở hai chỗ. Mỗi mẻ lại xin số khác nhau
+# (8, 8, 6, 1) nên mô hình đọc thấy mâu thuẫn và bỏ cả lượt ra phân vân.
 TOP_UP = """\
 {base}
 
-You already wrote these scenes. Write {count} NEW scenes that are clearly
-different from every one of them:
+Do not repeat any of these scenes, which already exist:
 
 {existing}\
 """
@@ -161,6 +164,16 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
         # bản trước dò "here/below/sure/..." nên vẫn để lọt "Thinking Process:"
         if line.endswith(":"):
             warnings.append(f"bỏ tiêu đề/câu dẫn: {line[:50]!r}")
+            continue
+
+        # Tới đây dấu gạch đầu dòng đã bị cắt ở trên. Còn sót dấu sao nào nữa
+        # nghĩa là markdown nhấn mạnh — chỉ có trong ghi chú của mô hình,
+        # không bao giờ trong một cảnh:
+        #     "**Task:** Write exactly 8 scene descriptions..."
+        #     "*Idea 1:* Santa on a roof"
+        # Một cảnh thật thì không chứa dấu sao nào cả.
+        if "*" in line:
+            warnings.append(f"bỏ ghi chú của mô hình: {line[:50]!r}")
             continue
 
         # Dưới 6 từ thì chắc chắn không phải cảnh, bỏ hẳn chứ không chỉ cảnh
@@ -247,12 +260,18 @@ def _chat(model: str, prompt: str, timeout: int, temperature: float,
       · hậu tố /no_think trong prompt               — công tắc riêng của Qwen3
     """
     warnings: list[str] = []
+
+    # `/no_think` đặt ở SYSTEM chứ không nối vào cuối user prompt. Bản trước
+    # nối vào cuối, mô hình đọc thấy nó lẫn trong chỉ dẫn rồi mang ra bàn
+    # luận ("Then '/no_think'") — thêm nhiễu vào đúng chỗ cần sạch.
+    messages = []
     if not think:
-        prompt = f"{prompt}\n\n/no_think"
+        messages.append({"role": "system", "content": "/no_think"})
+    messages.append({"role": "user", "content": prompt})
 
     payload = {
         "model": model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
         "stream": False,
@@ -263,10 +282,10 @@ def _chat(model: str, prompt: str, timeout: int, temperature: float,
     r = _post(payload, timeout)
 
     # Máy chủ cũ không biết chat_template_kwargs thì bỏ ra gọi lại,
-    # vẫn còn /no_think đỡ đòn.
+    # vẫn còn system /no_think đỡ đòn.
     if r.status_code == 400 and "chat_template_kwargs" in payload:
         warnings.append("máy chủ không nhận chat_template_kwargs, "
-                        "chỉ dựa vào /no_think")
+                        "chỉ dựa vào system /no_think")
         payload.pop("chat_template_kwargs")
         r = _post(payload, timeout)
 
@@ -281,15 +300,31 @@ def _chat(model: str, prompt: str, timeout: int, temperature: float,
     finish = choices[0].get("finish_reason", "") or ""
     content = (message.get("content") or "").strip()
 
-    # LM Studio để phần suy nghĩ ở TRƯỜNG RIÊNG, không phải thẻ <think>.
-    # Suy luận chạy tràn thì content rỗng còn cảnh nằm hết trong đó.
+    # LM Studio để phần suy nghĩ ở TRƯỜNG RIÊNG `reasoning_content`, không
+    # phải thẻ <think> trong content. Suy luận chạy tràn thì content rỗng.
+    #
+    # Bản trước "vớt" nội dung từ trường đó. ĐÃ BỎ, vì nó biến một thất bại
+    # sạch thành nhiễm bẩn âm thầm: khi mô hình bị cắt TRƯỚC lúc kịp viết
+    # cảnh, phần vớt được chỉ là ghi chú kế hoạch — chính prompt bị nhại lại
+    # ("**Task:** Write exactly 8 scene descriptions..."). Mấy dòng đó được
+    # lưu như cảnh, rồi vòng sau đưa lại vào prompt làm danh sách "đã viết",
+    # khiến mô hình đọc thấy số đếm mâu thuẫn và đốt sạch token để phân vân.
+    #
+    # Thà hỏng to còn hơn ghi rác vào file rồi người dùng tưởng là được.
     if not content:
         reasoning = (message.get("reasoning_content") or "").strip()
         if reasoning:
-            warnings.append(
-                "mô hình trả về rỗng vì suy luận chạy tràn hết token — "
-                "đang vớt cảnh từ phần suy nghĩ, chất lượng sẽ kém hơn")
-            content = reasoning
+            raise LLMError(
+                "Mô hình chỉ suy luận mà không trả lời "
+                f"({len(reasoning)} ký tự suy nghĩ, content rỗng).\n"
+                "Chế độ suy luận vẫn đang bật. Tắt tại nguồn:\n"
+                "  · LM Studio → cột cấu hình model → tắt Reasoning\n"
+                "  · hoặc đặt system prompt của model thành: /no_think\n"
+                "  · hoặc nạp bản Instruct\n"
+                "Kiểm tra nhanh: gọi thử một câu và xem reasoning_content có "
+                "rỗng chưa."
+            )
+        raise LLMError("Mô hình trả về rỗng, không rõ lý do")
 
     if finish == "length":
         warnings.append(
@@ -303,7 +338,7 @@ def generate_subjects(topic: str, count: int = 24, audience: str = "all",
                       model: str | None = None, timeout: int = 600,
                       temperature: float = 0.85, batch: int = 8,
                       max_tokens: int | None = None, think: bool = False,
-                      on_progress=None
+                      on_progress=None, on_result=None
                       ) -> tuple[list[str], list[str], str]:
     """
     Trả về (danh sách cảnh, cảnh báo, tên model đã dùng).
@@ -321,6 +356,7 @@ def generate_subjects(topic: str, count: int = 24, audience: str = "all",
     collected: list[str] = []
     warnings: list[str] = []
     seen: set[str] = set()
+    empty_rounds = 0
 
     # Cho phép hụt vài mẻ rồi vẫn còn cơ hội bù
     max_rounds = -(-count // batch) + 3
@@ -338,7 +374,7 @@ def generate_subjects(topic: str, count: int = 24, audience: str = "all",
             # Chỉ đưa lại 12 cảnh gần nhất — đủ để tránh lặp mà không phình
             # prompt, vì prompt dài làm mô hình nhỏ lú thêm.
             prompt = TOP_UP.format(
-                base=base, count=ask, existing="\n".join(collected[-12:]))
+                base=base, existing="\n".join(collected[-12:]))
         else:
             prompt = base
 
@@ -352,19 +388,35 @@ def generate_subjects(topic: str, count: int = 24, audience: str = "all",
 
         lines, warns = clean_lines(raw, ask)
         warnings.extend(warns)
+        dropped = sum(1 for w in warns if w.startswith("bỏ "))
 
-        added = 0
+        added = dupes = 0
         for line in lines:
             key = line.lower()
-            if key not in seen:
-                seen.add(key)
-                collected.append(line)
-                added += 1
+            if key in seen:
+                dupes += 1
+                continue
+            seen.add(key)
+            collected.append(line)
+            added += 1
+
+        # Báo cáo từng mẻ: vì sao xin 8 mà chỉ được 6. Không có dòng này thì
+        # nhìn tiến độ nhảy 8 → 14 → 18 rất khó hiểu.
+        if on_result:
+            on_result(rnd, ask, added, dupes, dropped)
 
         if added == 0:
+            empty_rounds += 1
             warnings.append(f"mẻ {rnd} không thêm được cảnh nào")
-            if rnd >= 2 and not collected:
+            # Hai mẻ liên tiếp trắng tay nghĩa là mô hình đã cạn ý cho chủ đề
+            # này. Gọi tiếp chỉ tốn thêm vài phút chờ mà không được gì.
+            if empty_rounds >= 2:
+                warnings.append(
+                    "hai mẻ liên tiếp không ra cảnh mới — mô hình cạn ý cho "
+                    "chủ đề này, dừng sớm")
                 break
+        else:
+            empty_rounds = 0
 
     if not collected:
         raise LLMError(

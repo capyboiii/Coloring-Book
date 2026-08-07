@@ -238,6 +238,8 @@ def main() -> int:
 The user wants ocean scenes. Let me think about what to include.
 </think>
 Thinking Process:
+**Task:** Write exactly 8 scene descriptions for a printed coloring book
+*Idea 1:* Santa on a roof
 Here are the scenes:
 ```
 1. a smiling sea turtle swimming through a coral reef, small fish above it, seaweed below
@@ -259,6 +261,9 @@ a manta ray gliding over a busy coral reef, tropical fish everywhere, rocks belo
           and not any("Thinking Process" in g for g in got))
     check("Bỏ hẳn dòng dưới 6 từ, không chỉ cảnh báo",
           not any(g == "jellyfish" for g in got))
+    # Prompt bị nhại lại luôn có markdown đậm/nghiêng; cảnh thì không bao giờ
+    check("Bỏ ghi chú của mô hình (**Task:**, *Idea 1:*)",
+          not any("**" in g or g.startswith("*") for g in got))
     check("Bỏ dòng trùng", len(got) == 3, f"{len(got)} dòng")
     check("Bỏ dòng tiếng Việt", not any("cá heo" in g for g in got))
 

@@ -112,6 +112,15 @@ def run(args) -> int:
     def progress(rnd, have, total, ask):
         info(f"  mẻ {rnd}: đã có {have}/{total}, xin thêm {ask}...")
 
+    def result(rnd, ask, added, dupes, dropped):
+        detail = []
+        if dupes:
+            detail.append(f"{dupes} trùng")
+        if dropped:
+            detail.append(f"{dropped} bị loại")
+        suffix = f"  ({', '.join(detail)})" if detail else ""
+        info(f"         xin {ask}, dùng được {added}{suffix}")
+
     try:
         lines, warnings, model = generate_subjects(
             topic=args.topic,
@@ -123,6 +132,7 @@ def run(args) -> int:
             max_tokens=args.max_tokens,
             think=args.think,
             on_progress=progress,
+            on_result=result,
         )
     except LLMError as exc:
         print(f"\nLỖI: {exc}")
