@@ -37,6 +37,7 @@ pages: 40             # số hình trong sách. In một mặt nên số trang g
 generate: 60          # sinh dư để còn chỗ loại. Tỷ lệ giữ lại thường 50-70%
 complexity: medium    # simple | medium | detailed  — độ tinh xảo của NÉT
 density: rich         # single | normal | rich      — số ĐỐI TƯỢNG mỗi trang
+style: kawaii         # kawaii | cartoon | decorative — PHONG CÁCH vẽ
 seed:                 # để trống là ngẫu nhiên. Điền số để sinh lại y hệt
 
 # ---- Bìa ----
@@ -70,6 +71,7 @@ class Recipe:
     generate: int = 60
     complexity: str = "medium"
     density: str = "rich"
+    style: str = "kawaii"
     seed: int | None = None
     cover: Cover = field(default_factory=Cover)
     collection: str = ""
@@ -164,6 +166,7 @@ def load(slug: str) -> Recipe:
         generate=int(data.get("generate") or 0),
         complexity=str(data.get("complexity") or "medium"),
         density=str(data.get("density") or "rich"),
+        style=str(data.get("style") or "kawaii"),
         seed=data.get("seed") if data.get("seed") not in ("", None) else None,
         cover=Cover(
             scene=cover_raw.get("scene") or None,
@@ -195,6 +198,9 @@ def _validate(r: Recipe) -> None:
     if r.density not in ("single", "normal", "rich"):
         problems.append(
             f"density '{r.density}' không hợp lệ (single | normal | rich)")
+    if r.style not in ("kawaii", "cartoon", "decorative"):
+        problems.append(
+            f"style '{r.style}' không hợp lệ (kawaii | cartoon | decorative)")
     if r.audience not in ("kids", "adults", "all"):
         problems.append(
             f"audience '{r.audience}' không hợp lệ (kids | adults | all)")

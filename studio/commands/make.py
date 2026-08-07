@@ -98,6 +98,7 @@ def _write_package(settings, r, slug: str) -> None:
             "theme": r.theme,
             "complexity": r.complexity,
             "density": r.density,
+            "style": r.style,
             "seed": r.seed,
             "retention_rate": stats.get("retention_rate"),
             "review_minutes": stats.get("review_minutes"),
@@ -118,6 +119,7 @@ def _do_generate(settings, r, args) -> int:
         count=r.generate,
         complexity=r.complexity,
         density=r.density,
+        style=r.style,
         seed=r.seed,
         steps=None,
         guidance=None,
@@ -191,7 +193,7 @@ def run(args) -> int:
 
     info(f"Công thức : {recipe_path(r.slug).name}")
     info(f"Sách      : {r.title}")
-    info(f"Chủ đề    : {r.theme} · {r.complexity} · density {r.density}")
+    info(f"Chủ đề    : {r.theme} · {r.style} · {r.complexity} · density {r.density}")
     info(f"Trang      : {r.pages} hình (sinh {r.generate} để còn chỗ loại)")
     info(f"Đối tượng  : {r.audience}")
     info(f"Trạng thái : {state}")

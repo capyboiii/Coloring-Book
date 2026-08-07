@@ -427,12 +427,30 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
           f"{config.ART_W_PX / config.GEN_W:.2f} lần")
     # COMPOSITIONS phải nói về BỐ TRÍ, không nói mật độ — nếu không nó đánh
     # nhau với DENSITY. Đây từng là lỗi thật.
-    from studio.prompts import COMPOSITIONS
+    from studio.prompts import COMPOSITIONS, build_prompt
     clash = [c for c in COMPOSITIONS
              if any(w in c.lower()
                     for w in ("filling", "densely", "packed", "edge to edge"))]
     check("COMPOSITIONS không nói về mật độ (tránh đánh nhau với DENSITY)",
           not clash, f"{len(clash)} mục: {clash[:1]}")
+
+    print("\n[12] Prompt không tự lặp")
+    pr = build_prompt("a smiling fox sitting in tall grass",
+                      "simple", "centered composition", "normal", "kawaii")
+    words = len(pr.split())
+    check("Prompt dưới 180 từ (dài quá thì chủ thể bị chìm)",
+          words < 180, f"{words} từ")
+    # Bản trước độ dày nét được nhắc ở cả 4 khối, prompt phình lên 180 từ.
+    # Mỗi ý phải nói đúng một lần.
+    for phrase, limit in (("line weight", 1), ("no shading", 1),
+                          ("texture", 1), ("uncolored", 1)):
+        n = pr.lower().count(phrase)
+        check(f"'{phrase}' chỉ xuất hiện {limit} lần", n <= limit, f"{n} lần")
+    check("Chủ thể có mặt trong prompt", "smiling fox" in pr)
+
+    from studio.prompts import STYLE
+    check("Có phong cách kawaii làm mặc định cho sách trẻ em",
+          "kawaii" in STYLE and "chibi" in STYLE["kawaii"])
 
     print("\n" + "─" * 50)
     if FAILURES:

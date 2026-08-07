@@ -70,6 +70,10 @@ def register(subparsers) -> None:
                    help="Bao nhiêu ĐỐI TƯỢNG trên một trang. "
                         "rich (mặc định) lấp đầy trang; "
                         "single chỉ một chủ thể trên nền trắng")
+    p.add_argument("--style", default="kawaii",
+                   choices=["kawaii", "cartoon", "decorative"],
+                   help="PHONG CÁCH vẽ. kawaii = đầu tròn to, mắt chấm, "
+                        "đồ vật vẽ như icon phẳng (mặc định)")
     p.add_argument("--theme", "--subjects", dest="theme", default=None,
                    metavar="<tên|file>",
                    help="Bộ chủ thể dựng sẵn (ocean, mandala, floral, "
@@ -133,6 +137,7 @@ def run(args) -> int:
         subjects=subjects,
         seed_start=args.seed,
         density=args.density,
+        style=args.style,
     )
 
     steps = args.steps if args.steps is not None else settings.steps
@@ -168,6 +173,7 @@ def run(args) -> int:
             "topic": args.topic,
             "complexity": args.complexity,
             "density": args.density,
+            "style": args.style,
             "theme": args.theme,
             "subject_count": len(subjects) if subjects else 0,
             "planned_count": args.count,

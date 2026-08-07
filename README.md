@@ -286,19 +286,36 @@ python studio.py generate x --list-themes
 | Tuỳ chọn | Ý nghĩa |
 |---|---|
 | `--theme ocean` | Bộ chủ thể dựng sẵn, hoặc file `.txt` |
-| `--complexity` | Độ tinh xảo của **nét**: `simple` / `medium` / `detailed` |
-| `--density` | Số **đối tượng** trên trang: `single` / `normal` / `rich` (mặc định) |
+| `--style` | **Phong cách vẽ**: `kawaii` (mặc định) / `cartoon` / `decorative` |
+| `--complexity` | **Độ chi tiết**: `simple` / `medium` / `detailed` |
+| `--density` | **Số đối tượng** trên trang: `single` / `normal` / `rich` |
 | `--seed 12345` | Cố định seed để tái tạo đúng mẻ cũ |
 | `--overwrite` | Sinh đè. Mặc định bỏ qua ảnh đã có nên chạy lại được sau khi đứt |
 
-`--complexity` và `--density` là hai trục khác nhau, dễ nhầm:
+Ba trục độc lập, dễ nhầm:
 
-- **complexity** = nét vẽ tinh xảo tới đâu. `simple` nét rất dày cho trẻ nhỏ.
-- **density** = trang có bao nhiêu thứ để tô. `rich` lấp kín, `single` một chủ thể trên nền trắng.
+- **style** = vẽ theo lối nào. `kawaii` là đầu tròn to, mắt chấm, đồ vật vẽ như
+  icon phẳng — đúng lối các sách tô màu trẻ em bán chạy.
+- **complexity** = nhiều hay ít chi tiết.
+- **density** = trang có bao nhiêu thứ.
 
-Sách trẻ em nên là `--complexity simple --density rich`: nét to dễ tô, nhưng
-trang vẫn đầy. Ngoại lệ là mandala — dùng `--density normal`, vì `rich` sẽ phá
-mất tính đối xứng.
+Sách trẻ em: `--style kawaii --complexity simple --density normal`.
+Mandala người lớn: `--style decorative --complexity detailed --density normal`.
+
+### Prompt phải ngắn
+
+`build_prompt` ghép bốn khối, và **mỗi ý chỉ được nói đúng một lần**. Bản trước
+độ dày nét bị nhắc ở cả bốn khối, prompt phình lên 180 từ và chủ thể chìm nghỉm
+ở giữa. Prompt dài không đồng nghĩa với prompt mạnh.
+
+| Khối | Lo việc gì |
+|---|---|
+| `BASE_STYLE` | Thứ không bao giờ đổi: là line art, chưa tô màu, nét khép kín |
+| `STYLE` | Phong cách vẽ |
+| `COMPLEXITY` | Mức độ chi tiết |
+| `DENSITY` | Bố trí trên trang |
+
+Có kiểm thử chặn: prompt quá 180 từ, hoặc một cụm bị lặp, là test đỏ.
 
 Lệnh này **chạy tiếp được**. Đứt giữa chừng thì chạy lại, nó bỏ qua ảnh đã xong.
 

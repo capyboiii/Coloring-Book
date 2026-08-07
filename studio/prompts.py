@@ -37,46 +37,78 @@ from pathlib import Path
 # đẻ ra mấy trang có mỗi con sứa giữa khoảng trắng mênh mông.
 # Việc chặn nền xám giờ do bước khử xám trong imageops lo, nên ở đây nói
 # theo cách không hàm ý bỏ trống.
+# Mỗi ý CHỈ nói đúng một lần. Bản trước độ dày nét được nhắc ở cả bốn khối
+# (BASE, STYLE, COMPLEXITY và cả DENSITY), prompt phình lên 180 từ và chủ thể
+# bị chìm nghỉm ở giữa. Prompt dài không đồng nghĩa với prompt mạnh.
+#
+# Phân vai:
+#   BASE_STYLE  thứ không bao giờ đổi: là line art, chưa tô màu, nét khép kín
+#   STYLE       phong cách vẽ
+#   COMPLEXITY  mức độ chi tiết
+#   DENSITY     bố trí trên trang
 BASE_STYLE = (
     "coloring book page, black and white line art, "
-    "thick clean outlines, bold continuous lines, no thin details, "
-    "smooth rounded outlines, fully closed shapes, no broken or open lines, "
-    "uniform line weight throughout, "
+    "clean closed outlines with even line weight, "
     "completely uncolored, blank white shapes for a child to fill in, "
-    "no shading, no grayscale, no color fill, no texture, "
-    "white paper, unshaded"
+    "no shading, no grayscale, no color fill"
 )
+
+# --------------------------------------------------------------------------
+# PHONG CÁCH VẼ — trục riêng, khác hẳn với độ tinh xảo và mật độ
+# --------------------------------------------------------------------------
+#
+# Thêm trục này sau khi Bao đưa một cuốn sách mẫu làm chuẩn chất lượng. Nhìn
+# ảnh mẫu thì rõ nó không phải "cartoon" chung chung mà là một phong cách rất
+# cụ thể: kawaii/chibi. Đầu tròn to, thân nhỏ, mắt chấm, miệng một nét cong.
+# Đồ vật (dứa, chuối, đàn ukulele, bóng) vẽ như ICON PHẲNG chứ không phải
+# hình minh hoạ chi tiết. Nét đều tăm tắp từ nhân vật tới nền.
+#
+# Chuỗi "simple cute cartoon style" cũ quá mơ hồ nên Flux tự do diễn giải,
+# ra kiểu vẽ tay nguệch ngoạc có texture lông lá.
+STYLE = {
+    "kawaii": (
+        "kawaii chibi style, big round head and small rounded body, "
+        "simple dot eyes and one small curved smile, "
+        "every object drawn as a simple flat icon, "
+        "no fur texture, no hatching, no stippling, "
+        "characters facing forward in a relaxed pose"
+    ),
+    "cartoon": (
+        "friendly cartoon style, rounded shapes, simple expressive faces, "
+        "no fur texture, no hatching"
+    ),
+    "decorative": (
+        "decorative ornamental line art, symmetrical flowing patterns"
+    ),
+}
 
 COMPLEXITY = {
     "simple": (
-        "simple cute cartoon style, very thick bold rounded outlines, "
-        "big chunky shapes with soft curved edges, "
-        "large open areas to color, very few details, "
-        "no tiny elements, no fine patterns, no fur texture, no small leaves, "
+        "thick bold outlines, big chunky shapes, large open areas to color, "
+        "very few details, no tiny scattered elements, "
         "whole subject fully visible, nothing cut off at the edges, "
-        "simple natural pose, "
         "for young children aged 3 to 7"
     ),
     "medium": (
-        "simple clean cartoon style, thick rounded outlines, moderate detail, "
-        "whole subject fully visible, nothing cut off at the edges"
+        "moderate detail, whole subject fully visible, "
+        "nothing cut off at the edges"
     ),
     "detailed": (
-        "decorative illustration style, thick clear outlines, "
-        "intricate ornamental detail, many areas to color, "
-        "adult coloring book"
+        "intricate ornamental detail, many areas to color, adult coloring book"
     ),
 }
 
 # Flux là mô hình guidance-distilled nên KHÔNG dùng negative prompt.
 # Giữ lại để ghi vào metadata và để dùng nếu sau này đổi sang SDXL.
 NEGATIVE = (
-    "shading, gradient, grayscale, gray fill, solid black fill, texture, "
+    "shading, gradient, grayscale, gray fill, solid black fill, "
+    "fur texture, hatching, cross-hatching, stippling, scribbles, "
     "photorealistic, 3d render, watermark, signature, text, letters, "
-    "thin faint lines, sketchy lines, broken lines, blurry, "
-    "cluttered, busy background, tiny details, fine patterns, "
+    "thin faint lines, sketchy lines, broken lines, uneven line weight, "
+    "blurry, cluttered, busy background, tiny details, fine patterns, "
+    "scattered small leaves, grass blades, pebbles, "
     "overlapping characters, cropped limbs, cut off at the edge, "
-    "ornate decorative frame, empty space, blank margins"
+    "ornate decorative frame, realistic proportions, detailed illustration"
 )
 
 # CHỈ nói về GÓC NHÌN và BỐ TRÍ, tuyệt đối không nói tới mật độ.
@@ -103,12 +135,14 @@ DENSITY = {
     "single": (
         "single subject, plain white background, no background elements"
     ),
+    # Chỉnh theo đúng sách mẫu Bao đưa. Trang mẫu KHÔNG ít đồ — cảnh picnic
+    # có dứa, chuối, kem, bóng, đàn ukulele. Nhưng mỗi món đều TO, vẽ đơn
+    # giản, và tách nhau bằng khoảng trắng rõ ràng. Cái sai của mẻ trước là
+    # đồ nhỏ li ti và dính chùm, chứ không phải nhiều đồ.
     "normal": (
-        "one clear main subject filling most of the page, "
-        "only two or three large simple background elements, "
-        "each object well separated with clear white space between them, "
-        "main subject clearly standing apart from the background, "
-        "uncluttered composition, nothing overlapping the main subject"
+        "one main subject in the middle, a few large objects around it, "
+        "clear white space between every object, nothing overlapping, "
+        "simple horizon line and one or two large background shapes only"
     ),
     "rich": (
         "a rich detailed scene filling the entire page, "
@@ -160,11 +194,13 @@ def has_non_ascii(text: str) -> bool:
 
 
 def build_prompt(subject: str, complexity: str, composition: str,
-                 density: str) -> str:
-    # Thứ tự bám theo prompt đã chạy tốt: style -> phong cách -> bố cục ->
-    # CHỦ THỂ -> mật độ. Chủ thể nằm gần cuối, ngay trước phần mật độ.
+                 density: str, style: str = "kawaii") -> str:
+    # Thứ tự: nền tảng -> PHONG CÁCH -> độ tinh xảo -> bố trí -> CHỦ THỂ ->
+    # mật độ. Phong cách đặt sớm vì nó là thứ định hình mạnh nhất; chủ thể
+    # đặt gần cuối theo đúng prompt đã chứng minh chạy tốt.
     parts = [
         BASE_STYLE,
+        STYLE[style],
         COMPLEXITY[complexity],
         composition,
         subject.strip().rstrip("."),
@@ -180,6 +216,7 @@ def make_prompts(
     subjects: list[str] | None = None,
     seed_start: int | None = None,
     density: str = "rich",
+    style: str = "kawaii",
 ) -> list[PagePrompt]:
     """
     Trả về `count` prompt khác nhau.
@@ -197,6 +234,10 @@ def make_prompts(
         raise ValueError(
             f"density phải là một trong {list(DENSITY)}, nhận '{density}'"
         )
+    if style not in STYLE:
+        raise ValueError(
+            f"style phải là một trong {list(STYLE)}, nhận '{style}'"
+        )
 
     if seed_start is None:
         seed_start = random.randint(1, 2**31 - 1)
@@ -211,7 +252,8 @@ def make_prompts(
         out.append(
             PagePrompt(
                 index=i + 1,
-                prompt=build_prompt(subject, complexity, composition, density),
+                prompt=build_prompt(subject, complexity, composition,
+                                    density, style),
                 negative=NEGATIVE,
                 seed=seed_start + i,
                 subject=subject,
