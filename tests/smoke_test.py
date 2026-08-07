@@ -290,6 +290,24 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
         check(f"themes/{name}.txt qua bộ lọc nguyên vẹn",
               len(kept_t) == len(subs), f"{len(kept_t)}/{len(subs)}")
 
+    # Ba dòng bị loại OAN trong lần chạy thật với Qwen2.5-7B, chủ đề Giáng sinh.
+    # Danh từ riêng viết hoa là đúng — chủ đề nào cũng có thể có.
+    proper_nouns = """Santa Claus sitting at a table writing letters to children, a stack of envelopes beside him, a candle glowing on the desk
+Mrs. Claus baking pies while singing Christmas songs, flour dusting her apron, cookies cooling on the windowsill
+Rudolph leading the sleigh through falling snow, bells jingling on his harness, pine trees lining the path below"""
+    kept_pn, _ = clean_lines(proper_nouns, 24)
+    check("Không loại oan cảnh mở đầu bằng danh từ riêng (Santa, Mrs. Claus)",
+          len(kept_pn) == 3, f"{len(kept_pn)}/3")
+
+    # Nhưng ghi chú viết hoa VÀ ngắn thì vẫn phải loại
+    still_junk = """One sentence per line, about twenty words (approximate)
+All 8 scenes must be clearly different (no repeating animals)
+a cheerful snowman wearing a striped scarf, two children rolling snowballs beside him, pine trees filling the background"""
+    kept_sj, _ = clean_lines(still_junk, 24)
+    check("Vẫn loại ghi chú viết hoa mà ngắn",
+          len(kept_sj) == 1 and kept_sj[0].startswith("a cheerful"),
+          f"{len(kept_sj)} dòng")
+
     from studio.llm import looks_like_reasoning
     check("Nhận ra suy luận nằm lẫn trong content",
           looks_like_reasoning("Thinking Process:\n\n1. **Analyze the Request:**"))

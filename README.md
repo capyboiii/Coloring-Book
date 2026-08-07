@@ -216,21 +216,31 @@ Cần thấy `reasoning: 0` **và** `content` bắt đầu thẳng bằng câu t
 Lọc theo **hình dạng câu**, không dò danh sách từ khoá — danh sách từ khoá
 luôn thiếu, còn hình dạng thì không đổi:
 
+**Luật cứng** — luôn loại:
+
 | Luật | Bắt được |
 |---|---|
 | Có `:` ở bất kỳ đâu | `Formula:` · `Wait, re-reading the prompt:` |
-| Có `"` | `Content only (no "line art", ...)` |
 | Có `*` sau khi cắt gạch đầu dòng | `**Task:**` · `*Idea 1:*` |
 | Có `+` | `subject + action + 2-3 things` |
 | Dưới 6 từ | `jellyfish` |
-| **Chữ hoa ở đầu dòng** | `One sentence per line...` · `All 8 scenes...` |
+| Trùng dòng, hoặc lọt tiếng Việt | |
 
-Luật cuối mạnh nhất, và đến từ một dòng thêm vào prompt:
+**Luật mềm** — chỉ loại khi dòng đó *không* có hình dạng cảnh thật
+(≥12 từ **và** ≥2 dấu phẩy):
+
+| Luật | Bắt được | Tha cho |
+|---|---|---|
+| Chữ hoa ở đầu dòng | `One sentence per line...` | `Santa Claus sitting at a table writing letters to children, ...` |
+| Có `"` | `Content only (no "line art", ...)` | cảnh dài có trích dẫn |
+
+Luật chữ hoa đến từ một dòng thêm vào prompt:
 `Start every line with a lowercase letter.` Cảnh viết thường, ghi chú luôn viết
-hoa. Nếu mô hình phớt lờ luật viết thường (mọi dòng đều hoa) thì bỏ qua luật
-này kèm cảnh báo, thay vì xoá sạch.
+hoa — **trừ khi cảnh mở đầu bằng danh từ riêng**, và chủ đề nào cũng có thể có
+(`Santa`, `Mrs. Claus`, `Rudolph`). Vì vậy nó là luật mềm.
 
-Cộng thêm: bỏ dòng trùng, bỏ dòng lọt tiếng Việt.
+Nếu mô hình phớt lờ hẳn luật viết thường (mọi dòng đều hoa) thì bỏ qua luật
+này kèm cảnh báo, thay vì xoá sạch.
 
 #### Đọc tiến độ
 

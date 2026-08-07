@@ -152,6 +152,25 @@ def looks_like_reasoning(text: str) -> bool:
     return any(m in head for m in REASONING_MARKERS)
 
 
+def looks_like_scene(line: str) -> bool:
+    """
+    Dòng này có hình dạng của một cảnh thật không?
+
+    Cảnh thật dài và nhiều mệnh đề:
+        "a smiling sea turtle swimming through a coral reef, schools of
+         small fish above it, seaweed and starfish along the sea floor"
+        -> 22 từ, 2 dấu phẩy
+
+    Ghi chú của mô hình thì ngắn và ít dấu phẩy:
+        "One sentence per line, about twenty words (approximate)"  -> 8 từ
+
+    KHÔNG dùng hàm này làm điều kiện loại trực tiếp — mandala hợp lệ kiểu
+    "a lotus mandala with eight large petals" (7 từ, 0 phẩy) sẽ rớt oan.
+    Chỉ dùng để tha cho những dòng vướng luật yếu bên dưới.
+    """
+    return len(line.split()) >= 12 and line.count(",") >= 2
+
+
 def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
     """
     Lọc kết quả thô thành danh sách cảnh dùng được.
@@ -186,9 +205,11 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
             warnings.append(f"bỏ tiêu đề/ghi chú: {line[:50]!r}")
             continue
 
-        # Dấu nháy kép chỉ xuất hiện khi mô hình trích lại chỉ dẫn:
+        # Dấu nháy kép THƯỜNG là mô hình trích lại chỉ dẫn:
         #     Content only (no "line art", "black and white", etc.)
-        if '"' in line:
+        # nhưng một cảnh thật cũng có thể có. Chỉ bỏ khi dòng đó KHÔNG có
+        # hình dạng của một cảnh — xem looks_like_scene().
+        if '"' in line and not looks_like_scene(line):
             warnings.append(f"bỏ dòng trích chỉ dẫn: {line[:50]!r}")
             continue
 
@@ -241,12 +262,19 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
     # >=30% dòng viết thường", nhưng gặp mẻ chỉ có 1 cảnh thật lẫn trong 3
     # dòng ghi chú thì tỉ lệ là 25% và luật không chạy — đúng lúc cần nhất.
     #
+    # NHƯNG tha cho dòng có hình dạng cảnh thật. Chạy thật với Qwen2.5-7B
+    # cho chủ đề Giáng sinh thì hai cảnh hoàn toàn hợp lệ bị loại oan:
+    #     "Santa Claus sitting at a table writing letters to children, ..."
+    #     "Mrs. Claus baking pies while singing Christmas songs, ..."
+    # Danh từ riêng thì viết hoa là đúng. Chủ đề nào cũng có thể có.
+    #
     # Rủi ro ngược lại là mô hình phớt lờ luật viết thường và bị xoá sạch.
     # Xử bằng cách: nếu xoá hết thì trả lại nguyên trạng kèm cảnh báo.
     if lines:
         kept, dropped = [], []
         for ln in lines:
-            (dropped if ln[:1].isupper() else kept).append(ln)
+            suspect = ln[:1].isupper() and not looks_like_scene(ln)
+            (dropped if suspect else kept).append(ln)
 
         if kept:
             for ln in dropped:
