@@ -83,8 +83,12 @@ RULES
    The child chooses the colours. Say "a scarf", never "a red scarf".
 9. NEVER describe light. No glowing, twinkling, shining, sparkling, gleaming.
    An outline cannot draw light.
-10. Subjects must NEVER touch, overlap or hide each other. Write "standing
-    next to", never "hugging", "riding", "behind" or "peeking out of".
+10. Characters must NEVER touch, overlap or hide each other. Leave clear
+    space between them. Never write: hugging, cuddling, riding, carrying,
+    climbing on, peeking out of, hiding behind, in front of, holding hands,
+    playing together. Write "standing next to" or "beside" instead.
+    An object may sit inside a container — flowers in a pot are fine.
+    It is two ANIMALS or two PEOPLE touching that ruins the drawing.
 11. Front view or slightly from the side. Never from above, never a dramatic
     or unusual angle.
 12. Keep everything cute, friendly, happy, smiling. Never scary, angry or
@@ -105,10 +109,15 @@ a fox in a dense forest with hundreds of leaves and scattered pebbles
 FIXED
 a smiling fox sitting on a simple grassy field with two flowers
 
-BAD (subjects overlap — limbs end up fused together)
+BAD (characters overlap — limbs end up fused into one strange lump)
 three bears hugging inside a house
 FIXED
-three bears standing side by side, one simple house behind them
+three bears standing apart in a row, one simple house beside them
+
+BAD (one character hides another)
+a small dinosaur peeking out from behind a big dinosaur
+FIXED
+a small dinosaur standing beside a big dinosaur, a clear gap between them
 
 BAD (names colours and light — the picture comes out already coloured)
 an elf decorating a tree with colorful ornaments, fairy lights twinkling
@@ -291,6 +300,83 @@ def lint_for_kids(line: str) -> list[str]:
     return notes
 
 
+# --------------------------------------------------------------------------
+# Chống vật thể chồng lên nhau
+# --------------------------------------------------------------------------
+#
+# Luật 10 trong chỉ dẫn đã cấm chuyện này, nhưng model 7B không phải lúc nào
+# cũng nghe. Đây là tầng sửa văn bản trả về, giống cách đã làm với từ chỉ màu.
+#
+# Vì sao quan trọng: Flux vẽ hai con vật dính nhau là tay chân hoà vào nhau,
+# nhìn ra một khối kỳ dị. Trẻ tô không biết đâu là chân con nào.
+#
+# CHỈ nhắm vào chỗ hai SINH VẬT dính nhau. Vật thể dính vật chứa thì bình
+# thường và cần thiết — bó hoa cắm trong chậu, con mèo ngồi trên ghế. Cuốn
+# sách mẫu đầy những cảnh như vậy.
+
+# Sửa thẳng: cụm bên trái luôn làm hai nhân vật dính nhau
+#
+# Thứ tự QUAN TRỌNG: cụm cụ thể phải đứng trước cụm chung. Bản đầu để
+# `hugging -> standing next to` một mình, gặp "two dinosaurs hugging ON a big
+# rock" thì ra "standing next to on a big rock" — câu què.
+OVERLAP_FIX = [
+    # Động từ KHÔNG có tân ngữ, đi thẳng vào giới từ chỉ nơi chốn
+    (r"\b(?:hugging|cuddling|embracing|snuggling)\s+(?=on|in|at|near|"
+     r"beside|under|by)\b", "sitting apart "),
+    (r"\bplaying together\b",           "standing apart"),
+    (r"\bhuddled together\b",           "standing apart"),
+    (r"\bholding hands\b",              "standing apart"),
+    # Động từ CÓ tân ngữ
+    (r"\b(?:hugging|cuddling|embracing|snuggling)\b", "standing next to"),
+    (r"\briding\b",                     "walking beside"),
+    (r"\bon the back of\b",             "beside"),
+    (r"\bpeeking\s+(?:out\s+)?(?:from\s+)?behind\b", "standing beside"),
+    (r"\bpeeking out of\b",             "standing beside"),
+    (r"\bhiding behind\b",              "standing beside"),
+    (r"\bpartially hidden by\b",        "next to"),
+    (r"\bin front of\b",                "beside"),
+    (r"\bclimbing on\b",                "standing next to"),
+    (r"\bcurled around\b",              "next to"),
+    (r"\bwrapped around\b",             "next to"),
+    (r"\bleaning on\b",                 "standing next to"),
+    (r"\b(?:piled|stacked) on\b",       "next to"),
+]
+
+# Chỉ cảnh báo, không sửa: mơ hồ, tuỳ ngữ cảnh.
+#
+# CỐ Ý KHÔNG có "behind it/him/them" ở đây. Bản đầu có, và nó báo nhầm ngay
+# trên chính mẫu câu tốt tôi dùng khắp themes: "one simple tree behind it".
+# Một vật nền đứng phía sau là chuyện bình thường và cần thiết.
+OVERLAP_WARN = re.compile(
+    r"\b(overlapping|touching each other|on top of each other|"
+    r"piggyback|nestled|tangled)\b", re.IGNORECASE)
+
+
+def scrub_overlap(line: str) -> tuple[str, list[str]]:
+    """
+    Tách các nhân vật ra khỏi nhau trong mô tả cảnh.
+
+    Trả về (câu đã sửa, ghi chú). Cụm sửa được thì sửa thẳng; cụm mơ hồ thì
+    chỉ cảnh báo để người đọc tự quyết.
+    """
+    notes = []
+    for pat, repl in OVERLAP_FIX:
+        new = re.sub(pat, repl, line, flags=re.IGNORECASE)
+        if new != line:
+            found = re.search(pat, line, re.IGNORECASE).group(0)
+            notes.append(f"đổi {found!r} thành {repl!r} để hai nhân vật "
+                         f"không dính nhau")
+            line = new
+
+    line = re.sub(r"\s{2,}", " ", line).strip()
+
+    warn_hits = {m.group(0).lower() for m in OVERLAP_WARN.finditer(line)}
+    if warn_hits:
+        notes.append(f"có thể làm nhân vật chồng nhau ({', '.join(sorted(warn_hits))}) "
+                     f"— đọc lại xem có nên sửa không")
+    return line, notes
+
+
 def looks_like_scene(line: str) -> bool:
     """
     Dòng này có hình dạng của một cảnh thật không?
@@ -399,7 +485,8 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
             continue
 
         line, notes = scrub_colour_and_light(line)
-        for n in notes:
+        line, overlap_notes = scrub_overlap(line)
+        for n in notes + overlap_notes:
             warnings.append(f"{n}: {line[:45]!r}")
 
         key = line.lower()

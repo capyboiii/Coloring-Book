@@ -549,6 +549,44 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     faint = ((g >= 100) & ink).sum() / max(1, ink.sum())
     check("Dưới 10% pixel mực còn xám nhạt", faint < 0.10, f"{faint:.1%}")
 
+    print("\n[16] Chống nhân vật chồng lên nhau")
+    from studio.llm import scrub_overlap
+
+    overlap_cases = [
+        # (câu vào, có phải sửa không, vì sao)
+        ("two dinosaurs hugging on a big rock, two clouds above them", True,
+         "hai con vật ôm nhau"),
+        ("a small dinosaur peeking out from behind a big tree, one hill behind",
+         True, "một con nấp sau con kia"),
+        ("a monkey riding an elephant, two trees beside them", True, "cưỡi"),
+        ("two bears playing together in a field, one tree beside them", True,
+         "chơi cùng nhau"),
+        # Ba câu này PHẢI được tha
+        ("a bouquet of sunflowers in a wooden bucket, one leaf beside it",
+         False, "hoa cắm trong chậu là bình thường"),
+        ("a cat sitting on a chair, one plant behind it", False,
+         "con vật ngồi trên đồ vật là bình thường"),
+        ("a brontosaurus eating leaves, one simple tree behind it", False,
+         "vật nền đứng phía sau là mẫu câu tốt"),
+    ]
+    for text, should_fix, why in overlap_cases:
+        new, notes = scrub_overlap(text)
+        touched = (new != text) or bool(notes)
+        check(f"{'Sửa' if should_fix else 'Tha'}: {why}",
+              touched == should_fix, new[:44])
+
+    # Câu phải còn ĐÚNG NGỮ PHÁP sau khi sửa. Bản đầu cho ra
+    # "standing next to on a big rock" vì động từ không có tân ngữ.
+    fixed, _ = scrub_overlap("two dinosaurs hugging on a big rock")
+    check("Sửa xong câu không bị què",
+          "next to on" not in fixed and "beside on" not in fixed, fixed)
+
+    for name in _themes():
+        dirty = [s for s in load_subjects(name)
+                 if scrub_overlap(s)[0] != s or scrub_overlap(s)[1]]
+        check(f"themes/{name}.txt không có cảnh chồng chéo",
+              not dirty, f"{len(dirty)} dòng: {dirty[:1]}")
+
     print("\n[15] Lệnh measure")
     from studio.commands.measure import measure_image
 

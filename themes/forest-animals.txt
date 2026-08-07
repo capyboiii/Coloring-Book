@@ -4,13 +4,13 @@
 # Hợp với --complexity simple (sách trẻ em) và --density rich.
 
 a smiling fox sitting in tall grass, mushrooms and wildflowers around it, pine trees and a full moon behind
-a bear cub hugging a honey pot, bees flying around, tree stumps and ferns filling the background
+a bear cub sitting beside a honey pot, two bees above it, one tree stump behind
 a rabbit standing beside a large mushroom, more mushrooms and clover around it, tall trees and falling leaves behind
 a squirrel holding an acorn on a branch, more acorns and leaves around it, a busy tree canopy filling the page
 a deer with small antlers standing among ferns, birds and butterflies around it, dense forest trees behind
 a hedgehog curled on fallen leaves, mushrooms and berries scattered around, tree roots and ferns filling the space
 an owl perched on a branch, smaller birds nearby, a crescent moon and leafy branches filling the background
-a raccoon peeking out of a hollow log, mushrooms and ferns around it, forest trees and vines behind
+a raccoon standing beside a hollow log, two mushrooms nearby, one tree behind
 a badger walking along a woodland path, flowers and stones lining the path, tall trees on both sides
 a mother duck leading ducklings across a pond, lily pads and cattails around them, trees and reeds behind
 a beaver building a dam with branches, fish in the water below, trees and reeds along the bank
@@ -24,6 +24,6 @@ a turtle walking through grass, flowers and stones around it, bushes and trees b
 a family of quail walking in a line, wildflowers and grass around them, bushes and trees filling the background
 a lynx sitting on a rock with its tail curled, pine branches around it, snowy trees behind
 a porcupine among pine cones, ferns and mushrooms around it, forest trees filling the page
-a koala hugging a thick tree trunk, two big leaves beside it, a round moon behind the tree
+a koala sitting on the ground beside a thick tree trunk, two big leaves nearby
 a family of otters playing in a stream, fish in the water, rocks and reeds along both banks
 a squirrel and a rabbit sharing acorns under a big tree, mushrooms and flowers around them, forest filling the background
