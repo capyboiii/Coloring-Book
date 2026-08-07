@@ -517,8 +517,12 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
               "two round clouds beside it, a wide hill below", 5)[0]) == 1)
 
     print("\n[14] Độ dày nét")
-    check("Có bật làm dày nét",
-          config.LINE_THICKEN > 1, f"{config.LINE_THICKEN}px")
+    # Do NET RA cuoi cung, khong kiem tra co bat co nao. CLOSE_GAPS lam day
+    # net san roi nen LINE_THICKEN mac dinh tat.
+    check("Có nối khe hở đủ rộng (Flux vẽ đứt sẵn từ ảnh gốc)",
+          config.CLOSE_GAPS >= 7, f"{config.CLOSE_GAPS}px")
+    check("Ngưỡng đen đủ cao để nét xám thành đen tuyền",
+          config.LEVELS_BLACK >= 150, f"{config.LEVELS_BLACK}")
     art = tmp / "line-test.png"
     im = Image.new("L", (config.GEN_W, config.GEN_H), 255)
     ImageDraw.Draw(im).ellipse((200, 300, 700, 900), outline=0, width=4)
@@ -527,8 +531,16 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     a = __import__("numpy").array(page) < 128
 
     width_px = 2.0 * a.sum() / max(1, (a & ~_erode(a)).sum())
-    check("Nét sau xử lý dày 6-14 px @300dpi (sách trẻ em cần 6-10)",
-          6 <= width_px <= 14, f"{width_px:.1f} px")
+    # Net gia trong test mong hon net Flux that (do tren 4 anh that: 9.8-14.3px)
+    check("Nét sau xử lý dày 6-18 px @300dpi",
+          6 <= width_px <= 18, f"{width_px:.1f} px")
+    # Net phai DEN TUYEN, khong duoc xam. Day la loi thay ro tren anh may:
+    # net nen xam nhat nen in ra nhu bi mo.
+    import numpy as _np
+    g = _np.array(page)
+    ink = g < 200
+    faint = ((g >= 100) & ink).sum() / max(1, ink.sum())
+    check("Dưới 10% pixel mực còn xám nhạt", faint < 0.10, f"{faint:.1%}")
 
     print("\n" + "─" * 50)
     if FAILURES:

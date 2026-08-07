@@ -140,7 +140,16 @@ def cover_size_in(page_count: int) -> tuple[float, float]:
 
 # Khử xám bằng levels thay vì threshold cứng: giữ được khử răng cưa ở viền nét
 # nhưng vẫn ép nền về trắng tinh và nét về đen tuyền.
-LEVELS_BLACK = 80    # <= giá trị này -> đen tuyền
+# 170 chứ không phải 80.
+#
+# Flux vẽ nét không đều màu: nét chính đen đậm, còn nét nền (mây, cỏ xa) thì
+# XÁM NHẠT. Đo trên ảnh thật: 17.7% pixel mực nằm ở vùng xám 100-200, tức gần
+# một phần năm số nét in ra sẽ nhạt hơn phần còn lại.
+#
+# Với ngưỡng 80 thì nét xám 150 vẫn ra xám 150 — in xong nhìn như bị mờ.
+# Với 170 thì mọi thứ tối hơn 170 đều thành đen tuyền, nét đều hẳn.
+# Đo lại: 17.7% -> 5.4% pixel còn xám.
+LEVELS_BLACK = 170   # <= giá trị này -> đen tuyền
 LEVELS_WHITE = 200   # >= giá trị này -> trắng tinh
 
 # Làm mịn TRƯỚC khi khử xám, để viền nét bớt lồi lõm.
@@ -152,9 +161,17 @@ LEVELS_WHITE = 200   # >= giá trị này -> trắng tinh
 # 0 = tắt. Trên 3.5 thì chi tiết nhỏ bắt đầu dính vào nhau.
 SMOOTH_RADIUS = 2.5
 
-# Nối khe hở nhỏ trên nét bằng phép đóng hình thái (giãn rồi co).
-# 0 = tắt. 3 hoặc 5 là hợp lý; lớn hơn thì mảng nhỏ bị lấp.
-CLOSE_GAPS = 3
+# Nối khe hở trên nét bằng phép đóng hình thái (giãn rồi co).
+#
+# 9 chứ không phải 3. Lý do: **Flux vẽ đứt nét ngay từ ảnh gốc**, không phải
+# do khâu phóng to. Đo ở đúng pixel gốc 1392 đã thấy 31 đầu mút và 75 mảnh
+# rời. Kéo lên 2625 không tạo thêm chỗ đứt nào.
+#
+# Mà đóng 3px chỉ nối được khe ~2px, trong khi khe của Flux rộng hơn nhiều.
+# Đo số mảnh rời sau xử lý: đóng 3 -> 83 mảnh, đóng 9 -> 42 mảnh. Giảm một nửa.
+#
+# Lớn hơn 13 thì chi tiết nhỏ bắt đầu dính vào nhau.
+CLOSE_GAPS = 9
 
 # Làm DÀY nét lên (chỉ giãn, không co lại).
 #
@@ -164,9 +181,12 @@ CLOSE_GAPS = 3
 # schnell 4 bước vẽ sao thì ra vậy, chữ trong prompt không cãi lại được.
 #
 # Phép giãn thì không phụ thuộc model: nét bao nhiêu cũng dày thêm đúng
-# ngần ấy pixel. 3 = dày thêm 1px mỗi bên. 5 thì rất đậm, hợp sách trẻ nhỏ.
-# 0 hoặc 1 = tắt.
-LINE_THICKEN = 3
+# ngần ấy pixel.
+#
+# Mặc định TẮT, vì `CLOSE_GAPS = 9` ở trên đã làm dày nét sẵn rồi — đo ra
+# 9-16 px tuỳ ảnh. Bật thêm cái này nữa thì lên 16-20 px, chi tiết nhỏ bắt
+# đầu bít lại. Vẫn giữ làm nút vặn: sách cho bé 3 tuổi có thể đặt 3.
+LINE_THICKEN = 0
 
 # Ngưỡng cảnh báo tự động (Phase 2 sẽ dùng để lọc trước khi mắt người nhìn)
 INK_RATIO_MIN = 0.005  # dưới 0.5% -> trang gần như trắng
