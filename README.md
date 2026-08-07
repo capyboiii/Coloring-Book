@@ -569,6 +569,22 @@ Workflow phải là bản export **API format** (Settings → bật Dev mode →
 
 ---
 
+## Đo chất lượng nét
+
+```bash
+python studio.py measure khung-long
+python studio.py measure khung-long --vs khung-long-q6
+```
+
+Đo trên **ảnh gốc chưa qua xử lý**, để tách bạch lỗi của Flux với lỗi của khâu
+xử lý. Bốn chỉ số: dày nét, mực xám, quầng mờ, mảnh rời.
+
+Mốc quan trọng nhất là **8 px**. Flux làm việc trong latent nhỏ hơn ảnh 8 lần,
+nên nét mảnh hơn 8 px nằm gọn trong một ô latent và VAE phải dựng lại từ thông
+tin không đủ — ra xám, gợn, đứt. Nét hiện tại 5.3 px.
+
+Cách cải thiện và quy trình A/B: [docs/thu-nghiem-chat-luong-net.md](docs/thu-nghiem-chat-luong-net.md)
+
 ## Kiểm thử
 
 ```bash

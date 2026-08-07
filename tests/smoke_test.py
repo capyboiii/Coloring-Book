@@ -542,6 +542,34 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     faint = ((g >= 100) & ink).sum() / max(1, ink.sum())
     check("Dưới 10% pixel mực còn xám nhạt", faint < 0.10, f"{faint:.1%}")
 
+    print("\n[15] Lệnh measure")
+    from studio.commands.measure import measure_image
+
+    thin = tmp / "net-manh.png"
+    thick = tmp / "net-day.png"
+    im = Image.new("L", (600, 800), 255)
+    ImageDraw.Draw(im).ellipse((100, 100, 500, 700), outline=0, width=2)
+    im.save(thin)
+    im = Image.new("L", (600, 800), 255)
+    ImageDraw.Draw(im).ellipse((100, 100, 500, 700), outline=0, width=12)
+    im.save(thick)
+
+    m_thin = measure_image(thin)
+    m_thick = measure_image(thick)
+    check("Phân biệt được nét mảnh với nét dày",
+          m_thick["width_px"] > m_thin["width_px"] * 2,
+          f"{m_thin['width_px']:.1f} px so với {m_thick['width_px']:.1f} px")
+
+    grey_img = tmp / "net-xam.png"
+    im = Image.new("L", (600, 800), 255)
+    ImageDraw.Draw(im).ellipse((100, 100, 500, 700), outline=150, width=12)
+    im.save(grey_img)
+    check("Phát hiện nét xám không đen hẳn",
+          measure_image(grey_img)["grey"] > 0.9,
+          f"{measure_image(grey_img)['grey']:.0%} mực xám")
+    check("Không báo nhầm khi nét đã đen tuyền",
+          m_thick["grey"] < 0.3, f"{m_thick['grey']:.0%}")
+
     print("\n" + "─" * 50)
     if FAILURES:
         print(f"HỎNG: {len(FAILURES)} mục không đạt")

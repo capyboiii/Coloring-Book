@@ -17,6 +17,7 @@ Các lệnh lẻ, khi cần làm từng bước:
     python studio.py approve dai-duong-ky-thu --minutes 95
     python studio.py build dai-duong-ky-thu
     python studio.py cover dai-duong-ky-thu
+    python studio.py measure dai-duong-ky-thu --vs ban-thu-nghiem
 
 Quy trình 5 bước của roadmap, Phase 1 phủ bước ① ② ③:
 
@@ -33,7 +34,7 @@ import argparse
 import sys
 
 from studio.commands import (approve, build, cover, doctor, generate, make,
-                             subjects)
+                             measure, subjects)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -52,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     approve.register(subparsers)
     build.register(subparsers)
     cover.register(subparsers)
+    measure.register(subparsers)
 
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):
