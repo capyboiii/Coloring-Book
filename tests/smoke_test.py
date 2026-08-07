@@ -437,9 +437,12 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
           config.SMOOTH_RADIUS > 0, f"bán kính {config.SMOOTH_RADIUS}")
     check("Có bật nối khe hở trên nét",
           config.CLOSE_GAPS > 1, f"{config.CLOSE_GAPS}px")
-    check("Sinh ảnh ở độ phân giải đủ cao (nét dày, ít phải phóng)",
-          config.GEN_W >= 1200,
-          f"{config.GEN_W}x{config.GEN_H}, phóng "
+    # Flux schnell duoc huan luyen quanh 1 MP. Vuot xa nguong do thi net di
+    # loang choang - da do va xac nhan bang cach so voi anh ve tay trong UI.
+    mp = config.GEN_W * config.GEN_H / 1e6
+    check("Sinh ảnh quanh 1 MP (vùng Flux schnell được huấn luyện)",
+          0.7 <= mp <= 1.6,
+          f"{config.GEN_W}x{config.GEN_H} = {mp:.2f} MP, phóng "
           f"{config.ART_W_PX / config.GEN_W:.2f} lần")
     # COMPOSITIONS phải nói về BỐ TRÍ, không nói mật độ — nếu không nó đánh
     # nhau với DENSITY. Đây từng là lỗi thật.
@@ -455,8 +458,12 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     pr = build_prompt("a smiling fox sitting in tall grass",
                       "simple", "centered composition", "normal", "kawaii")
     words = len(pr.split())
-    check("Prompt dưới 180 từ (dài quá thì chủ thể bị chìm)",
-          words < 180, f"{words} từ")
+    # Siet tu 180 xuong 100. Prompt Bao chay tay trong UI - cai cho ra net
+    # dep hon han - chi 27 tu. Ban cua toi tung phinh len 163.
+    check("Prompt dưới 100 từ (bản chạy tay cho nét đẹp chỉ 27 từ)",
+          words < 100, f"{words} từ")
+    check("Chủ thể đứng ĐẦU prompt, không bị chìm ở giữa",
+          pr.startswith("a smiling fox"), pr[:34])
     # Bản trước độ dày nét được nhắc ở cả 4 khối, prompt phình lên 180 từ.
     # Mỗi ý phải nói đúng một lần.
     for phrase, limit in (("line weight", 1), ("no shading", 1),
@@ -467,7 +474,7 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
 
     from studio.prompts import STYLE
     check("Có phong cách kawaii làm mặc định cho sách trẻ em",
-          "kawaii" in STYLE and "chibi" in STYLE["kawaii"])
+          "kawaii" in STYLE and "kawaii" in STYLE["kawaii"])
 
     print("\n[13] Khuôn bố cục cố định (@template)")
     from studio.prompts import load_template, make_prompts
@@ -489,13 +496,13 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     check("Có khuôn thì KHÔNG kèm COMPOSITIONS",
           "front view" not in with_tpl[0].prompt)
     check("Có khuôn thì KHÔNG kèm DENSITY",
-          "60 to 80 percent" not in with_tpl[0].prompt)
+          "lots of white space" not in with_tpl[0].prompt)
 
     no_tpl = make_prompts("x", 1, "simple", load_subjects("giang-sinh"),
                           seed_start=1, density="normal")
     check("Không có khuôn thì vẫn dùng COMPOSITIONS + DENSITY",
           "front view" in no_tpl[0].prompt
-          and "60 to 80 percent" in no_tpl[0].prompt)
+          and "lots of white space" in no_tpl[0].prompt)
 
     # CẮT chữ cái lạc chứ không bỏ cả dòng — phần còn lại vẫn dùng được.
     # File khung-long.txt của Bao hỏng 19/24 dòng đúng kiểu này, bỏ hết thì

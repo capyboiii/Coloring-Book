@@ -72,19 +72,29 @@ ART_H_PX = inch_to_px(ART_H_IN)     # 3000
 # Tỉ lệ đúng bằng vùng vẽ an toàn (7.25:10 = 0.725) và chia hết cho 16
 # để Flux không phải nội suy.
 #
-# 1392x1920 thay cho 928x1280 cũ. Lý do: nét ở khổ in bị gợn sóng và dày mỏng
-# không đều. Đo ra thì nét KHÔNG đứt — cả trang chỉ 4 đầu mút — mà là viền
-# lồi lõm. Nguyên nhân: nét sinh ra chỉ dày ~3 px, phóng 2.34 lần lên 2175 px
-# thì mọi gợn ở mức pixel bị khuếch đại thành cục.
+# 832x1152 = 0.96 MP.
 #
-# Ở 1392 px nét dày ~4-5 px và chỉ còn phóng 1.56 lần, gợn đỡ lộ hẳn.
-# Đổi lại số pixel gấp 2.25 lần nên mỗi ảnh lâu hơn khoảng gấp đôi.
+# Tôi đã từng nâng lên 1392x1920 (2.67 MP) với lập luận: latent to hơn thì nét
+# chiếm nhiều ô hơn, đỡ bị VAE làm hỏng. Lập luận đó SAI, và Bao phát hiện ra
+# bằng cách đơn giản nhất — vẽ thẳng trong giao diện ComfyUI thì nét đẹp hơn
+# hẳn so với chạy qua code.
 #
-# GPU yếu thì hạ lại trong .env:
-#     STUDIO_GEN_WIDTH=928
-#     STUDIO_GEN_HEIGHT=1280
-GEN_W = int(os.environ.get("STUDIO_GEN_WIDTH", "1392"))
-GEN_H = int(os.environ.get("STUDIO_GEN_HEIGHT", "1920"))
+# Đọc metadata nhúng trong file PNG thì thấy giao diện dùng 832x1088 = 0.91 MP.
+# Hai lý do nó thắng:
+#
+#   1. FLUX.1-schnell được huấn luyện quanh 1 MP. Đẩy lên 2.67 MP là ra ngoài
+#      vùng nó quen, nét bắt đầu đi loạng choạng và dày mỏng thất thường.
+#   2. Ảnh nhỏ phải phóng NHIỀU hơn để đạt khổ in (2.6 lần thay vì 1.56 lần),
+#      mà chính phép nội suy LANCZOS khi phóng lại là một bộ làm mượt. Nâng độ
+#      phân giải sinh đã vô tình lấy mất cái đó.
+#
+# Bài học: đừng suy luận về hành vi của model rồi tin luôn. Phải đo, và phải
+# so với một bản đối chứng chạy tay.
+#
+# Máy khoẻ muốn thử lại độ phân giải cao thì sửa trong .env — nhưng nhớ đo
+# bằng `studio.py measure` và so với ảnh vẽ tay trong giao diện.
+GEN_W = int(os.environ.get("STUDIO_GEN_WIDTH", "832"))
+GEN_H = int(os.environ.get("STUDIO_GEN_HEIGHT", "1152"))
 
 assert abs(GEN_W / GEN_H - ART_W_IN / ART_H_IN) < 0.005, (
     f"Tỉ lệ sinh ảnh {GEN_W}x{GEN_H} lệch vùng vẽ "

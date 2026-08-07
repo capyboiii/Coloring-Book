@@ -47,10 +47,8 @@ from pathlib import Path
 #   COMPLEXITY  mức độ chi tiết
 #   DENSITY     bố trí trên trang
 BASE_STYLE = (
-    "black and white coloring book page, clean line art, outline drawing, "
-    "thick clean black outlines with uniform line weight, "
-    "completely uncolored, blank white shapes for a child to fill in, "
-    "no shading, no gray, no gradients, no shadows"
+    "black and white coloring book page, clean bold black outlines, "
+    "no color, no shading, no gradients, no texture"
 )
 
 # --------------------------------------------------------------------------
@@ -66,42 +64,19 @@ BASE_STYLE = (
 # Chuỗi "simple cute cartoon style" cũ quá mơ hồ nên Flux tự do diễn giải,
 # ra kiểu vẽ tay nguệch ngoạc có texture lông lá.
 STYLE = {
-    "kawaii": (
-        "kawaii chibi style, cute friendly happy smiling, "
-        "big round head and small rounded body, "
-        "simple dot eyes and one small curved smile, "
-        "every object drawn as a simple flat icon, "
-        "no fur texture, no hatching, no stippling"
-    ),
-    "cartoon": (
-        "friendly cartoon style, cute and happy, rounded shapes, "
-        "no fur texture, no hatching"
-    ),
-    "decorative": (
-        "decorative ornamental line art, symmetrical flowing patterns"
-    ),
+    "kawaii": ("cute kawaii cartoon style, big round head, "
+               "simple dot eyes, happy smile"),
+    "cartoon": "friendly cartoon style, rounded shapes",
+    "decorative": "decorative ornamental line art, symmetrical patterns",
 }
 
 # Bốn mức theo độ tuổi, khớp với AGE_DETAIL bên llm.py để chỉ dẫn cho
 # LM Studio và prompt cho Flux nói cùng một thứ.
 COMPLEXITY = {
-    "simple": (
-        "very simple, large shapes, minimal details, "
-        "big chunky forms with wide open areas to color, "
-        "whole subject fully visible, nothing cut off at the edges, "
-        "for ages 3 to 5"
-    ),
-    "medium": (
-        "simple details and one cute accessory, "
-        "whole subject fully visible, nothing cut off at the edges, "
-        "for ages 5 to 8"
-    ),
-    "detailed": (
-        "moderately detailed, whole subject fully visible, for ages 8 to 12"
-    ),
-    "intricate": (
-        "intricate decorative detail, many areas to color, adult coloring book"
-    ),
+    "simple": "very simple, large shapes, minimal details, for ages 3 to 5",
+    "medium": "simple details, for ages 5 to 8",
+    "detailed": "moderately detailed, for ages 8 to 12",
+    "intricate": "intricate decorative detail, adult coloring book",
 }
 
 # Flux là mô hình guidance-distilled nên KHÔNG dùng negative prompt.
@@ -132,10 +107,10 @@ NEGATIVE = (
 # "foreground and background" — góc nhìn lạ làm Flux dựng phối cảnh, mà phối
 # cảnh thì đẻ ra chi tiết nhỏ và vật chồng lên nhau.
 COMPOSITIONS = [
-    "front view, subject standing upright and facing the viewer",
-    "slightly side view, subject facing a little to the left",
-    "front view, subject sitting upright",
-    "slightly side view, subject facing a little to the right",
+    "front view",
+    "slightly side view",
+    "front view, sitting",
+    "slightly side view, standing",
 ]
 
 # Mật độ chi tiết — đây là cái cần chỉnh khi ảnh ra chỉ có một đối tượng
@@ -144,21 +119,10 @@ COMPOSITIONS = [
 # phần trăm thì Flux bám được. Nền tối đa một phần tư trang — phần còn lại
 # phải là giấy trắng, vì trang tô màu đẹp luôn có nhiều khoảng trắng.
 DENSITY = {
-    "single": (
-        "the subject alone fills 70 percent of the frame, "
-        "plain empty white background, no background elements at all"
-    ),
-    "normal": (
-        "one main subject filling 60 to 80 percent of the frame, "
-        "only one or two simple background things in the remaining quarter, "
-        "large areas of empty white paper, nothing touching or overlapping"
-    ),
-    # Chỉ dùng cho sách người lớn. Trẻ nhỏ mà gặp trang này là bỏ cuộc.
-    "rich": (
-        "one main subject filling most of the frame, "
-        "a decorative background of large simple shapes, "
-        "still leaving clear white space between every element"
-    ),
+    "single": "one subject alone on plain white background",
+    "normal": ("one subject filling most of the page, "
+               "one or two simple background things, lots of white space"),
+    "rich": "one subject with a simple decorative background",
 }
 
 
@@ -207,12 +171,17 @@ def build_prompt(subject: str, complexity: str, composition: str,
     # Thứ tự: nền tảng -> PHONG CÁCH -> độ tinh xảo -> bố trí -> CHỦ THỂ ->
     # mật độ. Phong cách đặt sớm vì nó là thứ định hình mạnh nhất; chủ thể
     # đặt gần cuối theo đúng prompt đã chứng minh chạy tốt.
+    # CHỦ THỂ ĐẶT LÊN ĐẦU. Prompt Bao chạy tay trong giao diện — cái cho ra
+    # nét đẹp hơn hẳn — mở đầu bằng chủ thể rồi mới tới ràng buộc phong cách:
+    #     "a small brontosaurus munching on tall grass, one simple tree
+    #      behind it for children / No color / No shading / ..."
+    # Bản của tôi nhét 100 từ phong cách lên trước, chủ thể chìm ở giữa.
     parts = [
+        subject.strip().rstrip("."),
+        composition,
         BASE_STYLE,
         STYLE[style],
         COMPLEXITY[complexity],
-        composition,
-        subject.strip().rstrip("."),
         DENSITY[density] if density_text is None else density_text,
     ]
     return ", ".join(p for p in parts if p)

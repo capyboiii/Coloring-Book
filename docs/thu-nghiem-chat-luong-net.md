@@ -136,3 +136,66 @@ Mỗi lần thử, ghi vào bảng này để lần sau khỏi thử lại:
 |---|---|---|---|---|---|
 | 2026-08-07 | Q4_K_S, 1392×1920, 4 bước | 5.3 px | 20% | 14% | 39 |
 | | | | | | |
+
+---
+
+## Cập nhật 2026-08-07 — vẽ trong giao diện đẹp hơn chạy qua code
+
+Bao phát hiện bằng cách đơn giản nhất: **vẽ thẳng trong giao diện ComfyUI thì
+nét đều và rõ, chạy qua code thì xấu.** Cùng model, cùng máy.
+
+ComfyUI nhúng workflow vào file PNG nên so được ngay:
+
+| | Giao diện | Code |
+|---|---|---|
+| Model | flux1-schnell-Q4_K_S | *cùng* |
+| Sampler | 4 bước, euler/simple | *cùng* |
+| **Kích thước** | **832 × 1088 = 0.91 MP** | **1392 × 1920 = 2.67 MP** |
+| **Prompt** | **27 từ** | **163 từ** |
+
+Hai khác biệt, và cả hai đều do tôi gây ra.
+
+### Độ phân giải — tôi suy luận sai
+
+Tôi nâng từ 928 lên 1392 với lập luận: latent to hơn thì nét chiếm nhiều ô
+hơn, đỡ bị VAE làm hỏng. Nghe hợp lý, nhưng sai vì bỏ qua hai chuyện:
+
+1. **FLUX.1-schnell được huấn luyện quanh 1 MP.** Đẩy lên 2.67 MP là ra ngoài
+   vùng nó quen — nét bắt đầu đi loạng choạng, dày mỏng thất thường.
+2. **Ảnh nhỏ phải phóng nhiều hơn để đạt khổ in** (2.6 lần thay vì 1.56 lần),
+   mà chính phép nội suy LANCZOS khi phóng lại là một bộ làm mượt rất tốt.
+   Nâng độ phân giải sinh đã vô tình lấy mất cái đó.
+
+Đã hạ về **832 × 1152 = 0.96 MP**, sát với thứ giao diện đang dùng.
+
+### Prompt — 163 từ so với 27
+
+Prompt chạy tay của Bao:
+
+```
+a small brontosaurus munching on tall grass, one simple tree behind it for children
+No color
+No shading
+No texture
+No lighting
+No gradients
+Black outlines only
+```
+
+Chủ thể **đứng đầu**, rồi tới vài ràng buộc ngắn gọn.
+
+Bản của tôi nhét hơn 100 từ phong cách lên trước, chủ thể chìm ở giữa. Mỗi
+vòng sửa tôi lại thêm một chuỗi, lần nào cũng thấy có lý, và cộng dồn thành
+163 từ loãng toẹt.
+
+Đã rút xuống **72 từ** và **đưa chủ thể lên đầu**.
+
+### Bài học
+
+Đừng suy luận về hành vi của model rồi tin luôn. Phải đo, và **phải có một bản
+đối chứng chạy tay** để so. Nếu Bao không tự vẽ trong giao diện thì tôi còn
+loay hoay chỉnh khâu xử lý ảnh rất lâu nữa — trong khi lỗi nằm ở hai tham số
+tôi tự đặt.
+
+Kiểm thử giờ chặn cả hai: prompt phải dưới 100 từ, và độ phân giải phải nằm
+trong 0.7–1.6 MP.
