@@ -5,14 +5,32 @@ LM Studio phơi ra API tương thích OpenAI ở http://localhost:1234/v1 nên c
 cần POST /chat/completions như bình thường. Không cần API key, không tốn tiền,
 không gửi gì ra ngoài.
 
-Đổi lại: mô hình 9B yếu hơn hẳn mô hình đám mây. Ba chỗ phải xử lý thêm mà
-gọi API hãng không gặp:
+Đổi lại, mô hình 9B có chế độ suy luận hỏng theo cách rất tốn kém. Lần chạy
+đầu tiên thất bại như sau:
 
-  1. Chỉ dẫn viết bằng TIẾNG ANH — mô hình nhỏ bám chỉ dẫn tiếng Anh tốt hơn
-     nhiều, dù chủ đề đầu vào là tiếng Việt.
-  2. Qwen3 có chế độ suy nghĩ, nhả ra <think>...</think> trước câu trả lời.
-     Không cắt là rác lọt vào file theme.
-  3. Hiếm khi ra đủ số dòng trong một lần. Có vòng xin thêm cho đủ.
+    "content": ""
+    "reasoning_content": "Thinking Process: ... Count: A(1) happy(2) Santa(3)..."
+    "finish_reason": "length"
+    "reasoning_tokens": 3999    ← trên tổng 4000
+
+Mô hình đốt sạch 4000 token vào việc **đếm từ từng chữ một** để kiểm tra luật
+"mỗi dòng 15-30 từ", rồi hết token trước khi kịp viết câu trả lời. Mất 5 phút
+mỗi lần gọi và trả về rỗng.
+
+Ba chỗ đã sửa vì chuyện đó:
+
+  1. TẮT chế độ suy luận (enable_thinking=false + /no_think).
+  2. BỎ luật đếm từ — chính nó gây ra vòng đếm vô tận. Nói "một câu, khoảng
+     20 từ" thay vì đặt ngưỡng cứng để mô hình phải đi kiểm.
+  3. CHIA NHỎ: hỏi 8 cảnh mỗi lần thay vì 24. Yêu cầu ngắn thì mô hình nhỏ
+     làm chắc tay hơn nhiều.
+
+Và hai chỗ phòng thủ:
+
+  4. LM Studio để phần suy nghĩ ở trường RIÊNG `reasoning_content`, không phải
+     thẻ <think> trong content. Vẫn cắt <think> phòng khi, nhưng phải đọc cả
+     trường kia — lần chạy hỏng ở trên có sẵn cảnh dùng được nằm trong đó.
+  5. finish_reason == "length" thì cảnh báo rõ, đừng để im lặng trả về thiếu.
 """
 
 from __future__ import annotations
@@ -54,12 +72,15 @@ RULES
    main subject + what it is doing + 2 or 3 other things filling the rest of the page.
 3. Describe CONTENT only. Never mention "line art", "black and white",
    "coloring page", "outlines" or any drawing style.
-4. Each line must be 15 to 30 words and must contain commas.
+4. Write each line as one sentence of about twenty words, using commas to
+   separate the parts. Do not count the words.
 5. All {count} scenes must be clearly different from each other. Do not repeat
    the same animal, object or layout twice.
 6. Only things that can be drawn with outlines. Avoid fog, light rays,
    reflections, shadows.
 7. Never use copyrighted characters such as Disney, Pokemon, Sanrio or Sonic.
+
+Write the lines directly. Do not plan, do not draft, do not check your work.
 
 GOOD EXAMPLES (topic: ocean)
 a smiling sea turtle swimming through a coral reef, schools of small fish above it, seaweed and starfish along the sea floor below
@@ -135,10 +156,18 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
         if not line:
             continue
 
-        # Mô hình nhỏ hay chèn câu dẫn kiểu "Here are 24 scenes:"
-        if re.match(r"^(here|below|these|sure|okay|scene[s]?\b|output)\b",
-                    line, flags=re.IGNORECASE) and "," not in line:
-            warnings.append(f"bỏ câu dẫn: {line[:50]!r}")
+        # Dòng kết thúc bằng ':' luôn là tiêu đề hoặc câu dẫn, không bao giờ
+        # là một cảnh. Luật này chắc hơn nhiều so với dò danh sách từ khoá —
+        # bản trước dò "here/below/sure/..." nên vẫn để lọt "Thinking Process:"
+        if line.endswith(":"):
+            warnings.append(f"bỏ tiêu đề/câu dẫn: {line[:50]!r}")
+            continue
+
+        # Dưới 6 từ thì chắc chắn không phải cảnh, bỏ hẳn chứ không chỉ cảnh
+        # báo. Rác kiểu này lọt vào file theme là sinh ra một trang hỏng.
+        words = len(line.split())
+        if words < 6:
+            warnings.append(f"bỏ dòng quá ngắn ({words} từ): {line[:50]!r}")
             continue
 
         if any(ord(c) > 127 for c in line):
@@ -156,9 +185,9 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
                 f"dòng không có dấu phẩy, có thể là vật đơn lẻ chứ không phải "
                 f"cảnh: {line[:60]!r}")
 
-        words = len(line.split())
-        if words < 8:
-            warnings.append(f"dòng quá ngắn ({words} từ): {line[:60]!r}")
+        if words < 10:
+            warnings.append(f"dòng hơi ngắn ({words} từ), có thể nhạt: "
+                            f"{line[:60]!r}")
 
         lines.append(line)
 
@@ -200,21 +229,46 @@ def _resolve_model(model: str | None) -> str:
     return models[0]
 
 
-def _chat(model: str, prompt: str, timeout: int, temperature: float) -> str:
+def _post(payload: dict, timeout: int):
     try:
-        r = requests.post(
-            f"{base_url()}/chat/completions",
-            json={
-                "model": model,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": temperature,
-                "max_tokens": 4000,
-                "stream": False,
-            },
-            timeout=timeout,
-        )
+        return requests.post(
+            f"{base_url()}/chat/completions", json=payload, timeout=timeout)
     except requests.RequestException as exc:
         raise LLMError(f"Gọi LM Studio lỗi: {exc}") from exc
+
+
+def _chat(model: str, prompt: str, timeout: int, temperature: float,
+          max_tokens: int, think: bool) -> tuple[str, str, list[str]]:
+    """
+    Trả về (nội dung, finish_reason, cảnh báo).
+
+    Tắt suy luận bằng hai cách cùng lúc, vì tuỳ phiên bản mà cách nào ăn:
+      · chat_template_kwargs.enable_thinking=false  — llama.cpp / LM Studio
+      · hậu tố /no_think trong prompt               — công tắc riêng của Qwen3
+    """
+    warnings: list[str] = []
+    if not think:
+        prompt = f"{prompt}\n\n/no_think"
+
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": False,
+    }
+    if not think:
+        payload["chat_template_kwargs"] = {"enable_thinking": False}
+
+    r = _post(payload, timeout)
+
+    # Máy chủ cũ không biết chat_template_kwargs thì bỏ ra gọi lại,
+    # vẫn còn /no_think đỡ đòn.
+    if r.status_code == 400 and "chat_template_kwargs" in payload:
+        warnings.append("máy chủ không nhận chat_template_kwargs, "
+                        "chỉ dựa vào /no_think")
+        payload.pop("chat_template_kwargs")
+        r = _post(payload, timeout)
 
     if r.status_code != 200:
         raise LLMError(f"LM Studio trả HTTP {r.status_code}: {r.text[:400]}")
@@ -222,50 +276,81 @@ def _chat(model: str, prompt: str, timeout: int, temperature: float) -> str:
     choices = r.json().get("choices") or []
     if not choices:
         raise LLMError("LM Studio không trả về nội dung nào")
-    return choices[0].get("message", {}).get("content", "") or ""
+
+    message = choices[0].get("message", {}) or {}
+    finish = choices[0].get("finish_reason", "") or ""
+    content = (message.get("content") or "").strip()
+
+    # LM Studio để phần suy nghĩ ở TRƯỜNG RIÊNG, không phải thẻ <think>.
+    # Suy luận chạy tràn thì content rỗng còn cảnh nằm hết trong đó.
+    if not content:
+        reasoning = (message.get("reasoning_content") or "").strip()
+        if reasoning:
+            warnings.append(
+                "mô hình trả về rỗng vì suy luận chạy tràn hết token — "
+                "đang vớt cảnh từ phần suy nghĩ, chất lượng sẽ kém hơn")
+            content = reasoning
+
+    if finish == "length":
+        warnings.append(
+            "chạm giới hạn token, câu trả lời bị cắt giữa chừng. "
+            "Giảm --batch hoặc tăng --max-tokens.")
+
+    return content, finish, warnings
 
 
 def generate_subjects(topic: str, count: int = 24, audience: str = "all",
                       model: str | None = None, timeout: int = 600,
-                      temperature: float = 0.85,
-                      max_attempts: int = 3
+                      temperature: float = 0.85, batch: int = 8,
+                      max_tokens: int | None = None, think: bool = False,
+                      on_progress=None
                       ) -> tuple[list[str], list[str], str]:
     """
     Trả về (danh sách cảnh, cảnh báo, tên model đã dùng).
 
-    Mô hình 9B hiếm khi ra đủ số dòng trong một lần — nó hay dừng sớm hoặc lặp
-    lại. Nên có vòng xin thêm, mỗi vòng đưa lại danh sách đã có và yêu cầu viết
-    những cảnh KHÁC.
+    Hỏi theo từng mẻ nhỏ (mặc định 8) thay vì đòi 24 cảnh một lúc. Mô hình 9B
+    làm yêu cầu ngắn chắc tay hơn hẳn, và nếu một mẻ hỏng thì chỉ mất mẻ đó
+    chứ không mất cả lượt.
     """
     if audience not in AUDIENCE:
         raise LLMError(f"audience phải là một trong {list(AUDIENCE)}")
 
     model = _resolve_model(model)
-
-    base = INSTRUCTIONS.format(
-        topic=topic, count=count, audience=AUDIENCE[audience])
+    batch = max(1, min(batch, count))
 
     collected: list[str] = []
     warnings: list[str] = []
     seen: set[str] = set()
 
-    for attempt in range(1, max_attempts + 1):
+    # Cho phép hụt vài mẻ rồi vẫn còn cơ hội bù
+    max_rounds = -(-count // batch) + 3
+
+    for rnd in range(1, max_rounds + 1):
         missing = count - len(collected)
         if missing <= 0:
             break
 
-        if attempt == 1:
-            prompt = base
-        else:
-            prompt = TOP_UP.format(
-                base=INSTRUCTIONS.format(
-                    topic=topic, count=missing, audience=AUDIENCE[audience]),
-                count=missing,
-                existing="\n".join(collected),
-            )
+        ask = min(batch, missing)
+        base = INSTRUCTIONS.format(
+            topic=topic, count=ask, audience=AUDIENCE[audience])
 
-        raw = _chat(model, prompt, timeout, temperature)
-        lines, warns = clean_lines(raw, missing)
+        if collected:
+            # Chỉ đưa lại 12 cảnh gần nhất — đủ để tránh lặp mà không phình
+            # prompt, vì prompt dài làm mô hình nhỏ lú thêm.
+            prompt = TOP_UP.format(
+                base=base, count=ask, existing="\n".join(collected[-12:]))
+        else:
+            prompt = base
+
+        if on_progress:
+            on_progress(rnd, len(collected), count, ask)
+
+        tokens = max_tokens or (ask * 120 + 500)
+        raw, _finish, warns = _chat(
+            model, prompt, timeout, temperature, tokens, think)
+        warnings.extend(warns)
+
+        lines, warns = clean_lines(raw, ask)
         warnings.extend(warns)
 
         added = 0
@@ -276,17 +361,20 @@ def generate_subjects(topic: str, count: int = 24, audience: str = "all",
                 collected.append(line)
                 added += 1
 
-        if attempt > 1:
-            warnings.append(f"lần gọi {attempt}: xin thêm được {added} cảnh")
-
-        if added == 0 and attempt > 1:
-            warnings.append("mô hình không nghĩ thêm được cảnh mới, dừng lại")
-            break
+        if added == 0:
+            warnings.append(f"mẻ {rnd} không thêm được cảnh nào")
+            if rnd >= 2 and not collected:
+                break
 
     if not collected:
         raise LLMError(
-            "Không lọc được cảnh nào. Model quá nhỏ hoặc chưa nạp đúng model. "
-            "Thử model to hơn, hoặc chạy lại."
+            "Không lọc được cảnh nào.\n"
+            "Thường là do chế độ suy luận: mô hình đốt hết token vào phần "
+            "suy nghĩ rồi trả về rỗng.\n"
+            "  · Tắt Reasoning trong LM Studio (bên phải, phần cấu hình model)\n"
+            "  · Hoặc giảm mẻ:  --batch 4\n"
+            "  · Hoặc nới trần: --max-tokens 8000\n"
+            "  · Hoặc nạp model không có chế độ suy luận (Instruct)"
         )
 
     if len(collected) < count:

@@ -74,26 +74,58 @@ python studio.py subjects --list-models   # xem model nào đang nạp
 | `--dry-run` | In ra xem trước, không ghi file |
 | `--model <tên>` | Chọn model cụ thể. Mặc định lấy model đang nạp |
 | `--temperature 0.85` | Cao thì đa dạng hơn nhưng dễ lạc đề |
+| `--batch 8` | Hỏi bao nhiêu cảnh mỗi lần. Trả rỗng thì hạ xuống 4 |
+| `--think` | Bật chế độ suy luận. **Mặc định tắt** |
 | `--name <tên>` | Đặt tên bộ khác với slug suy từ chủ đề |
 
 Cổng khác 1234 thì đặt `LMSTUDIO_URL` trong `.env`. **Chỉ lệnh này cần LM
 Studio** — mọi lệnh khác không đụng tới.
 
-#### Xử lý riêng cho model nhỏ
+#### Vì sao mặc định tắt suy luận
 
-Model 9B yếu hơn hẳn model đám mây, nên có ba chỗ xử thêm:
+Lần chạy đầu với Qwen3.5 9B thất bại thế này:
 
-- **Chỉ dẫn viết bằng tiếng Anh.** Model nhỏ bám chỉ dẫn tiếng Anh chặt hơn
-  tiếng Việt rõ rệt, dù chủ đề đầu vào là tiếng Việt.
-- **Cắt khối `<think>`.** Qwen3 nhả cả quá trình suy nghĩ ra trước câu trả lời.
-  Không cắt là nguyên đoạn lảm nhảm lọt vào file theme.
-- **Vòng xin thêm.** Model nhỏ hiếm khi ra đủ 24 dòng trong một lần — nó hay
-  dừng sớm hoặc lặp lại. Lệnh tự gọi lại tối đa 3 lần, mỗi lần đưa lại danh
-  sách đã có và yêu cầu viết cảnh **khác**.
+```json
+"content": ""
+"reasoning_content": "... Count: A(1) happy(2) Santa(3) Claus(4) ..."
+"finish_reason": "length"
+"reasoning_tokens": 3999          // trên tổng 4000
+```
 
-Ngoài ra kết quả còn bị lọc: bỏ hàng rào ```` ``` ````, bỏ số thứ tự, bỏ câu
-dẫn kiểu *"Here are the scenes:"*, bỏ dòng trùng, bỏ dòng lọt tiếng Việt, và
-cảnh báo dòng nào cụt lủn quá.
+Model đốt sạch 4000 token vào việc **đếm từ từng chữ một** để kiểm luật *"mỗi
+dòng 15–30 từ"*, rồi hết token trước khi kịp viết câu trả lời. Mất 5 phút mỗi
+lần gọi và trả về rỗng.
+
+Ba chỗ sửa vì chuyện đó:
+
+1. **Tắt suy luận** — gửi `enable_thinking=false` kèm hậu tố `/no_think`, hai
+   cách cùng lúc vì tuỳ phiên bản mà cách nào ăn.
+2. **Bỏ luật đếm từ** — chính nó gây ra vòng đếm vô tận. Giờ nói *"một câu,
+   khoảng hai mươi từ, đừng đếm"*.
+3. **Chia nhỏ** — hỏi 8 cảnh mỗi mẻ thay vì 24. Yêu cầu ngắn thì model nhỏ làm
+   chắc tay hơn nhiều, và một mẻ hỏng chỉ mất mẻ đó.
+
+#### Lọc kết quả
+
+- **LM Studio để phần suy nghĩ ở trường riêng `reasoning_content`**, không phải
+  thẻ `<think>` trong `content`. Nếu suy luận vẫn chạy tràn, lệnh **vớt cảnh từ
+  trường đó** kèm cảnh báo — còn hơn mất trắng cả lượt.
+- Bỏ hàng rào ```` ``` ````, số thứ tự, gạch đầu dòng
+- **Bỏ mọi dòng kết thúc bằng `:`** — tiêu đề và câu dẫn không bao giờ là cảnh.
+  Luật này chắc hơn dò danh sách từ khoá; bản trước dò `here/below/sure/...`
+  nên vẫn để lọt `Thinking Process:`
+- Bỏ hẳn dòng dưới 6 từ, bỏ dòng trùng, bỏ dòng lọt tiếng Việt
+- `finish_reason == "length"` thì cảnh báo rõ thay vì im lặng trả về thiếu
+
+#### Vẫn hỏng thì làm gì
+
+Theo thứ tự:
+
+1. **Tắt Reasoning trong LM Studio** — cột cấu hình model bên phải. Chắc ăn
+   nhất, vì tắt ở nguồn.
+2. `--batch 4`
+3. `--max-tokens 8000`
+4. Nạp bản **Instruct** thay vì bản có suy luận
 
 > **Đọc lướt file một lượt trước khi chạy 40 ảnh.** File `.txt` sửa tay thoải
 > mái — sửa một dòng rẻ hơn nhiều so với gen lại 40 ảnh rồi mới thấy sai.

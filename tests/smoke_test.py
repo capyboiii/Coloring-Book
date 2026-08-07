@@ -237,6 +237,7 @@ def main() -> int:
     messy = """<think>
 The user wants ocean scenes. Let me think about what to include.
 </think>
+Thinking Process:
 Here are the scenes:
 ```
 1. a smiling sea turtle swimming through a coral reef, small fish above it, seaweed below
@@ -253,10 +254,13 @@ a manta ray gliding over a busy coral reef, tropical fish everywhere, rocks belo
           repr(got[0][:40]) if got else "rỗng")
     check("Không sót chữ nào từ khối <think>",
           not any("user wants" in g.lower() for g in got))
-    check("Bỏ dòng trùng", len(got) == 4, f"{len(got)} dòng")
+    check("Bỏ mọi dòng kết thúc bằng ':' (tiêu đề, câu dẫn)",
+          not any(g.endswith(":") for g in got)
+          and not any("Thinking Process" in g for g in got))
+    check("Bỏ hẳn dòng dưới 6 từ, không chỉ cảnh báo",
+          not any(g == "jellyfish" for g in got))
+    check("Bỏ dòng trùng", len(got) == 3, f"{len(got)} dòng")
     check("Bỏ dòng tiếng Việt", not any("cá heo" in g for g in got))
-    check("Cảnh báo dòng cụt lủn không có dấu phẩy",
-          any("dấu phẩy" in w for w in warns))
 
     print("\n" + "─" * 50)
     if FAILURES:

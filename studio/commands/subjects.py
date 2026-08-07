@@ -43,6 +43,14 @@ def register(subparsers) -> None:
                         "đang nạp")
     p.add_argument("--temperature", type=float, default=0.85,
                    help="Cao thì đa dạng hơn nhưng dễ lạc đề (mặc định 0.85)")
+    p.add_argument("--batch", type=int, default=8,
+                   help="Hỏi bao nhiêu cảnh mỗi lần (mặc định 8). "
+                        "Model hay trả rỗng thì hạ xuống 4")
+    p.add_argument("--max-tokens", type=int, default=None,
+                   help="Trần token mỗi lần gọi. Mặc định tính theo --batch")
+    p.add_argument("--think", action="store_true",
+                   help="Bật chế độ suy luận. Mặc định TẮT — Qwen3 hay đốt "
+                        "sạch token vào phần suy nghĩ rồi trả về rỗng")
     p.add_argument("--overwrite", action="store_true",
                    help="Ghi đè bộ đã có")
     p.add_argument("--dry-run", action="store_true",
@@ -96,9 +104,13 @@ def run(args) -> int:
     info(f"Bộ        : {name}")
     info(f"Đối tượng : {args.audience}")
     info(f"Số cảnh   : {args.count}")
+    info(f"Mỗi mẻ   : {args.batch} cảnh")
+    info(f"Suy luận : {'bật' if args.think else 'tắt'}")
     info("")
     info(f"Đang hỏi model local ở {base_url()}...")
-    info("(mô hình 9B chạy CPU/GPU nhà có thể mất vài phút)")
+
+    def progress(rnd, have, total, ask):
+        info(f"  mẻ {rnd}: đã có {have}/{total}, xin thêm {ask}...")
 
     try:
         lines, warnings, model = generate_subjects(
@@ -107,6 +119,10 @@ def run(args) -> int:
             audience=args.audience,
             model=args.model,
             temperature=args.temperature,
+            batch=args.batch,
+            max_tokens=args.max_tokens,
+            think=args.think,
+            on_progress=progress,
         )
     except LLMError as exc:
         print(f"\nLỖI: {exc}")
