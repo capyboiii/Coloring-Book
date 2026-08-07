@@ -9,7 +9,7 @@ subtitle: "40 trang tô màu cho bé 4-8 tuổi"
 theme: giang-sinh
 pages: 40
 generate: 60
-complexity: simple    # nét rất dày, bo tròn, mảng lớn — cho trẻ nhỏ
+complexity: simple    # 3-5 tuổi: hình rất to, cực ít chi tiết
 density: normal       # một chủ thể rõ ràng, vài chi tiết nền. KHÔNG rich
 style: kawaii         # đầu tròn to, mắt chấm, đồ vật vẽ như icon phẳng
 seed:

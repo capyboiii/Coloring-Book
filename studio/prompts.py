@@ -47,10 +47,10 @@ from pathlib import Path
 #   COMPLEXITY  mức độ chi tiết
 #   DENSITY     bố trí trên trang
 BASE_STYLE = (
-    "coloring book page, black and white line art, "
-    "clean closed outlines with even line weight, "
+    "black and white coloring book page, clean line art, outline drawing, "
+    "thick clean black outlines with uniform line weight, "
     "completely uncolored, blank white shapes for a child to fill in, "
-    "no shading, no grayscale, no color fill"
+    "no shading, no gray, no gradients, no shadows"
 )
 
 # --------------------------------------------------------------------------
@@ -67,14 +67,14 @@ BASE_STYLE = (
 # ra kiểu vẽ tay nguệch ngoạc có texture lông lá.
 STYLE = {
     "kawaii": (
-        "kawaii chibi style, big round head and small rounded body, "
+        "kawaii chibi style, cute friendly happy smiling, "
+        "big round head and small rounded body, "
         "simple dot eyes and one small curved smile, "
         "every object drawn as a simple flat icon, "
-        "no fur texture, no hatching, no stippling, "
-        "characters facing forward in a relaxed pose"
+        "no fur texture, no hatching, no stippling"
     ),
     "cartoon": (
-        "friendly cartoon style, rounded shapes, simple expressive faces, "
+        "friendly cartoon style, cute and happy, rounded shapes, "
         "no fur texture, no hatching"
     ),
     "decorative": (
@@ -82,33 +82,43 @@ STYLE = {
     ),
 }
 
+# Bốn mức theo độ tuổi, khớp với AGE_DETAIL bên llm.py để chỉ dẫn cho
+# LM Studio và prompt cho Flux nói cùng một thứ.
 COMPLEXITY = {
     "simple": (
-        "thick bold outlines, big chunky shapes, large open areas to color, "
-        "very few details, no tiny scattered elements, "
+        "very simple, large shapes, minimal details, "
+        "big chunky forms with wide open areas to color, "
         "whole subject fully visible, nothing cut off at the edges, "
-        "for young children aged 3 to 7"
+        "for ages 3 to 5"
     ),
     "medium": (
-        "moderate detail, whole subject fully visible, "
-        "nothing cut off at the edges"
+        "simple details and one cute accessory, "
+        "whole subject fully visible, nothing cut off at the edges, "
+        "for ages 5 to 8"
     ),
     "detailed": (
-        "intricate ornamental detail, many areas to color, adult coloring book"
+        "moderately detailed, whole subject fully visible, for ages 8 to 12"
+    ),
+    "intricate": (
+        "intricate decorative detail, many areas to color, adult coloring book"
     ),
 }
 
 # Flux là mô hình guidance-distilled nên KHÔNG dùng negative prompt.
 # Giữ lại để ghi vào metadata và để dùng nếu sau này đổi sang SDXL.
 NEGATIVE = (
-    "shading, gradient, grayscale, gray fill, solid black fill, "
+    "shading, gradient, gray, shadows, solid black fill, "
     "fur texture, hatching, cross-hatching, stippling, scribbles, "
-    "photorealistic, 3d render, watermark, signature, text, letters, "
+    # Nhóm này là guideline 12: mấy chữ "chất lượng cao" quen tay lại chính
+    # là thứ kéo Flux sang phía kết cấu, lông, ánh sáng và đổ bóng.
+    "realistic, photorealistic, high quality, 8k, detailed illustration, "
+    "3d render, watermark, signature, text, letters, "
     "thin faint lines, sketchy lines, broken lines, uneven line weight, "
-    "blurry, cluttered, busy background, tiny details, fine patterns, "
-    "scattered small leaves, grass blades, pebbles, "
-    "overlapping characters, cropped limbs, cut off at the edge, "
-    "ornate decorative frame, realistic proportions, detailed illustration"
+    "cluttered, busy background, tiny details, dense forest, hundreds of leaves, "
+    "scattered pebbles, grass blades, "
+    "overlapping subjects, touching limbs, cropped limbs, cut off at the edge, "
+    "top view, dramatic perspective, fisheye, "
+    "angry, scary, aggressive"
 )
 
 # CHỈ nói về GÓC NHÌN và BỐ TRÍ, tuyệt đối không nói tới mật độ.
@@ -118,38 +128,36 @@ NEGATIVE = (
 # ("clear white space, uncluttered"). Prompt tự mâu thuẫn thì Flux chọn bừa.
 #
 # Giờ hai trục tách bạch: COMPOSITIONS lo bố trí, DENSITY lo mật độ.
+# CHỈ có góc nhìn thẳng và hơi chếch. Bỏ hết "close-up", "circular",
+# "foreground and background" — góc nhìn lạ làm Flux dựng phối cảnh, mà phối
+# cảnh thì đẻ ra chi tiết nhỏ và vật chồng lên nhau.
 COMPOSITIONS = [
-    "centered composition",
-    "wide composition spanning the width of the page",
-    "vertical composition",
-    "close-up view of the subject",
-    "scene with a clear foreground and background",
-    "symmetrical composition",
-    "circular composition",
-    "subject seen slightly from the side",
+    "front view, subject standing upright and facing the viewer",
+    "slightly side view, subject facing a little to the left",
+    "front view, subject sitting upright",
+    "slightly side view, subject facing a little to the right",
 ]
 
 # Mật độ chi tiết — đây là cái cần chỉnh khi ảnh ra chỉ có một đối tượng
 # nằm giữa trang trống hoác.
+# Con số 60-80% là thứ quan trọng nhất ở đây. Nói "to" thì mơ hồ; nói tỉ lệ
+# phần trăm thì Flux bám được. Nền tối đa một phần tư trang — phần còn lại
+# phải là giấy trắng, vì trang tô màu đẹp luôn có nhiều khoảng trắng.
 DENSITY = {
     "single": (
-        "single subject, plain white background, no background elements"
+        "the subject alone fills 70 percent of the frame, "
+        "plain empty white background, no background elements at all"
     ),
-    # Chỉnh theo đúng sách mẫu Bao đưa. Trang mẫu KHÔNG ít đồ — cảnh picnic
-    # có dứa, chuối, kem, bóng, đàn ukulele. Nhưng mỗi món đều TO, vẽ đơn
-    # giản, và tách nhau bằng khoảng trắng rõ ràng. Cái sai của mẻ trước là
-    # đồ nhỏ li ti và dính chùm, chứ không phải nhiều đồ.
     "normal": (
-        "one main subject in the middle, a few large objects around it, "
-        "clear white space between every object, nothing overlapping, "
-        "simple horizon line and one or two large background shapes only"
+        "one main subject filling 60 to 80 percent of the frame, "
+        "only one or two simple background things in the remaining quarter, "
+        "large areas of empty white paper, nothing touching or overlapping"
     ),
+    # Chỉ dùng cho sách người lớn. Trẻ nhỏ mà gặp trang này là bỏ cuộc.
     "rich": (
-        "a rich detailed scene filling the entire page, "
-        "many different elements throughout the composition, "
-        "background filled with additional details, "
-        "no large empty white areas, "
-        "elements reaching the top and bottom edges of the page"
+        "one main subject filling most of the frame, "
+        "a decorative background of large simple shapes, "
+        "still leaving clear white space between every element"
     ),
 }
 

@@ -9,7 +9,7 @@
 #
 # Dùng: python studio.py generate "Khủng long" --theme khung-long --count 40
 
-a small brontosaurus munching on tall grass, sunshine filtering through trees behind it, a big scarf flapping in the breeze
+a small brontosaurus munching on tall grass, one simple tree behind it
 tiny pterodactyls flying overhead, a family of dinosaurs walking near a lake, reeds swaying gently by the water's edge
 two stegosaurs sharing a rock as a seat, a patchwork quilt spread out nearby, fluffy clouds floating in the sky above them
 cute ankylosaurus grazing on bushes, a butterfly landing on its back, boulders scattered around the area

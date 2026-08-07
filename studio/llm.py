@@ -63,19 +63,19 @@ You write page descriptions for a printed coloring book.
 
 TOPIC: {topic}
 AUDIENCE: {audience}
+DETAIL LEVEL: {detail}
 
 Write exactly {count} scene descriptions in English. One scene per line.
 
 RULES
 1. English only. Never use Vietnamese or any other language.
-2. Each line is a SCENE, not a single object. Use this formula:
-   main subject + what it is doing + 2 or 3 other things filling the rest of the page.
+2. ONE main subject per line. Name it and say what it is doing. Then add AT
+   MOST two simple background things. The subject is the star of the page;
+   the background is a hint, not a scene.
 3. Describe CONTENT only. Never mention "line art", "black and white",
    "coloring page", "outlines" or any drawing style.
-4. Write each line as one sentence of about twenty words, using commas to
-   separate the parts. Do not count the words.
-5. All {count} scenes must be clearly different from each other. Do not repeat
-   the same animal, object or layout twice.
+4. Write each line as one sentence of about fifteen words. Do not count them.
+5. All {count} lines must use a clearly different main subject.
 6. Only things that can be drawn with outlines. Avoid fog, light rays,
    reflections, shadows.
 7. Never use copyrighted characters such as Disney, Pokemon, Sanrio or Sonic.
@@ -83,21 +83,37 @@ RULES
    The child chooses the colours. Say "a scarf", never "a red scarf".
 9. NEVER describe light. No glowing, twinkling, shining, sparkling, gleaming.
    An outline cannot draw light.
+10. Subjects must NEVER touch, overlap or hide each other. Write "standing
+    next to", never "hugging", "riding", "behind" or "peeking out of".
+11. Front view or slightly from the side. Never from above, never a dramatic
+    or unusual angle.
+12. Keep everything cute, friendly, happy, smiling. Never scary, angry or
+    realistic.
 
 Write the lines directly. Do not plan, do not draft, do not check your work.
 {extra}
 
-GOOD EXAMPLES (topic: ocean)
-a smiling sea turtle swimming through a coral reef, schools of small fish above it, seaweed and starfish along the sea floor below
-a cluster of round jellyfish drifting upward, bubbles rising all around them, coral reef and swaying seaweed below
+GOOD EXAMPLES
+a happy elephant holding a balloon, standing on simple grass with two flowers
+a smiling sea turtle swimming, two round bubbles above it and one coral below
+a cheerful fire truck parked on a plain road, one simple tree behind it
 
-BAD EXAMPLE (too short, will produce one object on an empty page)
-a sea turtle
-
-BAD EXAMPLE (names colours and light, the picture comes out already coloured)
-an elf decorating a tree with colorful ornaments, fairy lights twinkling all around
+BAD (a whole scene instead of one subject — the page becomes cluttered)
+a jungle with many animals, trees, rivers, birds and insects
+BAD (dense background — nothing left to colour comfortably)
+a fox in a dense forest with hundreds of leaves and scattered pebbles
 FIXED
-an elf decorating a tree with round ornaments, paper garlands looping around the branches
+a smiling fox sitting on a simple grassy field with two flowers
+
+BAD (subjects overlap — limbs end up fused together)
+three bears hugging inside a house
+FIXED
+three bears standing side by side, one simple house behind them
+
+BAD (names colours and light — the picture comes out already coloured)
+an elf decorating a tree with colorful ornaments, fairy lights twinkling
+FIXED
+an elf decorating a tree with round ornaments, two wrapped boxes beside it
 
 OUTPUT FORMAT
 Start every line with a lowercase letter.
@@ -124,15 +140,23 @@ AUDIENCE = {
     "all": "all ages",
 }
 
+# Ba mức chi tiết theo độ tuổi. Cùng một chủ đề nhưng cảnh viết cho bé 4 tuổi
+# phải khác hẳn cảnh viết cho bé 10 tuổi.
+AGE_DETAIL = {
+    "simple": "very simple, large shapes, minimal details, for ages 3 to 5",
+    "medium": "simple details and one cute accessory, for ages 5 to 8",
+    "detailed": "moderately detailed, for ages 8 to 12",
+    "intricate": "intricate and decorative, for adults",
+}
+
 # Luật riêng cho sách trẻ em. Rút từ nhận xét thật khi Bao xem mẻ ảnh đầu:
 # quá nhiều nhân vật chồng chéo, dơi và sói làm trẻ sợ, khung viền hoa văn
 # rối mắt, đuôi và chân bị cắt cụt.
 AUDIENCE_EXTRA = {
     "kids": """
 EXTRA RULES FOR YOUNG CHILDREN
-- Exactly ONE main character. At most one small companion. Never a crowd.
-- Characters must never overlap or hide each other.
-- Only two or three background things, each one large and simple.
+- Exactly ONE main character. At most one small companion, standing apart.
+- Only one or two background things. Leave the page mostly empty around them.
 - Show the whole animal. Never cut off a tail, a leg or a wing.
 - No frightening animals. No bats, wolves, spiders, snakes, owls at night.
 - No ornate frames, no decorative borders, no swirling patterns.
@@ -194,7 +218,7 @@ COLOUR_WORDS = re.compile(
 
 LIGHT_WORDS = re.compile(
     r"\b(glow\w*|twinkl\w*|shin\w*|shimmer\w*|sparkl\w*|gleam\w*|"
-    r"light rays?|sunlight|moonlight|reflection\w*)\b", re.IGNORECASE)
+    r"light rays?|sunshine|sunlight|moonlight|sunset|sunrise|reflection\w*)\b", re.IGNORECASE)
 
 
 def scrub_colour_and_light(line: str) -> tuple[str, list[str]]:
@@ -552,6 +576,7 @@ def _chat(model: str, prompt: str, timeout: int, temperature: float,
 
 
 def generate_subjects(topic: str, count: int = 24, audience: str = "all",
+                      detail: str = "simple",
                       model: str | None = None, timeout: int = 600,
                       temperature: float = 0.85, batch: int = 8,
                       max_tokens: int | None = None, think: bool = False,
@@ -586,6 +611,7 @@ def generate_subjects(topic: str, count: int = 24, audience: str = "all",
         ask = min(batch, missing)
         base = INSTRUCTIONS.format(
             topic=topic, count=ask, audience=AUDIENCE[audience],
+            detail=AGE_DETAIL.get(detail, AGE_DETAIL["simple"]),
             extra=AUDIENCE_EXTRA[audience])
 
         if collected:

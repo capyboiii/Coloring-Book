@@ -36,6 +36,10 @@ def register(subparsers) -> None:
                    help="Liệt kê model LM Studio đang nạp rồi thoát")
     p.add_argument("--name", default=None,
                    help="Tên bộ. Mặc định suy ra từ chủ đề")
+    p.add_argument("--detail", default="simple",
+                   choices=["simple", "medium", "detailed", "intricate"],
+                   help="Mức chi tiết theo tuổi: simple=3-5, medium=5-8, "
+                        "detailed=8-12, intricate=người lớn")
     p.add_argument("--audience", default="all",
                    choices=["kids", "adults", "all"],
                    help="Nhắm tới ai — ảnh hưởng cách viết cảnh")
@@ -66,7 +70,7 @@ HEADER = """\
 # Model local: {model}
 # Sửa tay thoải mái — đây là file văn bản thuần, mỗi dòng một trang.
 #
-# Công thức mỗi dòng: nhân vật chính + hành động + 2-3 thứ lấp phần còn lại.
+# Công thức mỗi dòng: MỘT chủ thể chính + hành động + tối đa 2 thứ nền đơn giản.
 # Viết bằng tiếng Anh, vì Flux không hiểu tiếng Việt.
 #
 # Dùng: python studio.py generate "{topic}" --theme {name} --count 40
@@ -103,7 +107,7 @@ def run(args) -> int:
 
     info(f"Chủ đề    : {args.topic}")
     info(f"Bộ        : {name}")
-    info(f"Đối tượng : {args.audience}")
+    info(f"Đối tượng : {args.audience} · chi tiết {args.detail}")
     info(f"Số cảnh   : {args.count}")
     info(f"Mỗi mẻ   : {args.batch} cảnh")
     info(f"Suy luận : {'bật' if args.think else 'tắt'}")
@@ -127,6 +131,7 @@ def run(args) -> int:
             topic=args.topic,
             count=args.count,
             audience=args.audience,
+            detail=args.detail,
             model=args.model,
             temperature=args.temperature,
             batch=args.batch,

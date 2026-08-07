@@ -35,7 +35,7 @@ subtitle: ""
 theme: ocean          # tên bộ trong themes/ (studio.py generate x --list-themes)
 pages: 40             # số hình trong sách. In một mặt nên số trang gấp đôi
 generate: 60          # sinh dư để còn chỗ loại. Tỷ lệ giữ lại thường 50-70%
-complexity: medium    # simple | medium | detailed  — độ tinh xảo của NÉT
+complexity: medium    # simple=3-5t | medium=5-8t | detailed=8-12t | intricate=NL
 density: rich         # single | normal | rich      — số ĐỐI TƯỢNG mỗi trang
 style: kawaii         # kawaii | cartoon | decorative — PHONG CÁCH vẽ
 seed:                 # để trống là ngẫu nhiên. Điền số để sinh lại y hệt
@@ -84,18 +84,19 @@ class Recipe:
     def hints(self) -> list[str]:
         """Góp ý, không chặn — chỉ là kinh nghiệm hay sai."""
         out = []
-        if self.audience == "kids" and self.complexity != "simple":
+        if self.audience == "kids" and self.complexity in ("detailed", "intricate"):
             out.append(
                 f"audience=kids nhưng complexity={self.complexity}. "
-                f"Trẻ 4-8 tuổi cần nét dày, mảng lớn — dùng complexity=simple")
+                f"Trẻ nhỏ cần hình to, ít chi tiết — dùng simple (3-5 tuổi) "
+                f"hoặc medium (5-8 tuổi)")
         if self.audience == "kids" and self.density == "rich":
             out.append(
                 "audience=kids nhưng density=rich. Trang quá rối, trẻ nhỏ khó "
                 "tô — dùng density=normal")
-        if self.audience == "adults" and self.complexity == "simple":
+        if self.audience == "adults" and self.complexity in ("simple", "medium"):
             out.append(
-                "audience=adults với complexity=simple sẽ ra sách quá đơn "
-                "giản so với kỳ vọng — cân nhắc detailed")
+                f"audience=adults với complexity={self.complexity} sẽ ra sách "
+                f"quá đơn giản so với kỳ vọng — cân nhắc intricate")
         return out
 
     def sale_info(self) -> dict[str, Any]:
@@ -191,10 +192,10 @@ def load(slug: str) -> Recipe:
 def _validate(r: Recipe) -> None:
     problems = []
 
-    if r.complexity not in ("simple", "medium", "detailed"):
+    if r.complexity not in ("simple", "medium", "detailed", "intricate"):
         problems.append(
             f"complexity '{r.complexity}' không hợp lệ "
-            f"(simple | medium | detailed)")
+            f"(simple | medium | detailed | intricate)")
     if r.density not in ("single", "normal", "rich"):
         problems.append(
             f"density '{r.density}' không hợp lệ (single | normal | rich)")

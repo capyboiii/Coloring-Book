@@ -62,9 +62,9 @@ def register(subparsers) -> None:
     p.add_argument("--title", default=None,
                    help="Tên sách hiển thị. Mặc định lấy chủ đề")
     p.add_argument("--complexity", default="medium",
-                   choices=["simple", "medium", "detailed"],
-                   help="Độ tinh xảo của NÉT. simple cho trẻ nhỏ, "
-                        "detailed cho người lớn")
+                   choices=["simple", "medium", "detailed", "intricate"],
+                   help="Chi tiết theo TUỔI: simple=3-5, medium=5-8, "
+                        "detailed=8-12, intricate=người lớn")
     p.add_argument("--density", default="rich",
                    choices=["single", "normal", "rich"],
                    help="Bao nhiêu ĐỐI TƯỢNG trên một trang. "

@@ -446,7 +446,8 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     from studio.prompts import COMPOSITIONS, build_prompt
     clash = [c for c in COMPOSITIONS
              if any(w in c.lower()
-                    for w in ("filling", "densely", "packed", "edge to edge"))]
+                    for w in ("filling", "densely", "packed", "edge to edge",
+                              "percent", "background"))]
     check("COMPOSITIONS không nói về mật độ (tránh đánh nhau với DENSITY)",
           not clash, f"{len(clash)} mục: {clash[:1]}")
 
@@ -486,16 +487,15 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     # Khuôn đã quyết định bố cục; để thêm COMPOSITIONS và DENSITY vào nữa là
     # ba chỉ dẫn bố cục đánh nhau — đúng lỗi đã gặp ở COMPOSITIONS vs DENSITY
     check("Có khuôn thì KHÔNG kèm COMPOSITIONS",
-          "centered composition" not in with_tpl[0].prompt)
+          "front view" not in with_tpl[0].prompt)
     check("Có khuôn thì KHÔNG kèm DENSITY",
-          "clear white space between every object"
-          not in with_tpl[0].prompt)
+          "60 to 80 percent" not in with_tpl[0].prompt)
 
     no_tpl = make_prompts("x", 1, "simple", load_subjects("giang-sinh"),
                           seed_start=1, density="normal")
     check("Không có khuôn thì vẫn dùng COMPOSITIONS + DENSITY",
-          "centered composition" in no_tpl[0].prompt
-          and "clear white space" in no_tpl[0].prompt)
+          "front view" in no_tpl[0].prompt
+          and "60 to 80 percent" in no_tpl[0].prompt)
 
     # CẮT chữ cái lạc chứ không bỏ cả dòng — phần còn lại vẫn dùng được.
     # File khung-long.txt của Bao hỏng 19/24 dòng đúng kiểu này, bỏ hết thì
