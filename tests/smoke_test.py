@@ -224,6 +224,31 @@ def main() -> int:
         check("cover.pdf dưới 5 MB (dùng JPEG chứ không phải PNG)",
               size_mb < 5, f"{size_mb:.1f} MB")
 
+    print("\n[7] Lọc kết quả LLM (lệnh subjects)")
+    from studio.llm import clean_lines
+
+    # Đúng kiểu bừa bộn mà LLM hay trả về: bọc ```, đánh số dù đã dặn đừng,
+    # lẫn tiếng Việt, trùng dòng, và một dòng cụt lủn
+    messy = """```
+1. a smiling sea turtle swimming through a coral reef, small fish above it, seaweed below
+2. a cluster of jellyfish drifting upward, bubbles around them, coral reef below
+- a smiling sea turtle swimming through a coral reef, small fish above it, seaweed below
+* con cá heo nhảy trên sóng, chim biển bay phía trên
+jellyfish
+a manta ray gliding over a busy coral reef, tropical fish everywhere, rocks below
+```"""
+    got, warns = clean_lines(messy, 24)
+
+    check("Bỏ hàng rào ``` và số thứ tự",
+          got and got[0].startswith("a smiling sea turtle"), repr(got[0][:40]))
+    check("Bỏ dòng trùng", len(got) == 4, f"{len(got)} dòng")
+    check("Bỏ dòng tiếng Việt",
+          not any("cá heo" in g for g in got))
+    check("Cảnh báo dòng cụt lủn không có dấu phẩy",
+          any("dấu phẩy" in w for w in warns))
+    check("Cảnh báo khi thiếu so với số yêu cầu",
+          any("4/24" in w for w in warns))
+
     print("\n" + "─" * 50)
     if FAILURES:
         print(f"HỎNG: {len(FAILURES)} mục không đạt")

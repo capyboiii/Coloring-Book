@@ -19,6 +19,12 @@ python studio.py approve dai-duong-ky-thu --minutes 95
 python studio.py build dai-duong-ky-thu --subtitle "40 trang tô màu"
 ```
 
+Chủ đề mới thì thêm một lệnh ở đầu để sinh bộ chủ thể:
+
+```bash
+python studio.py subjects "Giáng sinh" --count 24 --audience kids
+```
+
 `generate` vẽ luôn ảnh bìa màu cùng lúc với các trang ruột. `build` ghép nó
 thành `cover.pdf` hoàn chỉnh. Không cần lệnh bìa riêng.
 
@@ -42,6 +48,33 @@ phải chạy 40 lượt GPU mới biết.
 ---
 
 ## Dùng
+
+### ⓪ Sinh bộ chủ thể cho chủ đề mới
+
+Bốn bộ dựng sẵn (`ocean`, `mandala`, `floral`, `forest-animals`) là file văn
+bản viết tay. Chủ đề nằm ngoài bốn cái đó thì để Claude viết:
+
+```bash
+python studio.py subjects "Giáng sinh" --count 24 --audience kids
+# → themes/giang-sinh.txt
+```
+
+| Tuỳ chọn | Ý nghĩa |
+|---|---|
+| `--audience kids` | Cảnh vui tươi dễ thương, cho trẻ 4–8 tuổi |
+| `--audience adults` | Cảnh tinh xảo nhiều hoạ tiết, sách thư giãn |
+| `--dry-run` | In ra xem trước, không ghi file |
+| `--name <tên>` | Đặt tên bộ khác với slug suy từ chủ đề |
+
+Cần `ANTHROPIC_API_KEY` trong `.env`
+([lấy key](https://console.anthropic.com/settings/keys)). Mỗi lần gọi tốn vài
+xu. **Chỉ lệnh này cần key** — mọi lệnh khác chạy hoàn toàn offline.
+
+Kết quả được lọc trước khi ghi: bỏ hàng rào ```` ``` ````, bỏ số thứ tự, bỏ
+dòng trùng, bỏ dòng lọt tiếng Việt, và cảnh báo dòng nào cụt lủn quá.
+
+> **Đọc lướt file một lượt trước khi chạy 40 ảnh.** File `.txt` sửa tay thoải
+> mái — sửa một dòng rẻ hơn nhiều so với gen lại 40 ảnh rồi mới thấy sai.
 
 ### ① Sinh ảnh
 
@@ -358,11 +391,13 @@ studio/
     config.py                mọi con số về in ấn
     prompts.py               sinh prompt biến thể
     imageops.py              khử xám, phóng to, đo chất lượng
+    llm.py                   gọi Claude sinh bộ chủ thể
     providers/
         base.py              giao diện chung
         comfyui.py           client HTTP nói chuyện với ComfyUI
     commands/
-        doctor.py  generate.py  approve.py  build.py  cover.py
+        doctor.py  subjects.py  generate.py
+        approve.py  build.py  cover.py
 workflows/
     flux_lineart.api.json    workflow Flux đen trắng (ruột)
     flux_lineart.map.json    tham số nằm ở node nào

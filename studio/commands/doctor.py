@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from .. import config
 from ..providers import ProviderError, get_provider
 from ..util import info
@@ -58,6 +60,15 @@ def run(args) -> int:
     info(f"  Pixel/trang   : {config.PAGE_W_PX} x {config.PAGE_H_PX} @ "
          f"{config.DPI} DPI")
     info(f"  Sinh ảnh ở    : {config.GEN_W} x {config.GEN_H} px")
+
+    info("")
+    info("Lệnh `subjects` (tuỳ chọn — chỉ cần khi sinh bộ chủ thể mới)")
+    if os.environ.get("ANTHROPIC_API_KEY", "").strip():
+        info(f"  ✓ Có ANTHROPIC_API_KEY · model "
+             f"{os.environ.get('STUDIO_LLM_MODEL', 'claude-sonnet-5')}")
+    else:
+        info("  – Chưa có ANTHROPIC_API_KEY. Các lệnh khác vẫn chạy bình thường,")
+        info("    chỉ `subjects` là không dùng được.")
 
     info("")
     info("Model workflow đang gọi")

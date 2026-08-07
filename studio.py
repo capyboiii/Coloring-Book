@@ -3,7 +3,8 @@
 Studio — công cụ tạo coloring book.
 
     python studio.py doctor
-    python studio.py generate "đại dương kỳ thú" --count 40
+    python studio.py subjects "Giáng sinh" --count 24
+    python studio.py generate "Giáng sinh ấm áp" --theme giang-sinh --count 40
     python studio.py approve dai-duong-ky-thu --minutes 95
     python studio.py build dai-duong-ky-thu
     python studio.py cover dai-duong-ky-thu
@@ -22,7 +23,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from studio.commands import approve, build, cover, doctor, generate
+from studio.commands import approve, build, cover, doctor, generate, subjects
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", metavar="<lệnh>")
 
     doctor.register(subparsers)
+    subjects.register(subparsers)
     generate.register(subparsers)
     approve.register(subparsers)
     build.register(subparsers)
