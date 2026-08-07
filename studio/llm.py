@@ -91,6 +91,7 @@ a sea turtle
 jellyfish
 
 OUTPUT FORMAT
+Start every line with a lowercase letter.
 Output exactly {count} lines. Plain text only.
 No numbering. No bullets. No blank lines. No headings. No explanation.
 Do not write anything before or after the {count} lines.\
@@ -132,6 +133,25 @@ def strip_thinking(text: str) -> str:
     return text.strip()
 
 
+# Dấu hiệu mô hình đang suy luận NGAY TRONG content, không tách ra
+# `reasoning_content`. Tắt reasoning trong LM Studio đôi khi chỉ làm nó
+# ngừng TÁCH TRƯỜNG, còn mô hình vẫn suy luận y như cũ — chỉ khác là giờ
+# nguyên khối suy nghĩ nằm lẫn trong câu trả lời.
+REASONING_MARKERS = (
+    "thinking process",
+    "analyze the request",
+    "deconstruct the",
+    "let me think",
+    "drafting scenes",
+    "constraint checklist",
+)
+
+
+def looks_like_reasoning(text: str) -> bool:
+    head = text[:400].lower()
+    return any(m in head for m in REASONING_MARKERS)
+
+
 def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
     """
     Lọc kết quả thô thành danh sách cảnh dùng được.
@@ -159,11 +179,17 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
         if not line:
             continue
 
-        # Dòng kết thúc bằng ':' luôn là tiêu đề hoặc câu dẫn, không bao giờ
-        # là một cảnh. Luật này chắc hơn nhiều so với dò danh sách từ khoá —
-        # bản trước dò "here/below/sure/..." nên vẫn để lọt "Thinking Process:"
-        if line.endswith(":"):
-            warnings.append(f"bỏ tiêu đề/câu dẫn: {line[:50]!r}")
+        # Dấu hai chấm Ở BẤT KỲ ĐÂU. Ghi chú của mô hình luôn có nó
+        # ("Formula:", "Draft:", "Top section:", "Wait, re-reading the end
+        # of the prompt:"), còn một cảnh thì không bao giờ cần tới nó.
+        if ":" in line:
+            warnings.append(f"bỏ tiêu đề/ghi chú: {line[:50]!r}")
+            continue
+
+        # Dấu nháy kép chỉ xuất hiện khi mô hình trích lại chỉ dẫn:
+        #     Content only (no "line art", "black and white", etc.)
+        if '"' in line:
+            warnings.append(f"bỏ dòng trích chỉ dẫn: {line[:50]!r}")
             continue
 
         # Tới đây dấu gạch đầu dòng đã bị cắt ở trên. Còn sót dấu sao nào nữa
@@ -176,8 +202,17 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
             warnings.append(f"bỏ ghi chú của mô hình: {line[:50]!r}")
             continue
 
-        # Dưới 6 từ thì chắc chắn không phải cảnh, bỏ hẳn chứ không chỉ cảnh
-        # báo. Rác kiểu này lọt vào file theme là sinh ra một trang hỏng.
+        # Ký hiệu công thức trong ghi chú: "subject + action + 2-3 things"
+        if "+" in line:
+            warnings.append(f"bỏ ghi chú dạng công thức: {line[:50]!r}")
+            continue
+
+        # Ngưỡng 6 từ, KHÔNG đặt ngưỡng dấu phẩy.
+        #
+        # Bản đầu tôi đặt >=12 từ và >=2 dấu phẩy vì rác trong log đều ngắn.
+        # Nhưng đem chạy lại trên chính themes/ tự viết tay thì mandala rớt
+        # 24/24 ("a lotus mandala with eight large petals" — 7 từ, 0 phẩy) và
+        # floral rớt 5/24. Lọc theo rác chứ không theo cảnh thật là sai.
         words = len(line.split())
         if words < 6:
             warnings.append(f"bỏ dòng quá ngắn ({words} từ): {line[:50]!r}")
@@ -193,16 +228,35 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
             continue
         seen.add(key)
 
-        if "," not in line:
-            warnings.append(
-                f"dòng không có dấu phẩy, có thể là vật đơn lẻ chứ không phải "
-                f"cảnh: {line[:60]!r}")
-
-        if words < 10:
-            warnings.append(f"dòng hơi ngắn ({words} từ), có thể nhạt: "
-                            f"{line[:60]!r}")
-
         lines.append(line)
+
+    # --- Lượt hai: chữ hoa đầu dòng ---------------------------------------
+    #
+    # Chỉ dẫn yêu cầu mọi cảnh bắt đầu bằng chữ thường. Ghi chú của mô hình
+    # thì luôn viết hoa: "Formula", "Content only", "One sentence", "All 8
+    # scenes", "Only drawable", "Draft", "Wait". Đây là thứ tách được rác
+    # khỏi cảnh mà không cần đặt ngưỡng độ dài — vốn đã chứng minh là hỏng.
+    #
+    # Áp dụng luôn, KHÔNG đặt ngưỡng tỉ lệ. Bản đầu tôi để "chỉ áp dụng nếu
+    # >=30% dòng viết thường", nhưng gặp mẻ chỉ có 1 cảnh thật lẫn trong 3
+    # dòng ghi chú thì tỉ lệ là 25% và luật không chạy — đúng lúc cần nhất.
+    #
+    # Rủi ro ngược lại là mô hình phớt lờ luật viết thường và bị xoá sạch.
+    # Xử bằng cách: nếu xoá hết thì trả lại nguyên trạng kèm cảnh báo.
+    if lines:
+        kept, dropped = [], []
+        for ln in lines:
+            (dropped if ln[:1].isupper() else kept).append(ln)
+
+        if kept:
+            for ln in dropped:
+                warnings.append(f"bỏ dòng viết hoa đầu, là ghi chú chứ không "
+                                f"phải cảnh: {ln[:50]!r}")
+            lines = kept
+        elif dropped:
+            warnings.append(
+                "mọi dòng đều viết hoa đầu — mô hình phớt lờ luật viết "
+                "thường, nên bỏ qua bộ lọc này. Kiểm kỹ kết quả.")
 
     return lines[:count], warnings
 
@@ -385,6 +439,25 @@ def generate_subjects(topic: str, count: int = 24, audience: str = "all",
         raw, _finish, warns = _chat(
             model, prompt, timeout, temperature, tokens, think)
         warnings.extend(warns)
+
+        # Bắt ngay ở mẻ đầu. Không có chốt này thì phải grind 6 mẻ, mất
+        # 15 phút, để cuối cùng thu về một file toàn ghi chú của mô hình.
+        if rnd == 1 and not think and looks_like_reasoning(raw):
+            raise LLMError(
+                "Mô hình VẪN đang suy luận, chỉ khác là phần suy nghĩ giờ nằm "
+                "lẫn trong câu trả lời thay vì ở trường riêng.\n"
+                f"Nó bắt đầu bằng: {raw[:80]!r}...\n\n"
+                "Tắt Reasoning trong LM Studio chỉ làm nó ngừng TÁCH TRƯỜNG, "
+                "chứ mô hình vẫn suy luận như cũ.\n\n"
+                "Cách chắc ăn nhất: nạp model KHÔNG CÓ chế độ suy luận.\n"
+                "  Việc này chỉ là viết 24 câu tiếng Anh — model instruct 7-8B "
+                "làm trong vài giây,\n"
+                "  còn model suy luận thì mất 5 phút mỗi mẻ và ra kết quả tệ hơn.\n"
+                "  Gợi ý: Qwen2.5-7B-Instruct, Llama-3.1-8B-Instruct, "
+                "Mistral-7B-Instruct\n\n"
+                "Nếu muốn giữ model này, thử: --think (để nó suy luận xong hẳn "
+                "rồi trả lời) kèm --max-tokens 8000 --batch 4"
+            )
 
         lines, warns = clean_lines(raw, ask)
         warnings.extend(warns)

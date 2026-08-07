@@ -226,6 +226,7 @@ def main() -> int:
 
     print("\n[7] Lọc kết quả model local (lệnh subjects)")
     from studio.llm import clean_lines, strip_thinking
+    from studio.prompts import load_subjects
 
     check("Cắt khối <think> của Qwen",
           strip_thinking("<think>để xem nào...</think>\nabc") == "abc")
@@ -264,6 +265,38 @@ a manta ray gliding over a busy coral reef, tropical fish everywhere, rocks belo
     # Prompt bị nhại lại luôn có markdown đậm/nghiêng; cảnh thì không bao giờ
     check("Bỏ ghi chú của mô hình (**Task:**, *Idea 1:*)",
           not any("**" in g or g.startswith("*") for g in got))
+
+    # Rác thật lấy từ log chạy hỏng của Bao — suy luận nằm lẫn trong content
+    junk = """Formula: main subject + what it is doing + 2 or 3 other things filling the rest of the page
+Content only (no "line art", "black and white", etc.)
+One sentence per line, about twenty words (approximate)
+All 8 scenes must be clearly different (no repeating animals/objects/layouts)
+Only drawable things (no fog, light rays, reflections, shadows)
+Draft: A jolly Santa Claus riding a red sleigh, holding a sack of gifts, snowy mountains in the background
+Wait, re-reading the end of the prompt: I must avoid those specific Santa descriptions
+a cheerful snowman wearing a striped scarf, two children rolling snowballs beside him, pine trees and falling snow filling the background"""
+    kept, _ = clean_lines(junk, 24)
+    check("Lọc sạch rác suy luận thật, chỉ giữ đúng cảnh thật",
+          len(kept) == 1 and kept[0].startswith("a cheerful snowman"),
+          f"{len(kept)} dòng: {kept}")
+
+    # Bộ lọc phải giữ được chính themes/ viết tay. Bản đầu đặt ngưỡng >=12 từ
+    # và >=2 dấu phẩy theo hình dạng của rác, kết quả là mandala rớt 24/24.
+    # Lọc theo rác chứ không theo cảnh thật là sai.
+    from studio.prompts import list_themes as _themes
+    for name in _themes():
+        subs = load_subjects(name)
+        kept_t, _ = clean_lines("\n".join(subs), 999)
+        check(f"themes/{name}.txt qua bộ lọc nguyên vẹn",
+              len(kept_t) == len(subs), f"{len(kept_t)}/{len(subs)}")
+
+    from studio.llm import looks_like_reasoning
+    check("Nhận ra suy luận nằm lẫn trong content",
+          looks_like_reasoning("Thinking Process:\n\n1. **Analyze the Request:**"))
+    check("Không báo nhầm khi content là cảnh thật",
+          not looks_like_reasoning(
+              "a smiling sea turtle swimming through a coral reef, "
+              "schools of small fish above it, seaweed below"))
     check("Bỏ dòng trùng", len(got) == 3, f"{len(got)} dòng")
     check("Bỏ dòng tiếng Việt", not any("cá heo" in g for g in got))
 

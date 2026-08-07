@@ -105,14 +105,21 @@ Ba chỗ sửa vì chuyện đó:
 3. **Chia nhỏ** — hỏi 8 cảnh mỗi mẻ thay vì 24. Yêu cầu ngắn thì model nhỏ làm
    chắc tay hơn nhiều, và một mẻ hỏng chỉ mất mẻ đó.
 
-#### Phải tắt Reasoning ở LM Studio
+#### Nên dùng model KHÔNG có chế độ suy luận
 
-Gửi cờ qua API **không đủ** — LM Studio không phải lúc nào cũng chuyển tiếp
-`chat_template_kwargs` xuống chat template. Phải tắt tại nguồn:
+Việc này chỉ là viết 24 câu tiếng Anh. Model instruct 7–8B làm trong vài giây.
+Model suy luận mất 5 phút mỗi mẻ và ra kết quả **tệ hơn**, vì nó dành phần lớn
+công sức tranh luận với chính prompt.
 
-- Cột cấu hình model bên phải → tắt **Reasoning**
-- Hoặc đặt system prompt của model thành đúng một dòng `/no_think`
-- Hoặc nạp bản **Instruct** (không có reasoning)
+Gợi ý: **Qwen2.5-7B-Instruct**, **Llama-3.1-8B-Instruct**, **Mistral-7B-Instruct**.
+
+> **Cảnh báo:** tắt *Reasoning* trong LM Studio chỉ làm nó **ngừng tách trường**
+> `reasoning_content` — mô hình vẫn suy luận y như cũ, chỉ khác là nguyên khối
+> suy nghĩ giờ nằm lẫn trong `content`. Lệnh có dò dấu hiệu này và **dừng ngay
+> ở mẻ đầu** kèm chẩn đoán, thay vì chạy 6 mẻ mất 10 phút rồi ghi ra file rác.
+
+Vẫn muốn giữ model suy luận thì: `--think --max-tokens 8000 --batch 4` — để nó
+suy luận xong hẳn rồi mới trả lời. Chậm nhưng sạch.
 
 Kiểm tra trong 10 giây thay vì chờ 10 phút:
 
@@ -120,10 +127,8 @@ Kiểm tra trong 10 giây thay vì chờ 10 phút:
 python -c "import requests; r=requests.post('http://localhost:1234/v1/chat/completions', json={'model':'qwen/qwen3.5-9b','messages':[{'role':'user','content':'Say hello in 5 words.'}],'max_tokens':200}).json()['choices'][0]['message']; print('content:', repr(r.get('content'))); print('reasoning:', len(r.get('reasoning_content') or ''), 'ky tu')"
 ```
 
-`reasoning` phải bằng 0.
-
-Nếu chưa tắt, lệnh **báo lỗi to và dừng hẳn**. Nó cố tình không cố cứu vãn —
-xem mục dưới.
+Cần thấy `reasoning: 0` **và** `content` bắt đầu thẳng bằng câu trả lời. Nếu
+`content` mở đầu bằng `Thinking Process:` thì model vẫn đang suy luận.
 
 #### Lọc kết quả
 
@@ -132,13 +137,24 @@ xem mục dưới.
   chú kế hoạch — tức prompt bị nhại lại. Mấy dòng đó bị lưu như cảnh, rồi vòng
   sau đưa lại vào prompt làm danh sách "đã viết", khiến mô hình đọc thấy số đếm
   mâu thuẫn và đốt sạch token để phân vân. Thà hỏng to còn hơn ghi rác vào file.
-- Bỏ hàng rào ```` ``` ````, số thứ tự, gạch đầu dòng
-- **Bỏ mọi dòng kết thúc bằng `:`** — tiêu đề và câu dẫn không bao giờ là cảnh.
-  Luật này chắc hơn dò danh sách từ khoá; bản trước dò `here/below/sure/...`
-  nên vẫn để lọt `Thinking Process:`
-- **Bỏ mọi dòng còn sót dấu sao** sau khi đã cắt gạch đầu dòng — markdown nhấn
-  mạnh chỉ có trong ghi chú của mô hình (`**Task:**`, `*Idea 1:*`)
-- Bỏ hẳn dòng dưới 6 từ, bỏ dòng trùng, bỏ dòng lọt tiếng Việt
+Lọc theo **hình dạng câu**, không dò danh sách từ khoá — danh sách từ khoá
+luôn thiếu, còn hình dạng thì không đổi:
+
+| Luật | Bắt được |
+|---|---|
+| Có `:` ở bất kỳ đâu | `Formula:` · `Wait, re-reading the prompt:` |
+| Có `"` | `Content only (no "line art", ...)` |
+| Có `*` sau khi cắt gạch đầu dòng | `**Task:**` · `*Idea 1:*` |
+| Có `+` | `subject + action + 2-3 things` |
+| Dưới 6 từ | `jellyfish` |
+| **Chữ hoa ở đầu dòng** | `One sentence per line...` · `All 8 scenes...` |
+
+Luật cuối mạnh nhất, và đến từ một dòng thêm vào prompt:
+`Start every line with a lowercase letter.` Cảnh viết thường, ghi chú luôn viết
+hoa. Nếu mô hình phớt lờ luật viết thường (mọi dòng đều hoa) thì bỏ qua luật
+này kèm cảnh báo, thay vì xoá sạch.
+
+Cộng thêm: bỏ dòng trùng, bỏ dòng lọt tiếng Việt.
 
 #### Đọc tiến độ
 
