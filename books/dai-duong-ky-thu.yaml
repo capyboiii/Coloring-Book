@@ -1,0 +1,31 @@
+# Công thức sách — dai-duong-ky-thu
+#
+# Sửa file này rồi chạy:  python studio.py make dai-duong-ky-thu
+# Mọi tham số đều ghi ở đây để ba tuần sau còn tái tạo lại được đúng cuốn này.
+
+title: "Đại dương kỳ thú"
+subtitle: "40 trang tô màu cho mọi lứa tuổi"
+
+# ---- Nội dung ----
+theme: ocean          # tên bộ trong themes/ (studio.py generate x --list-themes)
+pages: 40             # số hình trong sách. In một mặt nên số trang gấp đôi
+generate: 60          # sinh dư để còn chỗ loại. Tỷ lệ giữ lại thường 50-70%
+complexity: medium    # simple | medium | detailed  — độ tinh xảo của NÉT
+density: rich         # single | normal | rich      — số ĐỐI TƯỢNG mỗi trang
+seed:                 # để trống là ngẫu nhiên. Điền số để sinh lại y hệt
+
+# ---- Bìa ----
+cover:
+  scene:              # để trống là lấy cảnh đầu trong theme
+  bg: "#1B7A8C"
+
+# ---- Thông tin bán hàng (web đọc từ đây) ----
+collection: relaxation
+audience: all
+price_usd: 14.99
+tags: [ocean, animals, relaxation, adults]
+description: |
+  Bốn mươi cảnh biển để tô: rùa biển bơi giữa rạn san hô, đàn sứa trôi lên
+  mặt nước, rừng tảo bẹ đầy cá nhỏ.
+
+  In một mặt trên giấy dày, bút màu không lem sang trang sau.

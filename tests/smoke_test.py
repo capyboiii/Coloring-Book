@@ -300,6 +300,37 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     check("Bỏ dòng trùng", len(got) == 3, f"{len(got)} dòng")
     check("Bỏ dòng tiếng Việt", not any("cá heo" in g for g in got))
 
+    print("\n[8] Công thức sách (books/*.yaml)")
+    import studio.recipe as recipe_mod
+    from studio.recipe import Recipe, RecipeError, _validate
+
+    recipe_mod.BOOKS_DIR = tmp / "books"
+
+    path = recipe_mod.scaffold("sach-thu", "Sách Thử")
+    check("scaffold tạo được file công thức", path.exists())
+    r = recipe_mod.load("sach-thu")
+    check("Đọc lại đúng tên sách", r.title == "Sách Thử", r.title)
+    check("generate mặc định lớn hơn pages",
+          r.generate > r.pages, f"{r.generate} > {r.pages}")
+
+    def bad(**kw):
+        base = dict(slug="x", title="X", pages=10, generate=20)
+        base.update(kw)
+        try:
+            _validate(Recipe(**base))
+            return False
+        except RecipeError:
+            return True
+
+    check("Chặn complexity sai", bad(complexity="siêu-nét"))
+    check("Chặn density sai", bad(density="đầy"))
+    check("Chặn màu bìa sai định dạng",
+          bad(cover=recipe_mod.Cover(bg="xanh")))
+    check("Chặn generate ít hơn pages", bad(pages=40, generate=10))
+    check("Chặn mandala + density rich (phá đối xứng)",
+          bad(theme="mandala", density="rich"))
+    check("Công thức hợp lệ thì không chặn", not bad())
+
     print("\n" + "─" * 50)
     if FAILURES:
         print(f"HỎNG: {len(FAILURES)} mục không đạt")

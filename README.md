@@ -10,13 +10,14 @@ generate   xoá tay     build      chưa làm    chưa làm
            + approve
 ```
 
-Cả cuốn sách — ruột lẫn bìa — ra bằng **ba lệnh**:
+Cả cuốn sách — ruột, bìa, và gói bàn giao cho web — ra từ **một công thức**:
 
 ```bash
-python studio.py generate "Đại dương kỳ thú" --theme ocean --count 40
-#   ... mở raw/ xoá ảnh xấu bằng tay, bấm giờ ...
-python studio.py approve dai-duong-ky-thu --minutes 95
-python studio.py build dai-duong-ky-thu --subtitle "40 trang tô màu"
+python studio.py make dai-duong-ky-thu --init   # tạo books/dai-duong-ky-thu.yaml
+#   ... sửa công thức: chủ đề, số trang, giá ...
+python studio.py make dai-duong-ky-thu          # lần 1: sinh ảnh
+#   ... mở raw/ xoá ảnh xấu, bấm giờ ...
+python studio.py make dai-duong-ky-thu --minutes 95   # lần 2: dựng sách
 ```
 
 Chủ đề mới thì thêm một lệnh ở đầu để sinh bộ chủ thể:
@@ -24,6 +25,81 @@ Chủ đề mới thì thêm một lệnh ở đầu để sinh bộ chủ thể
 ```bash
 python studio.py subjects "Giáng sinh" --count 24 --audience kids
 ```
+
+---
+
+## Công thức sách
+
+Một file YAML trong [`books/`](books/) ghi hết mọi thứ cần để ra một cuốn:
+
+```yaml
+title: "Đại dương kỳ thú"
+subtitle: "40 trang tô màu cho mọi lứa tuổi"
+
+theme: ocean          # bộ chủ thể trong themes/
+pages: 40             # số hình trong sách
+generate: 60          # sinh dư để còn chỗ loại
+complexity: medium    # độ tinh xảo của NÉT
+density: rich         # số ĐỐI TƯỢNG mỗi trang
+seed:                 # điền số để sinh lại y hệt
+
+cover:
+  bg: "#1B7A8C"
+
+collection: relaxation
+price_usd: 14.99
+tags: [ocean, animals, relaxation]
+description: |
+  Mô tả bán hàng...
+```
+
+**Vì sao cần:** trước đây mọi tham số nằm rải trong lệnh gõ tay. Ba tuần sau
+muốn in lại đúng cuốn cũ thì không nhớ đã chạy `--complexity` gì, `--density`
+gì. Ghi vào file thì tái tạo được, sửa được, và **commit vào git được**.
+
+Công thức bị kiểm tra trước khi chạy — sai `complexity`, sai mã màu, hay
+`generate` ít hơn `pages` là báo lỗi ngay chứ không đợi gen xong 60 ảnh.
+
+### `make` chạy tiếp được
+
+Nó nhìn thư mục sách đang ở bước nào rồi làm bước kế tiếp:
+
+| Trạng thái | `make` làm gì |
+|---|---|
+| `cần sinh ảnh` | Sinh ảnh + ảnh bìa, rồi **dừng** để ông duyệt |
+| `cần duyệt` | Chép ảnh còn lại, dựng ruột + bìa + gói bán |
+| `xong` | Báo đã xong. `--force` để dựng lại |
+
+Không có cách nào gộp thành đúng một lần chạy, vì ở giữa có bước duyệt bằng
+mắt người — và đó là bước **cố tình** giữ lại. `--yes` bỏ qua bước duyệt, chỉ
+nên dùng khi chạy thử.
+
+### Gói bàn giao cho web
+
+`make` xuất ra `library/<slug>/out/book.json` — đây là **ranh giới giữa studio
+và cửa hàng**. Web chỉ đọc file này, không cần biết Flux hay ComfyUI là gì:
+
+```json
+{
+  "slug": "dai-duong-ky-thu",
+  "title": "Đại dương kỳ thú",
+  "price_usd": 14.99,
+  "collection": "relaxation",
+  "art_pages": 40,
+  "print": { "spine_in": 0.24, "cover_in": [17.49, 11.25] },
+  "files": {
+    "interior": "interior.pdf",      // ⚠ KHÔNG để public
+    "cover": "cover.pdf",            // ⚠ gửi nhà in
+    "preview": "preview.pdf",        // phát tự do
+    "cover_image": "web/cover.webp",
+    "preview_images": ["web/page-01.webp", "..."]
+  },
+  "source": { "theme": "ocean", "seed": null, "retention_rate": 0.63 }
+}
+```
+
+`source` giữ lại tham số đã dùng và hai con số đo được, để sau còn biết cuốn
+nào ra từ công thức nào.
 
 `generate` vẽ luôn ảnh bìa màu cùng lúc với các trang ruột. `build` ghép nó
 thành `cover.pdf` hoàn chỉnh. Không cần lệnh bìa riêng.
@@ -485,6 +561,7 @@ trang, bố cục và phần khử xám. Chạy cái này mỗi lần sửa `ima
 studio.py                    điểm vào CLI
 studio/
     config.py                mọi con số về in ấn
+    recipe.py                đọc + kiểm tra công thức sách
     prompts.py               sinh prompt biến thể
     imageops.py              khử xám, phóng to, đo chất lượng
     llm.py                   gọi LM Studio sinh bộ chủ thể
@@ -492,8 +569,10 @@ studio/
         base.py              giao diện chung
         comfyui.py           client HTTP nói chuyện với ComfyUI
     commands/
+        make.py                  ← lệnh dùng thường ngày
         doctor.py  subjects.py  generate.py
         approve.py  build.py  cover.py
+books/                       công thức sách, mỗi cuốn một file .yaml
 workflows/
     flux_lineart.api.json    workflow Flux đen trắng (ruột)
     flux_lineart.map.json    tham số nằm ở node nào
