@@ -5,6 +5,9 @@ from __future__ import annotations
 import os
 
 from .. import config
+from ..llm import LLMError
+from ..llm import base_url as llm_base_url
+from ..llm import list_models
 from ..providers import ProviderError, get_provider
 from ..util import info
 
@@ -62,13 +65,18 @@ def run(args) -> int:
     info(f"  Sinh ảnh ở    : {config.GEN_W} x {config.GEN_H} px")
 
     info("")
-    info("Lệnh `subjects` (tuỳ chọn — chỉ cần khi sinh bộ chủ thể mới)")
-    if os.environ.get("ANTHROPIC_API_KEY", "").strip():
-        info(f"  ✓ Có ANTHROPIC_API_KEY · model "
-             f"{os.environ.get('STUDIO_LLM_MODEL', 'claude-sonnet-5')}")
-    else:
-        info("  – Chưa có ANTHROPIC_API_KEY. Các lệnh khác vẫn chạy bình thường,")
-        info("    chỉ `subjects` là không dùng được.")
+    info("LM Studio (tuỳ chọn — chỉ lệnh `subjects` cần)")
+    try:
+        models = list_models()
+        info(f"  ✓ {llm_base_url()}")
+        for m in models[:5]:
+            info(f"      {m}")
+        chosen = os.environ.get("STUDIO_LLM_MODEL", "").strip()
+        info(f"  Sẽ dùng: {chosen or (models[0] if models else '(chưa có)')}")
+    except LLMError:
+        info(f"  – Không kết nối được {llm_base_url()}")
+        info("    Các lệnh khác vẫn chạy bình thường, chỉ `subjects` là không.")
+        info("    Bật LM Studio → tab Developer → nạp model → Start Server")
 
     info("")
     info("Model workflow đang gọi")

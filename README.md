@@ -52,11 +52,19 @@ phải chạy 40 lượt GPU mới biết.
 ### ⓪ Sinh bộ chủ thể cho chủ đề mới
 
 Bốn bộ dựng sẵn (`ocean`, `mandala`, `floral`, `forest-animals`) là file văn
-bản viết tay. Chủ đề nằm ngoài bốn cái đó thì để Claude viết:
+bản viết tay. Chủ đề nằm ngoài bốn cái đó thì để **model local trong LM Studio**
+viết:
 
 ```bash
 python studio.py subjects "Giáng sinh" --count 24 --audience kids
 # → themes/giang-sinh.txt
+```
+
+**Chuẩn bị:** bật LM Studio → tab **Developer** → nạp model (Qwen3.5 9B) →
+**Start Server**. Không cần API key, không tốn tiền, không gửi gì ra ngoài.
+
+```bash
+python studio.py subjects --list-models   # xem model nào đang nạp
 ```
 
 | Tuỳ chọn | Ý nghĩa |
@@ -64,14 +72,28 @@ python studio.py subjects "Giáng sinh" --count 24 --audience kids
 | `--audience kids` | Cảnh vui tươi dễ thương, cho trẻ 4–8 tuổi |
 | `--audience adults` | Cảnh tinh xảo nhiều hoạ tiết, sách thư giãn |
 | `--dry-run` | In ra xem trước, không ghi file |
+| `--model <tên>` | Chọn model cụ thể. Mặc định lấy model đang nạp |
+| `--temperature 0.85` | Cao thì đa dạng hơn nhưng dễ lạc đề |
 | `--name <tên>` | Đặt tên bộ khác với slug suy từ chủ đề |
 
-Cần `ANTHROPIC_API_KEY` trong `.env`
-([lấy key](https://console.anthropic.com/settings/keys)). Mỗi lần gọi tốn vài
-xu. **Chỉ lệnh này cần key** — mọi lệnh khác chạy hoàn toàn offline.
+Cổng khác 1234 thì đặt `LMSTUDIO_URL` trong `.env`. **Chỉ lệnh này cần LM
+Studio** — mọi lệnh khác không đụng tới.
 
-Kết quả được lọc trước khi ghi: bỏ hàng rào ```` ``` ````, bỏ số thứ tự, bỏ
-dòng trùng, bỏ dòng lọt tiếng Việt, và cảnh báo dòng nào cụt lủn quá.
+#### Xử lý riêng cho model nhỏ
+
+Model 9B yếu hơn hẳn model đám mây, nên có ba chỗ xử thêm:
+
+- **Chỉ dẫn viết bằng tiếng Anh.** Model nhỏ bám chỉ dẫn tiếng Anh chặt hơn
+  tiếng Việt rõ rệt, dù chủ đề đầu vào là tiếng Việt.
+- **Cắt khối `<think>`.** Qwen3 nhả cả quá trình suy nghĩ ra trước câu trả lời.
+  Không cắt là nguyên đoạn lảm nhảm lọt vào file theme.
+- **Vòng xin thêm.** Model nhỏ hiếm khi ra đủ 24 dòng trong một lần — nó hay
+  dừng sớm hoặc lặp lại. Lệnh tự gọi lại tối đa 3 lần, mỗi lần đưa lại danh
+  sách đã có và yêu cầu viết cảnh **khác**.
+
+Ngoài ra kết quả còn bị lọc: bỏ hàng rào ```` ``` ````, bỏ số thứ tự, bỏ câu
+dẫn kiểu *"Here are the scenes:"*, bỏ dòng trùng, bỏ dòng lọt tiếng Việt, và
+cảnh báo dòng nào cụt lủn quá.
 
 > **Đọc lướt file một lượt trước khi chạy 40 ảnh.** File `.txt` sửa tay thoải
 > mái — sửa một dòng rẻ hơn nhiều so với gen lại 40 ảnh rồi mới thấy sai.
@@ -391,7 +413,7 @@ studio/
     config.py                mọi con số về in ấn
     prompts.py               sinh prompt biến thể
     imageops.py              khử xám, phóng to, đo chất lượng
-    llm.py                   gọi Claude sinh bộ chủ thể
+    llm.py                   gọi LM Studio sinh bộ chủ thể
     providers/
         base.py              giao diện chung
         comfyui.py           client HTTP nói chuyện với ComfyUI

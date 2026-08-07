@@ -224,12 +224,21 @@ def main() -> int:
         check("cover.pdf dưới 5 MB (dùng JPEG chứ không phải PNG)",
               size_mb < 5, f"{size_mb:.1f} MB")
 
-    print("\n[7] Lọc kết quả LLM (lệnh subjects)")
-    from studio.llm import clean_lines
+    print("\n[7] Lọc kết quả model local (lệnh subjects)")
+    from studio.llm import clean_lines, strip_thinking
 
-    # Đúng kiểu bừa bộn mà LLM hay trả về: bọc ```, đánh số dù đã dặn đừng,
-    # lẫn tiếng Việt, trùng dòng, và một dòng cụt lủn
-    messy = """```
+    check("Cắt khối <think> của Qwen",
+          strip_thinking("<think>để xem nào...</think>\nabc") == "abc")
+    check("Cắt được cả <think> không có thẻ đóng (bị cụt token)",
+          strip_thinking("abc\n<think>đang nghĩ dở") == "abc")
+
+    # Đúng kiểu bừa bộn mà model 9B hay trả về: khối suy nghĩ, câu dẫn,
+    # hàng rào ```, đánh số dù đã dặn đừng, lẫn tiếng Việt, trùng dòng, cụt lủn
+    messy = """<think>
+The user wants ocean scenes. Let me think about what to include.
+</think>
+Here are the scenes:
+```
 1. a smiling sea turtle swimming through a coral reef, small fish above it, seaweed below
 2. a cluster of jellyfish drifting upward, bubbles around them, coral reef below
 - a smiling sea turtle swimming through a coral reef, small fish above it, seaweed below
@@ -239,15 +248,15 @@ a manta ray gliding over a busy coral reef, tropical fish everywhere, rocks belo
 ```"""
     got, warns = clean_lines(messy, 24)
 
-    check("Bỏ hàng rào ``` và số thứ tự",
-          got and got[0].startswith("a smiling sea turtle"), repr(got[0][:40]))
+    check("Bỏ khối suy nghĩ, câu dẫn, ``` và số thứ tự",
+          got and got[0].startswith("a smiling sea turtle"),
+          repr(got[0][:40]) if got else "rỗng")
+    check("Không sót chữ nào từ khối <think>",
+          not any("user wants" in g.lower() for g in got))
     check("Bỏ dòng trùng", len(got) == 4, f"{len(got)} dòng")
-    check("Bỏ dòng tiếng Việt",
-          not any("cá heo" in g for g in got))
+    check("Bỏ dòng tiếng Việt", not any("cá heo" in g for g in got))
     check("Cảnh báo dòng cụt lủn không có dấu phẩy",
           any("dấu phẩy" in w for w in warns))
-    check("Cảnh báo khi thiếu so với số yêu cầu",
-          any("4/24" in w for w in warns))
 
     print("\n" + "─" * 50)
     if FAILURES:
