@@ -25,7 +25,7 @@ from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
 from .. import config
-from ..imageops import load_font
+from ..imageops import load_font, cover_vividness
 from ..prompts import build_cover_prompt, has_non_ascii, load_subjects
 from ..providers import GenRequest, ProviderError, get_provider
 from ..util import image_files, info, read_json, warn, write_json
@@ -164,7 +164,18 @@ def _make_art(settings, args, book: dict) -> Image.Image:
         path = Path(tmp) / "cover.png"
         path.write_bytes(provider.generate(req))
         with Image.open(path) as im:
-            return im.convert("RGB")
+            art = im.convert("RGB")
+
+    # Bìa nhạt thì lên kệ là chìm nghỉm, mà nhìn từng ảnh một không thấy gì
+    # lạ — phải có số mới so được. Xem cover_vividness().
+    sat, pale = cover_vividness(art)
+    info(f"Độ rực    : bão hoà {sat:.0f}/255, {pale:.0%} diện tích nhạt")
+    if sat < config.COVER_SAT_MIN or pale > config.COVER_PALE_MAX:
+        warn(f"BÌA NHẠT. Cần bão hoà >= {config.COVER_SAT_MIN:.0f} và "
+             f"dưới {config.COVER_PALE_MAX:.0%} diện tích nhạt.")
+        warn("Sinh lại với seed khác, hoặc tả cảnh có sẵn màu mạnh — "
+             '"a penguin on white snow" thì kiểu gì cũng ra trắng.')
+    return art
 
 
 def _cover_fit(img: Image.Image, w: int, h: int) -> Image.Image:

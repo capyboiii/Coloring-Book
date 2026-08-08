@@ -161,6 +161,25 @@ def colour_amount(img: Image.Image, threshold: int = 30) -> float:
     return colour_report(img)[0]
 
 
+def cover_vividness(img: Image.Image) -> tuple[float, float]:
+    """
+    Trả về (độ bão hoà trung bình 0-255, tỉ lệ diện tích gần như không màu).
+
+    Ngược hẳn với trang ruột: ruột phải TRẮNG, bìa phải RỰC. Cùng một dải đo
+    nhưng ngưỡng nằm ở hai đầu đối nhau.
+
+    Vì sao cần: mở 4 ảnh bìa thật ra đo thì chênh nhau một trời một vực —
+    mandala 202/255 còn chim cánh cụt 27/255 với 92% diện tích gần trắng.
+    Bìa nhạt như thế đặt cạnh sách khác trên kệ là chìm nghỉm, mà nhìn từng
+    ảnh một thì không thấy vấn đề gì. Phải có số mới so được.
+    """
+    import numpy as np
+
+    hsv = np.asarray(img.convert("HSV").resize((256, 256), Image.BILINEAR))
+    sat = hsv[:, :, 1].astype(np.int16)
+    return float(sat.mean()), float((sat < 60).mean())
+
+
 def _ink_ratio(img: Image.Image, threshold: int = 128) -> float:
     hist = img.convert("L").histogram()
     ink = sum(hist[:threshold])

@@ -220,6 +220,16 @@ LINE_THICKEN = 0
 # thử đối chiếu lại với ngưỡng này.
 INK_GROWTH_MAX = 0.28
 
+# Bìa thì NGƯỢC HẲN trang ruột: ruột phải trắng, bìa phải rực.
+# Đo 4 bìa đã sinh (độ bão hoà trung bình / tỉ lệ diện tích gần như không màu):
+#     manmat 202 · 0.7%      <- đúng thứ cần
+#     thu-hoa 115 · 33.7%
+#     chihuahua 83 · 71.7%
+#     ngay-hoi-bien 27 · 92.1%   <- nền trắng xoá, lên kệ là chìm nghỉm
+# Cắt ở 90 và 55%: đủ để bắt hai bìa nhạt mà không đụng hai bìa đạt.
+COVER_SAT_MIN = 90.0
+COVER_PALE_MAX = 0.55
+
 # Ngưỡng cảnh báo tự động (Phase 2 sẽ dùng để lọc trước khi mắt người nhìn)
 INK_RATIO_MIN = 0.005  # dưới 0.5% -> trang gần như trắng
 INK_RATIO_MAX = 0.40   # trên 40%  -> trang đen kịt

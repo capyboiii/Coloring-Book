@@ -279,22 +279,42 @@ class PagePrompt:
 # Prompt cho ảnh bìa
 # --------------------------------------------------------------------------
 
+# BÌA CŨ HỎNG HAI CHỖ, cả hai đều thấy khi mở 4 ảnh bìa thật ra xem.
+#
+# 1. NHẠT THẾCH. Đo độ bão hoà trung bình (0-255):
+#        manmat 202  ·  thu-hoa 115  ·  chihuahua 83  ·  ngay-hoi-bien 27
+#    Bìa chim cánh cụt có 92% diện tích gần như không màu — nền trắng xoá,
+#    đặt cạnh sách khác trên kệ là chìm nghỉm.
+#    Prompt cũ CÓ ghi "vibrant saturated colors" nhưng nằm sau "full color"
+#    và trước một đống ràng buộc khác, nên bị loãng. Giờ đưa màu lên đầu và
+#    nói cụ thể: nền phải kín màu, không được để trắng.
+#
+# 2. FLUX VIẾT CHỮ SAI CHÍNH TẢ. Bìa chihuahua có dòng "BOOK Chiihhauua".
+#    Prompt cũ ghi "no text, no letters, no words, no typography" — vô dụng,
+#    vì Flux chạy CFG=1 nên không đọc được phủ định. Nhắc "text" là GỌI text.
+#    Tệ hơn nữa: "vertical composition with space at the top for A TITLE" là
+#    câu đặt hàng thẳng một cái tiêu đề. Flux giao đúng hàng.
+#    Bỏ HẾT mọi chữ dính tới text/title/letters. Muốn chừa chỗ trên đầu thì
+#    tả bằng hình ("simple open sky above"), không tả bằng chữ "title".
+#    Đây đúng cùng một bài học với "dot eyes on animals only".
 COVER_STYLE = (
-    "book cover illustration, full color, vibrant saturated colors, "
-    "clean cartoon style, bold clear shapes, cheerful and inviting, "
-    "vertical composition with space at the top for a title, "
-    "no text, no letters, no words, no typography, no watermark"
+    "vibrant children's book cover art, bold saturated colors, "
+    "bright cheerful palette, rich colorful background filling every corner, "
+    "no white background, "
+    "clean cartoon style, bold clear shapes, thick outlines, "
+    "one big friendly subject in the lower two thirds, "
+    "simple open sky above it"
 )
 
 
 def build_cover_prompt(scene: str) -> str:
     """
-    Bìa KHÔNG bị ràng buộc đen trắng — đây là ảnh màu.
+    Bìa KHÔNG bị ràng buộc đen trắng — đây là ảnh màu, càng rực càng tốt.
 
-    Chuỗi "no text, no letters" là bắt buộc: Flux viết chữ sai chính tả,
-    nên chữ tiêu đề do Pillow ghép vào sau.
+    Chữ tiêu đề do Pillow ghép vào sau, nên prompt tuyệt đối không được nhắc
+    tới chữ nghĩa dưới bất kỳ hình thức nào. Xem chú thích ở COVER_STYLE.
     """
-    return f"{COVER_STYLE}, {scene.strip().rstrip('.')}"
+    return f"{scene.strip().rstrip('.')}, {COVER_STYLE}"
 
 
 def has_non_ascii(text: str) -> bool:

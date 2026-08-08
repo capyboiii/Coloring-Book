@@ -225,6 +225,54 @@ def main() -> int:
           config.CLOSE_GAPS <= 5, str(config.CLOSE_GAPS))
     fine_path.unlink()
 
+    print("\n[0d] Bìa phải rực")
+    # Bia NGUOC HAN trang ruot: ruot phai trang, bia phai ruc.
+    from studio.imageops import cover_vividness
+    from studio.prompts import COVER_STYLE, build_cover_prompt
+
+    # Flux viet chu SAI CHINH TA len bia ("BOOK Chiihhauua"). Prompt cu ghi
+    # "no text, no letters, no typography" - vo dung, vi CFG=1 khong doc duoc
+    # phu dinh. Nhac "text" la GOI text. Va "space at the top for A TITLE" la
+    # cau dat hang thang mot cai tieu de.
+    cover_p = build_cover_prompt("a happy penguin")
+    for w in ("text", "letter", "word", "title", "typography", "font"):
+        check(f"Prompt bìa KHÔNG nhắc '{w}' (nhắc là Flux viết chữ sai)",
+              w not in cover_p.lower(), cover_p)
+    check("Prompt bìa vẫn chừa chỗ trên đầu, tả bằng HÌNH không bằng chữ",
+          "sky above" in COVER_STYLE)
+    check("Chủ thể bìa đứng đầu prompt", cover_p.startswith("a happy penguin"))
+    for w in ("saturated", "colorful", "no white background"):
+        check(f"Prompt bìa có đòi '{w}'", w in COVER_STYLE)
+
+    rich = Image.new("RGB", (64, 64), (230, 40, 30))
+    pale = Image.new("RGB", (64, 64), (245, 244, 250))
+    s_rich, p_rich = cover_vividness(rich)
+    s_pale, p_pale = cover_vividness(pale)
+    check("Bìa rực đạt ngưỡng",
+          s_rich >= config.COVER_SAT_MIN and p_rich <= config.COVER_PALE_MAX,
+          f"bão hoà {s_rich:.0f}, nhạt {p_rich:.0%}")
+    check("Bìa nhạt bị bắt",
+          s_pale < config.COVER_SAT_MIN or p_pale > config.COVER_PALE_MAX,
+          f"bão hoà {s_pale:.0f}, nhạt {p_pale:.0%}")
+
+    # Do lai tren 4 bia that neu con. Nguong dat sao cho bat dung hai bia
+    # nhat (chihuahua 83, ngay-hoi-bien 27) ma khong dung hai bia dat.
+    covers = sorted((ROOT / "library").glob("*/cover-art.png"))
+    if covers:
+        # Nguong phai TACH BACH duoc, khong phai bat het hoac tha het.
+        verdicts = {}
+        for p in covers:
+            with Image.open(p) as im:
+                sv, pl = cover_vividness(im.convert("RGB"))
+            verdicts[p.parent.name] = (
+                sv >= config.COVER_SAT_MIN and pl <= config.COVER_PALE_MAX)
+            print(f"      {p.parent.name:16s} bão hoà {sv:5.0f}  "
+                  f"nhạt {pl:5.1%}  {'đạt' if verdicts[p.parent.name] else 'NHẠT'}")
+        known_pale = {"chihuahua", "ngay-hoi-bien"}
+        wrong = [k for k, ok in verdicts.items()
+                 if ok == (k in known_pale)]
+        check("Ngưỡng bìa phân loại đúng 4 bìa thật", not wrong, str(wrong))
+
     print("\n[1] Cấu hình khổ giấy")
     check("Khổ file PDF 8.75 x 11.25 in",
           (config.PAGE_W_IN, config.PAGE_H_IN) == (8.75, 11.25),
