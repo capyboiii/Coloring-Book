@@ -5,8 +5,8 @@
     {
       "id": 30,
       "type": "Note",
-      "pos": [20, 40],
-      "size": [780, 430],
+      "pos": [20, 20],
+      "size": [820, 560],
       "flags": {},
       "order": 0,
       "mode": 0,
@@ -14,7 +14,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "FLUX.1 [dev] - BAN VE TAY, KHONG DUOC DUNG DE BAN\n\n=== DOC CHO NAY TRUOC ===\nFLUX.1 [dev] mang giay phep FLUX Non-Commercial. Ban sach in ra tu no la\nVI PHAM, tru khi mua giay phep thuong mai cua Black Forest Labs.\nDo la ly do file nay CHI o dinh dang giao dien. Toi khong noi dev vao\nstudio/ - de tranh mot hom nao do lo chay ca cuon sach bang no.\n\nDung file nay de tra loi DUNG MOT CAU HOI:\n  \"Tran chat luong co cao hon that khong?\"\nBiet cau tra loi roi thi moi quyet dinh duoc co dang mua giay phep khong.\n\n=== THU NAY DANG THU HON ===\nFLUX.2 [klein] 4B ra sau, giay phep APACHE 2.0 - ban hang thoai mai, khong\nphai xin ai. Ban GGUF Q4 chi ~2.6 GB, chay 4 buoc.\nMoi hon schnell (thang 8/2024) ca mot the he.\nHuong dan: docs.comfy.org/tutorials/flux/flux-2-klein\nNo dung bo node khac (text encoder Mistral chu khong phai T5), nen toi khong\ndoan cau hinh - lam theo trang tren.\n\n=== KHAC SCHNELL O DAU ===\n1. Co node FluxGuidance (mau cam). Schnell KHONG co.\n   Day la thu quan trong nhat. 3.5 la mac dinh. 2.0-2.5 net thoang hon,\n   4.0-5.0 bam prompt chat hon nhung de bi cung.\n2. Steps 24 chu khong phai 4. Schnell duoc chung cat cho 4 buoc, dev thi\n   khong - chay 4 buoc se ra be bet.\n3. Cham hon schnell khoang 6 lan. Tinh truoc thoi gian.\n\n=== VAN KHONG CO O NEGATIVE ===\nKien truc Flux chay CFG=1 nen phan negative bi bo qua, dev cung vay.\nCac thu KHONG muon phai viet vao o positive: \"no gray, no shading\".\nDay la cho khac SDXL, dung mang thoi quen tu ban SDXL sang.\n\n=== CAN TAI ===\nflux1-dev-Q4_K_S.gguf  ->  ComfyUI/models/unet/\nhuggingface.co/city96/FLUX.1-dev-gguf\nT5, clip_l, ae.safetensors thi da co san tu schnell roi, dung lai duoc."
+        "FLUX.1 [dev] cho card 6 GB - BAN VE TAY, KHONG DUOC DUNG DE BAN\n\n=== GIAY PHEP ===\nFLUX.1 [dev] la FLUX Non-Commercial. Ban sach in tu no la VI PHAM tru khi\nmua giay phep cua Black Forest Labs. Vi vay file nay CHI o dinh dang giao\ndien, khong noi vao studio/ - de khong lo chay ca cuon sach bang no.\n\n=== DOC KY CHO NAY: 6 GB LAM HONG PHEP THU ===\nMay 6 GB nen phai ep dev xuong Q3_K_S. Do la muc nen KHA MANH.\nMay dang chay schnell o Q4_K_S - tuc la NEN NHE HON.\n\n  So dev-Q3 voi schnell-Q4 KHONG phai la so dev voi schnell.\n  Neu dev-Q3 thua, chua chac dev kem - co the chi la Q3 lam hong.\n  Neu dev-Q3 thang, thi dev that su hon han (vi no thang du bi trói tay).\n\nChi ket luan duoc mot chieu. Nho dieu do khi nhin ket qua.\n\n=== THU NAY MOI HOP MAY 6 GB ===\nFLUX.2 [klein] 4B - giay phep APACHE 2.0, ban hang thoai mai.\nBan GGUF Q4 chi ~2.6 GB. Voi 6 GB thi no chay THOAI MAI, khong phai ep\nxuong Q3 nhu dev. Tuc la ong duoc dung model gan nhu nguyen ban, thay vi\nmot model to hon nhung bi bop meo.\nHuong dan: docs.comfy.org/tutorials/flux/flux-2-klein\n(No dung text encoder Mistral chu khong phai T5 nen bo node khac - lam theo\ntrang tren, toi khong doan cau hinh.)\n\n=== PHAI BAT --lowvram ===\nSua run_nvidia_gpu.bat trong thu muc ComfyUI_windows_portable, them --lowvram\nvao cuoi dong lenh. Khong bat thi tran VRAM, ComfyUI se bao het bo nho hoac\nchay cham kinh khung.\nCu 1 anh khoang 3-6 phut. Cham, nhung la de XEM CHAT LUONG chu khong phai\nde chay san xuat - ve 4-6 anh la du ket luan.\n\n=== VI SAO TEXT ENCODER DUOC PHEP TO HON UNET ===\nComfyUI nap LAN LUOT: nap T5 -> ma hoa prompt -> GO T5 RA -> nap UNET -> ve.\nHai thang khong bao gio nam trong VRAM cung luc. Nen T5 Q5 (3.4 GB) van on\ndu UNET da 5.2 GB. Dung cong hai so lai roi hoang.\n\n=== KHAC SCHNELL ===\n1. Co node FluxGuidance (mau cam). Schnell KHONG co. 3.5 la mac dinh.\n2. 24 buoc chu khong phai 4. Schnell duoc chung cat cho 4 buoc, dev thi\n   khong - chay 4 buoc ra be bet.\n3. VAN khong co o negative. Kien truc Flux chay CFG=1 nen negative bi bo\n   qua. Cai KHONG muon phai viet vao o positive.\n   Cho nay de nham vi ban SDXL vua roi co negative that.\n\n=== CAN TAI ===\nflux1-dev-Q3_K_S.gguf (~5.2 GB)  -> models/unet/\n   huggingface.co/city96/FLUX.1-dev-gguf\nt5-v1_1-xxl-encoder-Q5_K_M.gguf (~3.4 GB) -> models/clip/\n   huggingface.co/city96/t5-v1_1-xxl-encoder-gguf\nclip_l.safetensors va ae.safetensors da co san tu schnell, dung lai duoc."
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -22,8 +22,8 @@
     {
       "id": 12,
       "type": "UnetLoaderGGUF",
-      "pos": [20, 530],
-      "size": [380, 58],
+      "pos": [20, 640],
+      "size": [400, 58],
       "flags": {},
       "order": 1,
       "mode": 0,
@@ -32,16 +32,16 @@
         {"name": "MODEL", "type": "MODEL", "links": [1, 2], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "UnetLoaderGGUF"},
-      "widgets_values": ["flux1-dev-Q4_K_S.gguf"],
-      "title": "UnetLoaderGGUF  <- doi sang ban dev",
+      "widgets_values": ["flux1-dev-Q3_K_S.gguf"],
+      "title": "UNET  Q3_K_S ~5.2 GB  <- muc nen manh, xem Note",
       "color": "#322",
       "bgcolor": "#533"
     },
     {
       "id": 11,
-      "type": "DualCLIPLoader",
-      "pos": [20, 640],
-      "size": [380, 106],
+      "type": "DualCLIPLoaderGGUF",
+      "pos": [20, 750],
+      "size": [400, 106],
       "flags": {},
       "order": 2,
       "mode": 0,
@@ -49,18 +49,19 @@
       "outputs": [
         {"name": "CLIP", "type": "CLIP", "links": [3], "slot_index": 0}
       ],
-      "properties": {"Node name for S&R": "DualCLIPLoader"},
+      "properties": {"Node name for S&R": "DualCLIPLoaderGGUF"},
       "widgets_values": [
-        "t5xxl_fp8_e4m3fn.safetensors",
+        "t5-v1_1-xxl-encoder-Q5_K_M.gguf",
         "clip_l.safetensors",
         "flux"
-      ]
+      ],
+      "title": "T5 ban GGUF - ban fp8 cu qua to cho 6 GB"
     },
     {
       "id": 10,
       "type": "VAELoader",
-      "pos": [20, 800],
-      "size": [380, 58],
+      "pos": [20, 910],
+      "size": [400, 58],
       "flags": {},
       "order": 3,
       "mode": 0,
@@ -74,7 +75,7 @@
     {
       "id": 6,
       "type": "CLIPTextEncode",
-      "pos": [460, 530],
+      "pos": [480, 640],
       "size": [480, 250],
       "flags": {},
       "order": 4,
@@ -94,8 +95,8 @@
     {
       "id": 26,
       "type": "FluxGuidance",
-      "pos": [460, 830],
-      "size": [340, 58],
+      "pos": [480, 940],
+      "size": [360, 58],
       "flags": {},
       "order": 5,
       "mode": 0,
@@ -114,8 +115,8 @@
     {
       "id": 5,
       "type": "EmptySD3LatentImage",
-      "pos": [460, 950],
-      "size": [340, 106],
+      "pos": [480, 1050],
+      "size": [360, 106],
       "flags": {},
       "order": 6,
       "mode": 0,
@@ -124,12 +125,13 @@
         {"name": "LATENT", "type": "LATENT", "links": [10], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "EmptySD3LatentImage"},
-      "widgets_values": [832, 1152, 1]
+      "widgets_values": [832, 1152, 1],
+      "title": "832x1152 - giu nguyen de con so voi schnell"
     },
     {
       "id": 22,
       "type": "BasicGuider",
-      "pos": [1000, 530],
+      "pos": [1020, 640],
       "size": [280, 58],
       "flags": {},
       "order": 7,
@@ -147,7 +149,7 @@
     {
       "id": 16,
       "type": "KSamplerSelect",
-      "pos": [1000, 640],
+      "pos": [1020, 750],
       "size": [280, 58],
       "flags": {},
       "order": 8,
@@ -162,7 +164,7 @@
     {
       "id": 17,
       "type": "BasicScheduler",
-      "pos": [1000, 750],
+      "pos": [1020, 860],
       "size": [280, 106],
       "flags": {},
       "order": 9,
@@ -173,12 +175,12 @@
       ],
       "properties": {"Node name for S&R": "BasicScheduler"},
       "widgets_values": ["simple", 24, 1.0],
-      "title": "BasicScheduler  <- 24 buoc, khong phai 4"
+      "title": "24 buoc, khong phai 4"
     },
     {
       "id": 25,
       "type": "RandomNoise",
-      "pos": [1000, 910],
+      "pos": [1020, 1020],
       "size": [280, 82],
       "flags": {},
       "order": 10,
@@ -193,7 +195,7 @@
     {
       "id": 13,
       "type": "SamplerCustomAdvanced",
-      "pos": [1340, 530],
+      "pos": [1360, 640],
       "size": [300, 122],
       "flags": {},
       "order": 11,
@@ -215,7 +217,7 @@
     {
       "id": 8,
       "type": "VAEDecode",
-      "pos": [1340, 700],
+      "pos": [1360, 810],
       "size": [220, 46],
       "flags": {},
       "order": 12,
@@ -233,7 +235,7 @@
     {
       "id": 9,
       "type": "SaveImage",
-      "pos": [1340, 800],
+      "pos": [1360, 910],
       "size": [460, 500],
       "flags": {},
       "order": 13,
@@ -261,22 +263,22 @@
   ],
   "groups": [
     {
-      "title": "1. Nap model",
-      "bounding": [0, 490, 420, 400],
+      "title": "1. Nap model  (ban nho cho 6 GB)",
+      "bounding": [0, 600, 440, 400],
       "color": "#3f789e",
       "font_size": 24,
       "flags": {}
     },
     {
       "title": "2. Prompt + Guidance",
-      "bounding": [440, 490, 520, 590],
+      "bounding": [460, 600, 520, 590],
       "color": "#8A8",
       "font_size": 24,
       "flags": {}
     },
     {
       "title": "3. Sampler roi",
-      "bounding": [980, 490, 340, 530],
+      "bounding": [1000, 600, 340, 530],
       "color": "#b58b2a",
       "font_size": 24,
       "flags": {}
