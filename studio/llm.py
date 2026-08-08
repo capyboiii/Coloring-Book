@@ -91,6 +91,10 @@ RULES
     It is two ANIMALS or two PEOPLE touching that ruins the drawing.
 11. Front view or slightly from the side. Never from above, never a dramatic
     or unusual angle.
+11b. ANCHOR EVERYTHING. Say what the subject stands, sits or floats on, and
+    say where each background thing is in relation to it. "a rabbit, two
+    carrots" leaves the drawer guessing; "a rabbit sitting on the ground, two
+    carrots on the ground beside it" does not. Every object needs a place.
 12. Keep everything cute, friendly, happy, smiling. Never scary, angry or
     realistic.
 
@@ -101,6 +105,11 @@ GOOD EXAMPLES
 a happy elephant holding a balloon, standing on simple grass with two flowers
 a smiling sea turtle swimming, two round bubbles above it and one coral below
 a cheerful fire truck parked on a plain road, one simple tree behind it
+
+BAD (nothing is anchored — the drawer cannot tell what is where)
+a rabbit, a basket and two carrots
+FIXED
+a rabbit sitting on the ground, a basket beside it, two carrots in the basket
 
 BAD (a whole scene instead of one subject — the page becomes cluttered)
 a jungle with many animals, trees, rivers, birds and insects
@@ -142,6 +151,58 @@ Do not repeat any of these scenes, which already exist:
 
 {existing}\
 """
+
+# --------------------------------------------------------------------------
+# Lượt soi lại cảnh
+# --------------------------------------------------------------------------
+#
+# Bao nói cứ 40 ảnh thì khoảng 10 ảnh sai logic, vì Flux không hiểu hết ngữ
+# cảnh. Đúng, nhưng chữa ở chỗ vẽ thì không ăn: Flux schnell chạy CFG=1, nhét
+# thêm câu ràng buộc vào prompt chỉ tổ triệu hồi đúng thứ mình cấm. Đã dính
+# ba lần trong dự án này ("no text" ra chữ, "dot eyes on animals only" ra mắt
+# khắp nơi, "no colors outside the outlines" ra bìa trắng).
+#
+# Nên chặn ở ĐẦU VÀO. Một lượt hỏi lại bằng văn bản tốn vài giây và không
+# đụng GPU; một mẻ vẽ hỏng tốn 20 phút GPU rồi vẫn phải xoá tay.
+#
+# Nguyên tắc quan trọng nhất của hàm này: KHÔNG BAO GIỜ ĐƯỢC LÀM TỆ ĐI. Dòng
+# nào không hiểu, không phân tích được, hoặc sửa ra tệ hơn thì giữ nguyên bản
+# gốc. Một bộ kiểm tự tin quá mức còn hại hơn không có bộ kiểm.
+REVIEW = """\
+You are checking scene descriptions for a children's coloring book BEFORE an
+illustrator draws them. Your job is to catch scenes that cannot be drawn as
+one clear picture.
+
+Reject a line ONLY for these reasons:
+  IMPOSSIBLE   physically impossible or nonsense
+               (a snowman holding a candy cane as a traffic light)
+  UNPLACED     an object has no stated place — you cannot tell what is where
+               (a rabbit, a basket and two carrots)
+  CROWDED      more than one main subject, or more than two background things
+  UNDRAWABLE   needs fog, light, glow, reflection, shadow, sound or motion
+
+Everything else is fine. Do not reject a line for being plain or boring.
+
+For EACH numbered line output exactly one line, nothing else:
+  <number>: OK
+  <number>: FIX <rewritten line>
+
+When you rewrite:
+  keep the SAME main subject
+  keep it under sixteen words, one sentence, lowercase start
+  say what the subject stands or sits on
+  say where each background thing is in relation to the subject
+  never name a colour, never mention drawing style, never mention light
+
+EXAMPLES
+  3: OK
+  4: FIX a snowman standing on the ground, a candy cane in the snow beside it
+  7: FIX a rabbit sitting on the ground, a basket beside it, two carrots in it
+
+LINES TO CHECK
+{lines}\
+"""
+
 
 AUDIENCE = {
     "kids": "children aged 3 to 7 — cheerful, cute, easy to recognise",
@@ -538,6 +599,88 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
 # --------------------------------------------------------------------------
 # Gọi LM Studio
 # --------------------------------------------------------------------------
+
+VERDICT = re.compile(r"^\s*(\d+)\s*[:.\)]\s*(OK|FIX)\b[:\s]*(.*)$", re.I)
+
+
+def review_scenes(lines: list[str], model: str | None = None,
+                  batch: int = 8, timeout: int = 300,
+                  temperature: float = 0.2, think: bool = False,
+                  on_progress=None) -> tuple[list[str], list[dict]]:
+    """
+    Soi lại từng cảnh, sửa dòng nào không vẽ ra một hình rõ ràng được.
+
+    Trả về (danh sách cảnh sau khi sửa, nhật ký thay đổi).
+
+    KHÔNG BAO GIỜ LÀM TỆ ĐI — đây là ràng buộc cứng, không phải mong muốn:
+
+      · dòng nào mô hình không chấm, chấm sai định dạng, hay trả về rỗng
+        thì GIỮ NGUYÊN bản gốc
+      · bản sửa phải qua đúng bộ lọc mà `subjects` dùng cho cảnh mới
+        (scrub màu, scrub chồng chéo, looks_like_scene). Không qua thì bỏ
+      · bản sửa dài hơn 20 từ thì bỏ — mô hình đang bịa thêm chứ không sửa
+      · cả mẻ hỏng thì giữ nguyên cả mẻ, không dừng cả lượt
+
+    Nhiệt độ để 0.2 chứ không phải 0.85 như lúc sáng tác: đây là việc soi lỗi,
+    cần nhất quán, không cần sáng tạo.
+    """
+    model = _resolve_model(model)
+    batch = max(1, batch)
+
+    out: list[str] = []
+    log: list[dict] = []
+
+    for start in range(0, len(lines), batch):
+        chunk = lines[start:start + batch]
+        numbered = "\n".join(f"{i + 1}: {ln}" for i, ln in enumerate(chunk))
+
+        if on_progress:
+            on_progress(start, len(lines))
+
+        verdicts: dict[int, tuple[str, str]] = {}
+        try:
+            raw, _finish, _warns = _chat(
+                model, REVIEW.format(lines=numbered), timeout,
+                temperature, len(chunk) * 90 + 400, think)
+            raw = strip_thinking(raw)
+            for ln in raw.splitlines():
+                m = VERDICT.match(ln)
+                if m:
+                    verdicts[int(m.group(1))] = (m.group(2).upper(),
+                                                 m.group(3).strip())
+        except LLMError as exc:
+            # Một mẻ hỏng không được kéo theo cả lượt. Giữ nguyên mẻ đó.
+            log.append({"batch": start // batch + 1, "error": str(exc)})
+
+        for i, original in enumerate(chunk, start=1):
+            kind, text = verdicts.get(i, ("OK", ""))
+            if kind != "FIX" or not text:
+                out.append(original)
+                continue
+
+            fixed, _ = scrub_colour_and_light(text)
+            fixed, _ = scrub_overlap(fixed)
+            fixed = fixed.strip().rstrip(".")
+
+            # KHÔNG dùng looks_like_scene() ở đây, dù thoạt nhìn nó có vẻ hợp.
+            # Hàm đó đòi >= 12 từ và >= 2 dấu phẩy để phân biệt cảnh thật với
+            # ghi chú của mô hình, và docstring của nó nói thẳng là đừng dùng
+            # làm điều kiện loại. Tôi dùng và nó loại đúng những bản sửa TỐT:
+            # "a rabbit sitting on the ground, a basket beside it" chỉ 10 từ
+            # một phẩy — gọn và rõ, mà vẫn rớt.
+            #
+            # Ở đây chỉ cần chặn rác: quá ngắn, quá dài, hoặc là câu suy luận.
+            words = len(fixed.split())
+            if (words < 4 or words > 20 or looks_like_reasoning(fixed)
+                    or fixed.lower() == original.lower()):
+                out.append(original)
+                continue
+
+            out.append(fixed)
+            log.append({"index": start + i, "before": original, "after": fixed})
+
+    return out, log
+
 
 def list_models(timeout: int = 15) -> list[str]:
     try:
