@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from datetime import date
 
-from ..llm import (LLMError, base_url, generate_subjects, lint_for_kids,
-                   list_models)
+from ..llm import (LLMError, base_url, generate_graphs,
+                   generate_subjects, lint_for_kids, list_models)
 from ..prompts import THEMES_DIR, list_themes
 from ..util import info, slugify, warn
 
@@ -58,6 +58,11 @@ def register(subparsers) -> None:
                         "sạch token vào phần suy nghĩ rồi trả về rỗng")
     p.add_argument("--overwrite", action="store_true",
                    help="Ghi đè bộ đã có")
+    p.add_argument("--graph", action="store_true",
+                   help="Bắt model tả cảnh dạng ĐỒ THỊ (SUBJECT/ACTION/"
+                        "OBJECTS/RELATIONSHIPS) rồi studio tự duỗi thành câu. "
+                        "Chậm hơn, nhưng vật lơ lửng và vật dính nhau bị chặn "
+                        "bằng code chứ không phải trông chờ model nhớ")
     p.add_argument("--dry-run", action="store_true",
                    help="In ra màn hình, không ghi file")
     p.set_defaults(func=run)
@@ -126,6 +131,9 @@ def run(args) -> int:
         suffix = f"  ({', '.join(detail)})" if detail else ""
         info(f"         xin {ask}, dùng được {added}{suffix}")
 
+    if args.graph:
+        return _run_graph(args, name, path)
+
     try:
         lines, warnings, model = generate_subjects(
             topic=args.topic,
@@ -187,5 +195,87 @@ def run(args) -> int:
     info("")
     info("Đọc lướt qua một lượt trước khi chạy 40 ảnh — sửa dòng nào không ưng.")
     info("Sau đó:")
+    info(f'  python studio.py generate "{args.topic}" --theme {name} --count 40')
+    return 0
+
+
+# --------------------------------------------------------------------------
+# Chế độ đồ thị
+# --------------------------------------------------------------------------
+
+def _run_graph(args, name: str, path) -> int:
+    """
+    Sinh cảnh dạng đồ thị rồi duỗi thành câu.
+
+    Ghi RA HAI FILE:
+      themes/<ten>.txt         câu đã duỗi — mặt tiếp xúc của cả hệ thống,
+                               `generate`/`cover`/`recipe` đều đọc file này
+      themes/<ten>.graph.json  đồ thị gốc — để tra lại sau, và để chạy kiểm
+                               mà không phải gọi model lần nữa
+
+    Không đổi định dạng .txt là có chủ đích: đổi thì phải sửa năm chỗ khác,
+    mà lợi ích của đồ thị nằm ở khâu KIỂM chứ không ở khâu lưu.
+    """
+    from ..scenegraph import save
+
+    def progress(rnd, have, total, ask):
+        info(f"  mẻ {rnd}: đã có {have}/{total}, xin thêm {ask}...")
+
+    def result(rnd, ask, added, dupes, bad):
+        detail = []
+        if dupes:
+            detail.append(f"{dupes} trùng")
+        if bad:
+            detail.append(f"{bad} không qua kiểm")
+        suffix = f"  ({', '.join(detail)})" if detail else ""
+        info(f"         xin {ask}, dùng được {added}{suffix}")
+
+    info("Chế độ ĐỒ THỊ — model phải khai chỗ đứng của từng vật")
+    info("")
+    try:
+        graphs, rejected, model = generate_graphs(
+            topic=args.topic, count=args.count, audience=args.audience,
+            detail=args.detail, model=args.model,
+            temperature=min(args.temperature, 0.7), batch=min(args.batch, 4),
+            think=args.think, on_progress=progress, on_result=result)
+    except LLMError as exc:
+        print(f"\nLỖI: {exc}")
+        return 1
+
+    info("")
+    for i, g in enumerate(graphs, start=1):
+        info(f"  {i:>2}. {g.to_prompt()}")
+
+    # In ra vì sao loại. Đây là phần đáng xem nhất: nó cho biết model hay sai
+    # ở đâu, và ngưỡng kiểm có quá tay không.
+    if rejected:
+        info("")
+        info(f"── {len(rejected)} đồ thị bị loại ──")
+        for g, issues in rejected[:8]:
+            info(f"  {g.subject or '(thiếu chủ thể)'}: {issues[0]}")
+        if len(rejected) > 8:
+            info(f"  ... và {len(rejected) - 8} cái nữa")
+
+    if len(graphs) < args.count:
+        info("")
+        warn(f"Chỉ được {len(graphs)}/{args.count} cảnh đạt.")
+
+    if args.dry_run:
+        info("")
+        info("--dry-run, không ghi file.")
+        return 0
+
+    lines = [g.to_prompt() for g in graphs]
+    THEMES_DIR.mkdir(parents=True, exist_ok=True)
+    header = HEADER.format(topic=args.topic, n=len(lines), name=name,
+                           today=date.today().isoformat(), model=model)
+    path.write_text(header + "\n" + "\n".join(lines) + "\n", encoding="utf-8")
+    gpath = path.with_suffix(".graph.json")
+    save(gpath, args.topic, graphs)
+
+    info("")
+    info(f"✓ Ghi {len(lines)} cảnh vào {path}")
+    info(f"✓ Ghi đồ thị gốc vào {gpath.name}")
+    info("")
     info(f'  python studio.py generate "{args.topic}" --theme {name} --count 40')
     return 0

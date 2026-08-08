@@ -143,6 +143,70 @@ Do not repeat any of these scenes, which already exist:
 {existing}\
 """
 
+# --------------------------------------------------------------------------
+# Cảnh dạng đồ thị
+# --------------------------------------------------------------------------
+#
+# Ép mô hình điền vào ô thay vì viết văn xuôi tự do. Hai cái lợi, và cái thứ
+# hai mới là cái đáng:
+#
+#   1. Chính mô hình phải nghĩ tới chỗ đứng của từng vật. Viết văn xuôi thì
+#      "a rabbit, a basket and two carrots" trôi qua lúc nào không hay.
+#   2. MÁY KIỂM ĐƯỢC. Vật khai ở OBJECTS mà không xuất hiện trong quan hệ nào
+#      là vật sẽ lơ lửng trong tranh — bắt bằng ba dòng code, không cần model.
+#      Văn xuôi thì muốn kiểm phải hiểu tiếng Anh.
+#
+# KHÔNG bắt mô hình viết CONSTRAINTS: nó giống hệt nhau ở mọi cảnh, để mô hình
+# viết chỉ tốn token và mỗi lần một khác. Studio tự ghép khi cần.
+GRAPH_INSTRUCTIONS = """\
+You describe pages for a printed coloring book as small scene graphs.
+
+TOPIC: {topic}
+AUDIENCE: {audience}
+DETAIL LEVEL: {detail}
+
+Write exactly {count} scene graphs. Use this exact format:
+
+SUBJECT: <one animal, person or object>
+ACTION: <what the subject is doing>
+OBJECTS: <at most two background things, comma separated>
+RELATIONSHIPS: <one per line or separated by semicolons>
+
+Separate graphs with a blank line.
+
+RELATIONSHIP FORMAT
+  <thing> --<relation>--> <thing>
+
+ALLOWED RELATIONS, use no others:
+  support (where something rests): {support}
+  position (where something is):   {position}
+
+HARD RULES
+1. The SUBJECT must have exactly one support relation saying what it rests on.
+   Use a plain ground word: ground, grass, snow, sand, water, branch, path.
+2. EVERY name in OBJECTS must appear in at least one relationship. An object
+   with no relationship has no place in the picture and will float.
+3. Never use: riding, hugging, holding, carrying, climbing_on, hiding_behind,
+   touching, wearing. Two animals that touch get fused into one strange lump.
+4. At most two objects. English only. Lowercase names.
+5. NEVER name a colour and NEVER describe light. No red, golden, glowing,
+   twinkling. The child chooses the colours; an outline cannot draw light.
+6. All {count} graphs must use a clearly different SUBJECT.
+{extra}
+
+EXAMPLE
+SUBJECT: panda
+ACTION: eating bamboo
+OBJECTS: bamboo shoot, sunflower
+RELATIONSHIPS: panda --sitting_on--> ground; bamboo_shoot --behind--> panda; sunflower --beside--> panda
+
+Write the graphs directly. Do not plan, do not explain, do not add headings.\
+"""
+
+CONSTRAINTS_LINE = ("objects are separate, no object overlaps the subject "
+                    "unnaturally, all objects fully visible")
+
+
 AUDIENCE = {
     "kids": "children aged 3 to 7 — cheerful, cute, easy to recognise",
     "adults": "adults — intricate, decorative, relaxing",
@@ -538,6 +602,81 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
 # --------------------------------------------------------------------------
 # Gọi LM Studio
 # --------------------------------------------------------------------------
+
+def generate_graphs(topic: str, count: int = 24, audience: str = "all",
+                    detail: str = "simple", model: str | None = None,
+                    temperature: float = 0.7, batch: int = 4,
+                    timeout: int = 600, think: bool = False,
+                    on_progress=None, on_result=None):
+    """
+    Sinh cảnh dạng đồ thị. Trả về (danh sách SceneGraph đạt, bị loại, model).
+
+    Mẻ nhỏ hơn lúc sinh văn xuôi (4 thay vì 8): mỗi đồ thị chiếm bốn dòng nên
+    cùng số token thì được ít cảnh hơn.
+
+    Nhiệt độ 0.7 chứ không 0.85 — điền vào ô cần chính xác hơn là cần bay bổng.
+
+    Đồ thị nào không qua `problems()` thì BỊ LOẠI chứ không sửa. Sửa tự động
+    là đoán mò ý mô hình; loại rồi xin bù thì rẻ hơn và không bịa thêm gì.
+    """
+    from .scenegraph import RELATIONS, SUPPORT, BESIDE, parse_many
+
+    if audience not in AUDIENCE:
+        raise LLMError(f"audience phải là một trong {list(AUDIENCE)}")
+
+    model = _resolve_model(model)
+    batch = max(1, min(batch, count))
+
+    good: list = []
+    rejected: list[tuple] = []
+    seen: set[str] = set()
+    max_rounds = -(-count // batch) + 3
+
+    for rnd in range(1, max_rounds + 1):
+        missing = count - len(good)
+        if missing <= 0:
+            break
+        ask = min(batch, missing)
+
+        prompt = GRAPH_INSTRUCTIONS.format(
+            topic=topic, count=ask, audience=AUDIENCE[audience],
+            detail=AGE_DETAIL.get(detail, AGE_DETAIL["simple"]),
+            support=", ".join(sorted(SUPPORT)),
+            position=", ".join(sorted(BESIDE)),
+            extra=AUDIENCE_EXTRA[audience])
+        if good:
+            prompt += ("\n\nDo not reuse these subjects: "
+                       + ", ".join(g.subject for g in good[-14:]))
+
+        if on_progress:
+            on_progress(rnd, len(good), count, ask)
+
+        raw, _finish, _warns = _chat(model, prompt, timeout, temperature,
+                                     ask * 190 + 500, think)
+        raw = strip_thinking(raw)
+
+        added = dupes = bad = 0
+        for g in parse_many(raw):
+            key = g.subject.strip().lower()
+            if not key or key in seen:
+                dupes += 1
+                continue
+            issues = g.problems()
+            if issues:
+                rejected.append((g, issues))
+                bad += 1
+                continue
+            seen.add(key)
+            good.append(g)
+            added += 1
+            if len(good) >= count:
+                break
+
+        if on_result:
+            on_result(rnd, ask, added, dupes, bad)
+
+    return good[:count], rejected, model
+
 
 def list_models(timeout: int = 15) -> list[str]:
     try:

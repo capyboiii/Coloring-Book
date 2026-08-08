@@ -491,6 +491,73 @@ def main() -> int:
     check("Tắt được khung", (_np2.asarray(prepare_page(
         raw / "001.png", border=0)[0]) == ap).all())
 
+    print("\n[0f] Cảnh dạng đồ thị")
+    # Cai loi THAT SU cua do thi khong phai "ro rang hon cho Flux" - ma la
+    # MAY KIEM DUOC. Van xuoi "a rabbit, a basket and two carrots" muon biet
+    # cai gio dat o dau thi phai hieu tieng Anh; do thi thi ba dong code.
+    from studio import scenegraph as sg
+
+    ok = sg.parse_block(
+        "SUBJECT: panda\nACTION: eating bamboo\n"
+        "OBJECTS: bamboo shoot, sunflower\n"
+        "RELATIONSHIPS: panda --sitting_on--> ground; "
+        "bamboo_shoot --behind--> panda; sunflower --beside--> panda\n"
+        "CONSTRAINTS: objects are separate")
+    check("Đọc được đúng định dạng đồ thị",
+          ok.subject == "panda" and len(ok.objects) == 2
+          and len(ok.relations) == 3)
+    check("Đồ thị hợp lệ thì không báo lỗi gì", ok.problems() == [],
+          str(ok.problems()))
+    check("Duỗi thành câu có đủ chỗ đứng của từng vật",
+          ok.to_prompt() == ("a panda sitting on the ground, eating bamboo, "
+                             "a bamboo shoot behind it, a sunflower beside it"),
+          ok.to_prompt())
+    check("Chủ thể vẫn đứng ĐẦU câu", ok.to_prompt().startswith("a panda"))
+
+    # Mo hinh nho ngan cach quan he tuy hung: luc `;`, luc `,`, luc chi mot
+    # dau cach. Khong tach bang dau cach don thuan duoc - dich co the nhieu
+    # chu ("sea floor"), tach ra la mat.
+    loose = sg.parse_block(
+        "SUBJECT: turtle\nACTION: swimming\nOBJECTS: coral\n"
+        "RELATIONSHIPS: turtle --swimming_in--> sea floor "
+        "coral --below--> turtle")
+    check("Đọc được cả khi model quên dấu ngăn cách",
+          len(loose.relations) == 2
+          and loose.relations[0].dst == "sea_floor",
+          str(loose.relations))
+
+    # Bon loai loi ma do thi bat duoc, van xuoi thi khong
+    cases = [
+        ("SUBJECT: rabbit\nACTION: hopping\nOBJECTS: basket, carrot, tree\n"
+         "RELATIONSHIPS: rabbit --sitting_on--> grass; carrot --inside--> basket",
+         "lơ lửng", "vật khai rồi bỏ đó"),
+        ("SUBJECT: fox\nACTION: standing\nOBJECTS: tree\n"
+         "RELATIONSHIPS: tree --behind--> fox",
+         "không tựa vào đâu", "chủ thể không có chỗ đứng"),
+        ("SUBJECT: bear\nACTION: playing\nOBJECTS: fox\n"
+         "RELATIONSHIPS: bear --standing_on--> grass; bear --hugging--> fox",
+         "dính vào nhau", "quan hệ làm hai con vật nhập làm một"),
+        ("SUBJECT: fox\nACTION: sitting near a glowing lantern\n"
+         "OBJECTS: lantern\nRELATIONSHIPS: fox --sitting_on--> ground; "
+         "lantern --beside--> fox",
+         "ánh sáng", "từ chỉ ánh sáng"),
+    ]
+    for block, want, label in cases:
+        issues = sg.parse_block(block).problems()
+        check(f"Bắt được: {label}",
+              any(want in i for i in issues), str(issues))
+
+    check("Quan hệ lạ ngoài từ vựng thì bị chặn",
+          any("từ vựng" in i for i in sg.parse_block(
+              "SUBJECT: cat\nACTION: sitting\nOBJECTS: ball\n"
+              "RELATIONSHIPS: cat --sitting_on--> floor; "
+              "ball --associated_with--> cat").problems()))
+
+    # Do thi KHONG di thang vao Flux - Flux an van xuoi. Giu ham nay de do
+    # chu khong de dung mac dinh.
+    check("Có sẵn dạng thô để đo thử với Flux",
+          "SUBJECT:" in ok.graph_text() and "-->" in ok.graph_text())
+
     print("\n[1] Cấu hình khổ giấy")
     check("Khổ file PDF 8.75 x 11.25 in",
           (config.PAGE_W_IN, config.PAGE_H_IN) == (8.75, 11.25),
