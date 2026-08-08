@@ -216,8 +216,6 @@ def run(args) -> int:
             continue
 
         req = GenRequest(
-            lora=args.lora,
-            lora_strength=args.lora_strength,
             prompt=item.prompt,
             negative=item.negative,
             seed=item.seed,

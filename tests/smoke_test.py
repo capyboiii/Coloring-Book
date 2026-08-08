@@ -102,6 +102,26 @@ def main() -> int:
         "planned_count": n_pages,
     })
 
+    print("\n[0] Mọi module đều nạp được")
+    # Bo kiem thu nay TUNG BO SOT generate.py hoan toan: no chi nap approve va
+    # build. Ket qua la mot loi cu phap (truyen `lora` hai lan trong
+    # GenRequest) nam yen trong generate.py qua ca mot commit, va chi lo ra
+    # khi Bao chay `studio.py doctor` - tuc la luc dinh chay that.
+    # Nap het moi module la phep thu re nhat co the co: no khong kiem tra logic
+    # gi ca, chi bat dung loai loi ngu ngoc ma le ra phai chet ngay lap tuc.
+    import importlib
+    mods = sorted(p.stem for p in (ROOT / "studio" / "commands").glob("*.py")
+                  if not p.stem.startswith("_"))
+    for m in mods:
+        try:
+            importlib.import_module(f"studio.commands.{m}")
+            bad = None
+        except Exception as exc:
+            bad = f"{type(exc).__name__}: {exc}"
+        check(f"studio/commands/{m}.py", bad is None, bad or "")
+    check("Nạp được studio.py (điểm vào)",
+          importlib.util.find_spec("studio") is not None)
+
     print("\n[1] Cấu hình khổ giấy")
     check("Khổ file PDF 8.75 x 11.25 in",
           (config.PAGE_W_IN, config.PAGE_H_IN) == (8.75, 11.25),
