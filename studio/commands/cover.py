@@ -25,7 +25,8 @@ from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
 from .. import config
-from ..imageops import load_font, cover_vividness
+from ..imageops import (cover_outline_ratio, cover_vividness,
+                        load_font)
 from ..prompts import build_cover_prompt, has_non_ascii, load_subjects
 from ..providers import GenRequest, ProviderError, get_provider
 from ..util import image_files, info, read_json, warn, write_json
@@ -169,12 +170,19 @@ def _make_art(settings, args, book: dict) -> Image.Image:
     # Bìa nhạt thì lên kệ là chìm nghỉm, mà nhìn từng ảnh một không thấy gì
     # lạ — phải có số mới so được. Xem cover_vividness().
     sat, pale = cover_vividness(art)
-    info(f"Độ rực    : bão hoà {sat:.0f}/255, {pale:.0%} diện tích nhạt")
+    outline = cover_outline_ratio(art)
+    info(f"Độ rực    : bão hoà {sat:.0f}/255, {pale:.0%} nhạt, "
+         f"nét đen {outline:.1%}")
     if sat < config.COVER_SAT_MIN or pale > config.COVER_PALE_MAX:
         warn(f"BÌA NHẠT. Cần bão hoà >= {config.COVER_SAT_MIN:.0f} và "
              f"dưới {config.COVER_PALE_MAX:.0%} diện tích nhạt.")
         warn("Sinh lại với seed khác, hoặc tả cảnh có sẵn màu mạnh — "
              '"a penguin on white snow" thì kiểu gì cũng ra trắng.')
+    if outline < config.COVER_OUTLINE_MIN:
+        warn(f"BÌA KHÔNG CÓ NÉT ĐEN ({outline:.1%}, cần "
+             f">= {config.COVER_OUTLINE_MIN:.0%}). Bìa phải trông như trang "
+             f"tô màu ĐÃ TÔ, để khách nhìn là biết bên trong ra sao.")
+        warn("Sinh lại với seed khác.")
     return art
 
 

@@ -244,6 +244,37 @@ def main() -> int:
     for w in ("saturated", "colorful", "no white background"):
         check(f"Prompt bìa có đòi '{w}'", w in COVER_STYLE)
 
+    # BIA = TRANG RUOT DA DUOC TO. Khach nhin bia la biet ben trong to ra
+    # thanh cai gi. Bia ve kieu minh hoa mem mai thi dep nhung NOI DOI - no
+    # khong giong thu khach nhan duoc.
+    for w in ("coloring book page", "thick black outlines",
+              "flat bright color fills", "no gradients", "no shading"):
+        check(f"Prompt bìa đòi '{w}'", w in COVER_STYLE)
+
+    # Canh bia mac dinh lay dong DAU trong file theme - dai 23-26 tu, ba menh
+    # de. Bat Flux dung ba thu cung luc tren tam anh QUAN TRONG NHAT cua cuon
+    # sach la cach chac chan nhat de ra bo cuc phi ly.
+    from studio.prompts import COVER_SUBJECT_MAX_WORDS, load_subjects
+    long_scene = load_subjects("ocean")[0]
+    cp = build_cover_prompt(long_scene)
+    subject = cp.split(", a colored-in")[0]
+    check("Cảnh bìa bị cắt còn một chủ thể rõ ràng",
+          len(subject.split()) <= COVER_SUBJECT_MAX_WORDS + 4
+          and len(subject.split()) < len(long_scene.split()),
+          f"{len(long_scene.split())} → {len(subject.split())} từ")
+
+    from studio.imageops import cover_outline_ratio
+    line_art = Image.new("RGB", (256, 256), (255, 230, 60))
+    ImageDraw.Draw(line_art).ellipse((30, 30, 226, 226), outline=(0, 0, 0),
+                                     width=14)
+    soft = Image.new("RGB", (256, 256), (255, 230, 60))
+    check("Bìa có nét đen đạt ngưỡng",
+          cover_outline_ratio(line_art) >= config.COVER_OUTLINE_MIN,
+          f"{cover_outline_ratio(line_art):.1%}")
+    check("Bìa không có nét đen bị bắt",
+          cover_outline_ratio(soft) < config.COVER_OUTLINE_MIN,
+          f"{cover_outline_ratio(soft):.1%}")
+
     rich = Image.new("RGB", (64, 64), (230, 40, 30))
     pale = Image.new("RGB", (64, 64), (245, 244, 250))
     s_rich, p_rich = cover_vividness(rich)

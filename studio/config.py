@@ -230,6 +230,14 @@ INK_GROWTH_MAX = 0.28
 COVER_SAT_MIN = 90.0
 COVER_PALE_MAX = 0.55
 
+# Bìa phải trông như TRANG TÔ MÀU ĐÃ ĐƯỢC TÔ — nét đen giữ nguyên, chỉ khác
+# là bên trong đổ màu. Khách nhìn bìa là biết bên trong tô ra thành cái gì.
+# Tỉ lệ pixel nét đen trên 4 bìa cũ:
+#     thu-hoa 14.2%   <- đúng thứ cần
+#     manmat 7.3% · ngay-hoi-bien 5.5%
+#     chihuahua 1.8%  <- gần như không có nét, nhìn không ra sách tô màu
+COVER_OUTLINE_MIN = 0.04
+
 # Ngưỡng cảnh báo tự động (Phase 2 sẽ dùng để lọc trước khi mắt người nhìn)
 INK_RATIO_MIN = 0.005  # dưới 0.5% -> trang gần như trắng
 INK_RATIO_MAX = 0.40   # trên 40%  -> trang đen kịt

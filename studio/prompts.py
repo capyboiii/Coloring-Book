@@ -297,24 +297,48 @@ class PagePrompt:
 #    Bỏ HẾT mọi chữ dính tới text/title/letters. Muốn chừa chỗ trên đầu thì
 #    tả bằng hình ("simple open sky above"), không tả bằng chữ "title".
 #    Đây đúng cùng một bài học với "dot eyes on animals only".
+# BÌA = ĐÚNG TRANG RUỘT NHƯNG ĐÃ ĐƯỢC TÔ MÀU.
+#
+# Đây là ý hay về mặt bán hàng: khách nhìn bìa là biết ngay bên trong tô ra
+# sẽ thành cái gì. Bìa vẽ kiểu minh hoạ mềm mại thì đẹp thật nhưng nói dối —
+# nó không giống thứ khách nhận được.
+#
+# Nên bìa phải giữ ĐÚNG nét đen dày của trang ruột, chỉ khác là các mảng bên
+# trong được đổ màu phẳng. Đo trên 4 bìa cũ, tỉ lệ pixel nét đen:
+#     thu-hoa 14.2%   <- đúng thứ cần, nhìn ra ngay là line art đã tô
+#     manmat 7.3%     mảng màu phẳng nhưng gần như không có nét đen
+#     ngay-hoi-bien 5.5%
+#     chihuahua 1.8%  <- gần như không có nét
+#
+# "no gradients, no shading" quan trọng ngang phần màu: tô màu sáp thì ra
+# mảng phẳng, chứ không ra chuyển sắc mượt như máy.
 COVER_STYLE = (
-    "vibrant children's book cover art, bold saturated colors, "
-    "bright cheerful palette, rich colorful background filling every corner, "
-    "no white background, "
-    "clean cartoon style, bold clear shapes, thick outlines, "
+    "a colored-in coloring book page, "
+    "thick black outlines around every shape, "
+    "flat bright color fills inside the outlines, "
+    "bold saturated colors, no gradients, no shading, no soft edges, "
+    "colorful background filling every corner, no white background, "
     "one big friendly subject in the lower two thirds, "
     "simple open sky above it"
 )
 
+# Bìa chỉ được MỘT chủ thể rõ ràng — chặt hơn cả trang ruột cho bé 3 tuổi.
+# Cảnh bìa mặc định lấy dòng ĐẦU trong file theme, mà mấy dòng đó dài 23-26
+# từ với ba mệnh đề. Bắt Flux dựng ba thứ cùng lúc trên tấm ảnh quan trọng
+# nhất của cuốn sách là cách chắc chắn nhất để ra bố cục phi lý.
+COVER_SUBJECT_MAX_WORDS = 12
+
 
 def build_cover_prompt(scene: str) -> str:
     """
-    Bìa KHÔNG bị ràng buộc đen trắng — đây là ảnh màu, càng rực càng tốt.
+    Bìa KHÔNG bị ràng buộc đen trắng — đây là trang tô màu ĐÃ ĐƯỢC TÔ.
 
     Chữ tiêu đề do Pillow ghép vào sau, nên prompt tuyệt đối không được nhắc
     tới chữ nghĩa dưới bất kỳ hình thức nào. Xem chú thích ở COVER_STYLE.
     """
-    return f"{scene.strip().rstrip('.')}, {COVER_STYLE}"
+    scene = shorten_subject(scene.strip().rstrip("."),
+                            COVER_SUBJECT_MAX_WORDS)
+    return f"{scene}, {COVER_STYLE}"
 
 
 def has_non_ascii(text: str) -> bool:

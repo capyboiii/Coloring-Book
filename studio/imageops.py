@@ -161,6 +161,20 @@ def colour_amount(img: Image.Image, threshold: int = 30) -> float:
     return colour_report(img)[0]
 
 
+def cover_outline_ratio(img: Image.Image) -> float:
+    """
+    Tỉ lệ pixel là NÉT ĐEN. Bìa phải trông như trang tô màu đã được tô, nên
+    nét đen phải còn nguyên chứ không tan vào mảng màu.
+
+    Đo trên 4 bìa cũ: thu-hoa 14.2% (nhìn ra ngay là line art đã tô),
+    manmat 7.3%, ngay-hoi-bien 5.5%, chihuahua 1.8% (gần như không có nét).
+    """
+    import numpy as np
+
+    a = np.asarray(img.convert("RGB").resize((512, 512), Image.BILINEAR))
+    return float((a.mean(axis=2) < 70).mean())
+
+
 def cover_vividness(img: Image.Image) -> tuple[float, float]:
     """
     Trả về (độ bão hoà trung bình 0-255, tỉ lệ diện tích gần như không màu).
