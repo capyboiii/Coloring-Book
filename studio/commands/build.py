@@ -228,7 +228,9 @@ def run(args) -> int:
         if not art.exists():
             warn("Chưa có cover-art.png. `generate` sẽ tự vẽ ảnh bìa; "
                  "lần này để Flux vẽ ngay bây giờ.")
+        back = config.book_dir(settings, slug) / "cover-back-art.png"
         cover_kwargs = {"image": str(art) if art.exists() else None,
+                        "back_image": str(back) if back.exists() else None,
                         "subtitle": args.subtitle}
         if args.bg:
             cover_kwargs["bg"] = args.bg

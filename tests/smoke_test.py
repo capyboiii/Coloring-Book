@@ -395,10 +395,16 @@ def main() -> int:
                 sv >= config.COVER_SAT_MIN and pl <= config.COVER_PALE_MAX)
             print(f"      {p.parent.name:16s} bão hoà {sv:5.0f}  "
                   f"nhạt {pl:5.1%}  {'đạt' if verdicts[p.parent.name] else 'NHẠT'}")
-        known_pale = {"chihuahua", "ngay-hoi-bien"}
-        wrong = [k for k, ok in verdicts.items()
-                 if ok == (k in known_pale)]
-        check("Ngưỡng bìa phân loại đúng 4 bìa thật", not wrong, str(wrong))
+        # CHI cham nhung bia da soi bang mat. Bao sinh sach moi lien tuc, ma
+        # bia moi thi toi chua nhin - cham no la cham mo. Ban dau toi de danh
+        # sach "bia nhat" roi bat het phan con lai phai dat; hai cuon moi cua
+        # Bao lam hong ngay kiem thu du code khong doi gi.
+        judged = {"chihuahua": False, "ngay-hoi-bien": False,
+                  "manmat": True, "thu-hoa": True}
+        wrong = [k for k, want in judged.items()
+                 if k in verdicts and verdicts[k] != want]
+        check(f"Ngưỡng bìa phân loại đúng {len(judged & verdicts.keys())} "
+              f"bìa đã soi bằng mắt", not wrong, str(wrong))
 
     print("\n[1] Cấu hình khổ giấy")
     check("Khổ file PDF 8.75 x 11.25 in",

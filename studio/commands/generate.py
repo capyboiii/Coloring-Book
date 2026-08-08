@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 from .. import config
 from ..prompts import (build_cover_prompt, has_non_ascii, list_themes,
+                       summarise_scenes,
                        load_style, load_subjects, load_template,
                        make_prompts)
 from ..providers import GenRequest, ProviderError, get_provider
@@ -315,9 +316,17 @@ def _make_cover_art(settings, args, slug: str,
         info(f"Bìa      : đã có {art_path.name}, bỏ qua (--overwrite để làm lại)")
         return
 
+    # GỘP nhiều chủ thể chứ không lấy subjects[0].
+    #
+    # Đây là chỗ tôi sửa sót lần trước: tôi vá `cover.py` nhưng quên rằng
+    # `generate` có đường sinh bìa RIÊNG, và đó mới là đường Bao thực sự chạy.
+    # Nên bìa vẫn ra đúng một con báo. Cùng một lỗi, hai chỗ, sửa một chỗ.
+    #
+    # Ở đây chưa có approved/ (chưa duyệt), nên gộp từ chính mẻ vừa sinh —
+    # đó cũng chính là những trang sắp vào sách.
     scene = args.cover_scene
     if not scene and subjects:
-        scene = subjects[0]
+        scene = summarise_scenes(subjects, count=3) or subjects[0]
     if not scene:
         scene = args.topic
         if has_non_ascii(scene):
@@ -355,4 +364,40 @@ def _make_cover_art(settings, args, slug: str,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "seconds": round(time.time() - t0, 1),
     })
+
+    # ẢNH BÌA SAU — cũng sinh ngay ở đây.
+    #
+    # Trước đây chỉ sinh một ảnh, nên `build` chỉ có bìa trước; bìa sau phải
+    # chạy `cover` riêng mới có. Mà Bao thì chạy generate → approve → build,
+    # không ai nhớ chạy thêm lệnh.
+    # Ít nhân vật hơn và cảnh tĩnh hơn: bìa sau còn phải chừa chỗ cho chữ và
+    # ô mã vạch.
+    back_path = config.book_dir(settings, slug) / "cover-back-art.png"
+    if subjects:
+        back_scene = summarise_scenes(
+            subjects, count=2, offset=1,
+            ending="in a calm simple scene with open space around them")
+    else:
+        back_scene = scene
+    info(f"Bìa sau  : đang vẽ ảnh màu — {back_scene[:60]}...")
+    try:
+        t1 = time.time()
+        back = provider.generate(GenRequest(
+            prompt=build_cover_prompt(back_scene),
+            negative="",
+            seed=(args.seed + 10000) if args.seed is not None
+            else random.randint(1, 2**31 - 1),
+            width=config.COVER_GEN_W,
+            height=config.COVER_GEN_H,
+            steps=steps,
+            guidance=settings.guidance,
+        ))
+    except ProviderError as exc:
+        # Bìa sau hỏng KHÔNG được làm hỏng cả lượt chạy: bìa trước mới là thứ
+        # bán hàng, còn bìa sau thiếu thì in trên nền màu vẫn được.
+        warn(f"Không vẽ được bìa sau: {exc}. Bìa sau sẽ dùng nền màu trơn.")
+        return
+    back_path.write_bytes(back)
+    info(f"Bìa sau  : xong sau {human_duration(time.time() - t1)} "
+         f"→ {back_path.name}")
     info(f"Bìa      : xong sau {time.time() - t0:.0f}s → {art_path.name}")

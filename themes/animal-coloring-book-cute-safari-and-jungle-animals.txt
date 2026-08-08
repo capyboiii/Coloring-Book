@@ -1,0 +1,51 @@
+# Animal Coloring Book - Cute Safari and Jungle Animals — 40 cảnh
+#
+# Sinh tự động bằng `studio.py subjects` ngày 2026-08-08
+# Model local: qwen2.5-7b-instruct-1m
+# Sửa tay thoải mái — đây là file văn bản thuần, mỗi dòng một trang.
+#
+# Công thức mỗi dòng: MỘT chủ thể chính + hành động + tối đa 2 thứ nền đơn giản.
+# Viết bằng tiếng Anh, vì Flux không hiểu tiếng Việt.
+#
+# Dùng: python studio.py generate "Animal Coloring Book - Cute Safari and Jungle Animals" --theme animal-coloring-book-cute-safari-and-jungle-animals --count 40
+
+a cheetah running on simple grass, two flowers nearby
+a panda sitting beside a pool of clear water, a bamboo stem behind it
+an owl perched in a big oak tree, two acorns at its feet
+a koala holding an , standing on simple eucalyptus leaves
+a giraffe drinking from a stream, two birds flying overhead
+a penguin waddling along plain snow, one star above the horizon
+a fox with a scarf on a snowy hill, one pine cone beside it
+an otter playing with a stick in clear water, two lily pads beside it
+a happy rabbit hopping on simple grass, two daisies nearby
+a cheetah running across open plain, two butterflies above it
+a giraffe standing next to tall acacia tree, one cactus behind it
+an otter swimming in clear lake water, two lily pads beside it
+a panda sitting quietly on bamboo field, a small waterfall behind it
+a koala lounging among big eucalyptus leaves, two birds watching nearby
+a penguin waddling happily across snow, one simple pine cone at its feet
+an owl roosting in large oak tree, two acorns at its feet
+a lioness lying on soft sand, two seashells nearby
+a koala climbing a thick tree, two flowers below
+a kangaroo standing next to tall grass, two simple clouds above
+a fox with a scarf sitting on simple snow, two pine cones beside it
+an otter swimming in clear water, two rocks in the background
+a giraffe drinking from a pool, two birds flying overhead
+a panda munching bamboo leaves, two butterflies above it
+a cheetah running across open field, two wildebeests nearby
+a rabbit hopping through meadow, a daisy beside it
+an owl sitting quietly on old tree branch, two owls' nests below
+a bear standing next to large oak, two acorns at its feet
+a squirrel gathering nuts in autumn leaves, two seeds beside it
+a fox with a scarf sitting on simple snow, two pine cones nearby
+a deer drinking from clear stream, two frogs croaking above
+a lamb eating grass under cherry tree, two birds watching
+a lioness sleeping in the sun, a simple rock beside her
+an elephant walking through tall grass, two flowers nearby
+a penguin waddling on snow, two ice crystals above it
+a koala sitting high in tree, two leaves hanging down
+a giraffe drinking from pool, two birds flying overhead
+a zebra grazing peacefully, two zebras standing nearby
+a kitten playing with a ball, simple grass beside it
+an otter swimming in calm water, two bubbles above
+a chick walking through tall wheat, two seeds on the ground
