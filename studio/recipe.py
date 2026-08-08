@@ -22,8 +22,14 @@ from .util import slugify
 
 BOOKS_DIR = ROOT / "books"
 
-# Chủ đề KHÔNG có nhân vật sống. Gắn mặt vào những thứ này là ra ảnh kỳ quặc.
-PLANT_THEMES = {"floral", "hoa-trong-chau", "mandala"}
+
+def _theme_style(theme: str) -> str | None:
+    """Đọc @style của chủ đề. Chủ đề không tồn tại thì kệ — _validate lo."""
+    from .prompts import load_style
+    try:
+        return load_style(theme)
+    except (FileNotFoundError, ValueError):
+        return None
 
 TEMPLATE = """\
 # Công thức sách — {slug}
@@ -40,7 +46,9 @@ pages: 40             # số hình trong sách. In một mặt nên số trang g
 generate: 60          # sinh dư để còn chỗ loại. Tỷ lệ giữ lại thường 50-70%
 complexity: medium    # simple=3-5t | medium=5-8t | detailed=8-12t | intricate=NL
 density: rich         # single | normal | rich      — số ĐỐI TƯỢNG mỗi trang
-style: kawaii         # kawaii | cartoon | decorative — PHONG CÁCH vẽ
+style:                # BỎ TRỐNG là tốt nhất — chủ đề tự khai (@style trong
+                      # themes/*.txt). Hoa lá tự chọn decorative, con vật tự
+                      # chọn kawaii. Ghi đè bằng: kawaii | cartoon | decorative
 lora:                 # tên file LoRA trong ComfyUI/models/loras/. Trống = không dùng
 lora_strength: 0.9    # 0.6-1.0. Cao quá thì LoRA nuốt mất chủ thể
 seed:                 # để trống là ngẫu nhiên. Điền số để sinh lại y hệt
@@ -91,16 +99,16 @@ class Recipe:
     def hints(self) -> list[str]:
         """Góp ý, không chặn — chỉ là kinh nghiệm hay sai."""
         out = []
-        # Chủ đề hoa lá đồ vật + style kawaii = HOA CÓ MẶT NGƯỜI.
-        # Chuỗi kawaii có "dot eyes and a small smile", nên khi chủ thể là bó
-        # hoa hồng thì Flux vẫn gắn mặt vào cho bằng được. Soi ảnh trong
-        # library/floral/ thấy đúng thế: một khuôn mặt mọc giữa bông hồng.
-        # Đây là một trong mấy trang Bao thấy "logic chưa hợp lý".
-        if self.style == "kawaii" and self.theme in PLANT_THEMES:
+        # Chủ đề hoa lá / hoạ tiết + kawaii = CẢNH VẬT MỌC MẮT MŨI CHÂN.
+        # Soi ảnh thật: hướng dương có mặt, tulip mỗi bông hai con mắt,
+        # mandala mọc mặt và hai cái chân.
+        declared = _theme_style(self.theme)
+        if declared and self.style != declared:
             out.append(
-                f"theme '{self.theme}' là hoa lá/hoạ tiết nhưng style=kawaii. "
-                f"Kawaii gắn mắt và miệng vào chủ thể, nên sẽ ra hoa có mặt "
-                f"người — dùng style=decorative")
+                f"theme '{self.theme}' tự khai @style: {declared}, nhưng "
+                f"công thức ghi style={self.style}. Hoa lá và hoạ tiết mà vẽ "
+                f"kiểu kawaii sẽ mọc mắt mũi chân — bỏ trống dòng style: "
+                f"trong YAML là tự lấy đúng")
         if self.audience == "kids" and self.complexity in ("detailed", "intricate"):
             out.append(
                 f"audience=kids nhưng complexity={self.complexity}. "
@@ -184,7 +192,12 @@ def load(slug: str) -> Recipe:
         generate=int(data.get("generate") or 0),
         complexity=str(data.get("complexity") or "medium"),
         density=str(data.get("density") or "rich"),
-        style=str(data.get("style") or "kawaii"),
+        # Để trống `style` trong YAML thì lấy theo @style chủ đề tự khai.
+        # Không có khai gì thì mới về kawaii. Nhờ vậy sách hoa lá không bao
+        # giờ vô tình chạy kawaii rồi ra bông hoa có mặt người.
+        style=str(data.get("style")
+                  or _theme_style(str(data.get("theme") or "ocean"))
+                  or "kawaii"),
         lora=(str(data["lora"]) if data.get("lora") else None),
         lora_strength=float(data.get("lora_strength") or 0.9),
         seed=data.get("seed") if data.get("seed") not in ("", None) else None,

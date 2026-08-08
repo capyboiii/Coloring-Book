@@ -1,3 +1,4 @@
+@style: decorative
 # Hoa lá — 24 cảnh
 #
 # Đây là ngách bán chạy nhất cho người lớn, và cũng là thứ Flux vẽ giỏi nhất.

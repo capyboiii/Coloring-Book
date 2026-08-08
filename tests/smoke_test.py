@@ -586,6 +586,35 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     check("Có cấm khung viền trong prompt ẢNH, không chỉ trong chỉ dẫn LLM",
           "no frame" in kid and "no border" in kid)
     check("Có đòi nét ĐỀU, không chỉ đòi nét dày", "even" in kid)
+
+    # CANH VAT MOC MAT MUI CHAN.
+    # Lan truoc toi viet "dot eyes and a small smile ON ANIMALS ONLY", tuong
+    # chu "only" gioi han duoc pham vi. Khong. Flux chay CFG=1 nen khong phan
+    # giai duoc dieu kien - he chu "dot eyes" co mat la moi thu deu moc mat.
+    from studio.prompts import STYLE as _ST, load_style
+    for w in ("eyes", "smile", "mouth", "nose"):
+        check(f"Chuỗi kawaii KHÔNG nhắc '{w}' (chủ thể tự lo phần mặt)",
+              w not in _ST["kawaii"], _ST["kawaii"])
+    for w in ("no faces", "no eyes", "no arms", "no legs"):
+        check(f"Chuỗi decorative có cấm '{w}'", w in _ST["decorative"])
+
+    # Chu de tu khai phong cach. Vá bang mot dong CANH BAO la khong du: canh
+    # bao thi doc xong van chay tiep duoc, va lenh `generate` go tay khong he
+    # di qua recipe.
+    for t in ("floral", "hoa-trong-chau", "mandala"):
+        check(f"themes/{t}.txt tự khai @style: decorative",
+              load_style(t) == "decorative", str(load_style(t)))
+    for t in ("ocean", "khung-long", "giang-sinh"):
+        check(f"themes/{t}.txt (con vật) KHÔNG ép decorative",
+              load_style(t) in (None, "kawaii"), str(load_style(t)))
+
+    from studio.recipe import Recipe as _R2, _theme_style
+    check("Công thức bỏ trống style thì lấy theo chủ đề",
+          _theme_style("mandala") == "decorative")
+    check("Công thức ghi đè sai phong cách thì bị cảnh báo",
+          any("mọc mắt mũi chân" in h
+              for h in _R2(slug="x", title="X", theme="mandala",
+                           style="kawaii").hints()))
     check("Có tả khoảng trống để tô, không chỉ tả nét",
           "areas to fill" in kid)
 

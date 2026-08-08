@@ -8,7 +8,8 @@ from datetime import datetime, timezone
 
 from .. import config
 from ..prompts import (build_cover_prompt, has_non_ascii, list_themes,
-                       load_subjects, load_template, make_prompts)
+                       load_style, load_subjects, load_template,
+                       make_prompts)
 from ..providers import GenRequest, ProviderError, get_provider
 from ..util import human_duration, info, slugify, warn, write_json
 
@@ -70,7 +71,7 @@ def register(subparsers) -> None:
                    help="Bao nhiêu ĐỐI TƯỢNG trên một trang. "
                         "rich (mặc định) lấp đầy trang; "
                         "single chỉ một chủ thể trên nền trắng")
-    p.add_argument("--style", default="kawaii",
+    p.add_argument("--style", default=None,
                    choices=["kawaii", "cartoon", "decorative"],
                    help="PHONG CÁCH vẽ. kawaii = đầu tròn to, mắt chấm, "
                         "đồ vật vẽ như icon phẳng (mặc định)")
@@ -121,6 +122,10 @@ def run(args) -> int:
 
     subjects = None
     template = None
+    # None = chua chon. Phai phan biet duoc 'khong go --style'
+    # voi 'go --style kawaii', vi truong hop dau thi chu de
+    # duoc quyen tu khai, truong hop sau thi khong.
+    style = args.style
     if args.theme:
         try:
             subjects = load_subjects(args.theme)
@@ -136,6 +141,25 @@ def run(args) -> int:
         if template:
             info(f"Khuôn bố cục: {template}")
 
+        # Chủ đề tự khai phong cách. Xem load_style() để biết vì sao.
+        try:
+            theme_style = load_style(args.theme)
+        except ValueError as exc:
+            print(f"LỖI: {exc}")
+            return 1
+        if theme_style:
+            if args.style is None:
+                style = theme_style
+                info(f"Phong cách   : {style} (chủ đề '{args.theme}' tự khai)")
+            elif args.style != theme_style:
+                warn(f"Chủ đề '{args.theme}' khai @style: {theme_style}, "
+                     f"nhưng ông gõ --style {args.style}.")
+                warn(f"Hoa lá và hoạ tiết mà vẽ kiểu kawaii thì sẽ mọc mắt "
+                     f"mũi chân — bông hướng dương có mặt, mandala có chân.")
+
+    if style is None:
+        style = "kawaii"
+
     if not _check_language(args, subjects):
         return 1
 
@@ -150,7 +174,7 @@ def run(args) -> int:
         subjects=subjects,
         seed_start=args.seed,
         density=args.density,
-        style=args.style,
+        style=style,
         template=template,
     )
 
@@ -187,7 +211,7 @@ def run(args) -> int:
             "topic": args.topic,
             "complexity": args.complexity,
             "density": args.density,
-            "style": args.style,
+            "style": style,
             "lora": args.lora,
             "theme": args.theme,
             "subject_count": len(subjects) if subjects else 0,

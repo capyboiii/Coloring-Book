@@ -1,3 +1,4 @@
+@style: decorative
 # Hoa trong chậu — 24 loại hoa
 #
 # Bộ này làm theo đúng cách cuốn Flower Garden mẫu được dựng: cả 48 trang

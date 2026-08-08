@@ -121,12 +121,20 @@ BASE_STYLE = (
 #    Thêm "on animals and characters only" để buộc điều kiện. Với chủ đề hoa
 #    lá đồ vật thì nên dùng style=decorative, và recipe giờ cảnh báo.
 STYLE = {
+    # KHÔNG nhắc tới mắt/miệng ở đây nữa. Lần trước tôi viết "dot eyes and a
+    # small smile ON ANIMALS ONLY", tưởng chữ "only" sẽ giới hạn phạm vi.
+    # Không. Flux chạy CFG=1 nên nó không phân giải được điều kiện — hễ chữ
+    # "dot eyes" có mặt trong prompt là mọi thứ trong tranh đều mọc mắt.
+    # Bỏ hẳn: chủ thể đã tự nói "a smiling sea turtle" rồi, thế là đủ để có
+    # mặt ở đúng chỗ cần. Prompt tay đã chứng minh chạy tốt cũng chỉ ghi
+    # "simple cute cartoon style", không hề tả mắt mũi.
     "kawaii": ("cute kawaii cartoon style, rounded chunky shapes, "
-               "plain white cheeks, "
-               "dot eyes and a small smile on animals only"),
+               "plain white cheeks"),
     "cartoon": "friendly cartoon style, rounded shapes, plain white cheeks",
+    # Cấm rõ cả CHÂN TAY chứ không chỉ mặt: ảnh mandala ra một bông hoa có
+    # mặt VÀ hai cái chân thò xuống dưới.
     "decorative": ("decorative ornamental line art, symmetrical patterns, "
-                   "no faces, no eyes"),
+                   "no faces, no eyes, no arms, no legs, not a character"),
 }
 
 # Bốn mức theo độ tuổi, khớp với AGE_DETAIL bên llm.py để chỉ dẫn cho
@@ -421,6 +429,45 @@ def load_subjects(value: str) -> list[str]:
     lines = path.read_text(encoding="utf-8").splitlines()
     return [ln.strip() for ln in lines
             if ln.strip() and not ln.startswith(("#", "@"))]
+
+
+def load_style(value: str) -> str | None:
+    """
+    Đọc dòng `@style:` nếu file theme có khai báo.
+
+    VÌ SAO CẦN — cảnh vật mọc mắt mũi chân.
+
+    Soi 28 ảnh trong library/ thì thấy lỗi này chỉ xảy ra ở đúng ba bộ chủ đề:
+    hoa, hoa trong chậu, và mandala. Hướng dương có mặt, hoa tulip mỗi bông
+    hai con mắt, mandala mọc mặt và hai cái chân. Còn cá voi, gấu, khủng long
+    thì không sao — chúng vốn phải có mặt.
+
+    Nguyên nhân không phải Flux bậy: chủ đề hoa lá mà chạy `style=kawaii` thì
+    đúng là đang đặt hàng "bông hoa dễ thương kiểu chibi", và Flux giao đúng
+    hàng. Lỗi nằm ở chỗ chọn phong cách.
+
+    Trước tôi vá bằng một dòng CẢNH BÁO trong recipe.hints(). Không đủ, vì
+    hai lý do: cảnh báo thì đọc xong vẫn chạy tiếp được, và lệnh `generate`
+    gõ tay không hề đi qua recipe.
+
+    Nên chuyển thành: **chủ đề tự khai phong cách của nó**, ngay trong file
+    theme, cạnh đúng đám chủ thể cần nó. Đây là cùng cơ chế với `@template:`.
+
+        @style: decorative
+
+    Ai gõ `--style` tay thì vẫn đè lên được, nhưng sẽ bị cảnh báo to.
+    """
+    path = resolve_subjects_path(value)
+    for ln in path.read_text(encoding="utf-8").splitlines():
+        ln = ln.strip()
+        if ln.lower().startswith("@style:"):
+            style = ln.split(":", 1)[1].strip()
+            if style not in STYLE:
+                raise ValueError(
+                    f"@style trong {path.name} là '{style}', "
+                    f"phải là một trong {list(STYLE)}")
+            return style
+    return None
 
 
 def load_template(value: str) -> str | None:
