@@ -122,6 +122,67 @@ def main() -> int:
     check("Nạp được studio.py (điểm vào)",
           importlib.util.find_spec("studio") is not None)
 
+    print("\n[0b] Bắt ảnh dính màu")
+    # Bo do CU chay tren 20 anh that cua Bao thi bo lot CA HAI kieu hong ma
+    # mat thuong nhin ra ngay. Dung so do that lam kiem thu, khong bia so.
+    from studio.imageops import colour_report, prepare_page
+    import numpy as _np2
+
+    def _fake(spread_px, spread_val, tint_val=0):
+        """Anh trang co `spread_px` pixel lech mau `spread_val`."""
+        a = _np2.full((256, 256, 3), 255, dtype=_np2.uint8)
+        a[200:, :] = 255 - 60          # mot dai co muc de tint co cho ma do
+        a[200:, :, 2] = 255 - 60 - tint_val
+        n = int(spread_px * 256)
+        a[:n, :, 0] = 200
+        a[:n, :, 1] = _np2.clip(200 - spread_val, 0, 255)
+        a[:n, :, 2] = _np2.clip(200 - spread_val, 0, 255)
+        return Image.fromarray(a)
+
+    patch, tint = colour_report(_fake(0, 0))
+    check("Ảnh đen trắng thật: cả hai chỉ số bằng 0",
+          patch == 0 and tint == 0, f"mảng {patch:.2%}, ám {tint:.1f}")
+
+    # Kieu hong 1: DAM ma HEP - ma hong nhan vat, ~0.4% dien tich
+    patch, _ = colour_report(_fake(0.004, 120))
+    check("Bắt được mảng màu hẹp (má hồng ~0.4% diện tích)",
+          patch > config.COLOUR_RATIO_MAX, f"{patch:.2%}")
+
+    # Kieu hong 2: NHAT ma RONG - ca trang phu mot lop sac
+    _, tint = colour_report(_fake(0, 0, tint_val=25))
+    check("Bắt được ám màu nhạt phủ rộng (lệch kênh chỉ 25)",
+          tint > config.COLOUR_TINT_MAX, f"{tint:.1f}")
+
+    # Nguong phai TACH BACH duoc anh sach khoi anh ban, khong chi bat anh ban
+    patch, tint = colour_report(_fake(0.001, 40))
+    check("Không báo động giả với nhiễu nén quanh nét",
+          patch <= config.COLOUR_RATIO_MAX and tint <= config.COLOUR_TINT_MAX,
+          f"mảng {patch:.2%}, ám {tint:.1f}")
+
+    # Neu library/ con anh that thi do luon tren do. library/ nam trong
+    # .gitignore nen may khac se khong co - bo qua, khong bao hong.
+    real = ROOT / "library"
+    known_bad = {"floral/001", "floral/002", "thu-net-deu/001", "bienca/001"}
+    if real.exists():
+        seen = missed = false_alarm = 0
+        for p in sorted(real.glob("*/raw/*.png")):
+            key = f"{p.parent.parent.name}/{p.stem}"
+            with Image.open(p) as im:
+                pa, ti = colour_report(im.convert("RGB"))
+            dirty = (pa > config.COLOUR_RATIO_MAX
+                     or ti > config.COLOUR_TINT_MAX)
+            seen += 1
+            if key in known_bad and not dirty:
+                missed += 1
+                print(f"      bỏ lọt {key}: mảng {pa:.2%}, ám {ti:.1f}")
+            if key not in known_bad and dirty:
+                false_alarm += 1
+                print(f"      báo nhầm {key}: mảng {pa:.2%}, ám {ti:.1f}")
+        check(f"Bắt hết ảnh dính màu Bao chỉ ra ({len(known_bad)} ảnh)",
+              missed == 0, f"bỏ lọt {missed}")
+        check(f"Không báo nhầm ảnh sạch (trên {seen} ảnh thật)",
+              false_alarm == 0, f"báo nhầm {false_alarm}")
+
     print("\n[1] Cấu hình khổ giấy")
     check("Khổ file PDF 8.75 x 11.25 in",
           (config.PAGE_W_IN, config.PAGE_H_IN) == (8.75, 11.25),
@@ -487,14 +548,34 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
 
     # Phep do tren MOT chu the nga^n tu bia ra khong bat duoc gi. Cac dong
     # trong themes/ dai gap doi, va chinh chung moi la thu chay that.
-    from studio.prompts import KIDS_PRESET, load_subjects, list_themes
-    longest = max(
-        (build_prompt(s, composition=max(COMPOSITIONS, key=len), **KIDS_PRESET)
-         for t in list_themes() for s in load_subjects(t)),
-        key=lambda p: len(p.split()))
-    n_long = len(longest.split())
+    # Phai di qua make_prompts chu khong phai build_prompt: khau cat menh de
+    # dai (shorten_subject) nam trong make_prompts. Goi thang build_prompt la
+    # do mot duong ma studio khong bao gio chay.
+    from studio.prompts import (KIDS_PRESET, load_subjects, list_themes,
+                                make_prompts as _mk)
+    n_long = max(
+        len(pp.prompt.split())
+        for t in list_themes()
+        for pp in _mk(t, len(load_subjects(t)), "simple",
+                     load_subjects(t), seed_start=1,
+                     density="normal"))
     check("Dòng chủ thể DÀI NHẤT trong themes/ vẫn dưới 100 từ",
           n_long < 100, f"{n_long} từ")
+
+    # Menh de duoi trong themes/ vua lam prompt tran nguong, vua bat Flux dung
+    # ba thu cung luc - nguon goc may trang "logic chua hop ly".
+    from studio.prompts import shorten_subject
+    long_scene = ("a wise old owl on a fence post, holding a bell in its "
+                  "talon, snow falling all around it in the night")
+    cut = shorten_subject(long_scene, 14)
+    check("Cắt mệnh đề ĐUÔI, giữ chủ thể ở đầu",
+          cut.startswith("a wise old owl on a fence post")
+          and "snow falling" not in cut, cut)
+    check("Cắt theo dấu phẩy, không cắt cụt giữa mệnh đề",
+          all(c.strip() in long_scene for c in cut.split(",")))
+    check("Chủ thể dài quá vẫn được giữ nguyên, không cắt mất",
+          shorten_subject("a very long single clause with no commas at all", 3)
+          == "a very long single clause with no commas at all")
 
     # Moi y CHI duoc noi mot lan. Bản trước nói độ dày nét ba lần và nói
     # khoảng trắng hai lần — prompt phình ra mà không mạnh thêm.
@@ -506,12 +587,12 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
           "no frame" in kid and "no border" in kid)
     check("Có đòi nét ĐỀU, không chỉ đòi nét dày", "even" in kid)
     check("Có tả khoảng trống để tô, không chỉ tả nét",
-          "spaces to fill" in kid)
+          "areas to fill" in kid)
 
     # Flux chay CFG=1 nen BO QUA negative prompt. Moi thu muon cam phai nam
     # trong positive duoi dang "no X" - dung nhu prompt tay cua Bao.
     for must in ("extremely thick even black outlines",
-                 "clean vector style",
+                 "black and white vector line art",
                  "no gray", "no shading", "no thin or broken lines"):
         check(f"Positive prompt có {must!r}", must in pr)
 

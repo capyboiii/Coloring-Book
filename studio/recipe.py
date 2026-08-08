@@ -22,6 +22,9 @@ from .util import slugify
 
 BOOKS_DIR = ROOT / "books"
 
+# Chủ đề KHÔNG có nhân vật sống. Gắn mặt vào những thứ này là ra ảnh kỳ quặc.
+PLANT_THEMES = {"floral", "hoa-trong-chau", "mandala"}
+
 TEMPLATE = """\
 # Công thức sách — {slug}
 #
@@ -88,6 +91,16 @@ class Recipe:
     def hints(self) -> list[str]:
         """Góp ý, không chặn — chỉ là kinh nghiệm hay sai."""
         out = []
+        # Chủ đề hoa lá đồ vật + style kawaii = HOA CÓ MẶT NGƯỜI.
+        # Chuỗi kawaii có "dot eyes and a small smile", nên khi chủ thể là bó
+        # hoa hồng thì Flux vẫn gắn mặt vào cho bằng được. Soi ảnh trong
+        # library/floral/ thấy đúng thế: một khuôn mặt mọc giữa bông hồng.
+        # Đây là một trong mấy trang Bao thấy "logic chưa hợp lý".
+        if self.style == "kawaii" and self.theme in PLANT_THEMES:
+            out.append(
+                f"theme '{self.theme}' là hoa lá/hoạ tiết nhưng style=kawaii. "
+                f"Kawaii gắn mắt và miệng vào chủ thể, nên sẽ ra hoa có mặt "
+                f"người — dùng style=decorative")
         if self.audience == "kids" and self.complexity in ("detailed", "intricate"):
             out.append(
                 f"audience=kids nhưng complexity={self.complexity}. "

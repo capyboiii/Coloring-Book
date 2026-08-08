@@ -76,11 +76,20 @@ from pathlib import Path
 #
 # Bỏ chữ "professional": mấy chữ khen chất lượng chung chung ("professional",
 # "high quality", "8k") kéo Flux sang phía tả thực, kết cấu và đổ bóng.
+# "black and white line art" và "no color fill" nằm trong prompt gốc đã chạy
+# tốt (xem đầu file). Tôi làm MẤT cả hai lúc rút prompt từ 163 xuống 86 từ.
+# Đó là lý do Flux vẫn trả về ảnh có màu: prompt không hề nói nó phải đen
+# trắng nữa. Giờ trả lại.
+#
+# "no blush, no pink cheeks" thêm mới. Xem chú thích ở STYLE.
+# Ngân sách từ rất chật (dưới 100 cho cả prompt), nên mỗi lần thêm phải cắt
+# chỗ khác. Lần này gộp "clean vector style" vào "vector line art", bỏ
+# "no gradients" (đã có "no shading"), và chuyển phần cấm má hồng xuống
+# STYLE — đúng chỗ nó được gọi ra, thay vì cấm chung chung ở đây.
 BASE_STYLE = (
-    "children's coloring book page, clean vector style, "
-    "extremely thick even black outlines, "
-    "large open white spaces to fill, "
-    "no gray, no shading, no gradients, no thin or broken lines, "
+    "black and white vector line art, children's coloring book page, "
+    "extremely thick even black outlines, large white areas to fill, "
+    "no color, no gray, no shading, no thin or broken lines, "
     "no frame, no border"
 )
 
@@ -96,11 +105,28 @@ BASE_STYLE = (
 #
 # Chuỗi "simple cute cartoon style" cũ quá mơ hồ nên Flux tự do diễn giải,
 # ra kiểu vẽ tay nguệch ngoạc có texture lông lá.
+# HAI LỖI TRONG CHUỖI kawaii CŨ, cả hai đều lộ ra khi soi ảnh thật:
+#
+# 1. MÁ HỒNG. Kiểu vẽ kawaii trong dữ liệu huấn luyện gần như luôn kèm hai
+#    chấm hồng trên má. Gọi "kawaii" là gọi luôn cả má hồng — nó không phải
+#    Flux làm bừa, mà là tôi đặt hàng mà không biết. Đo được: má hồng chiếm
+#    ~0.4% diện tích nhưng đỏ chói, in ra là hỏng trang.
+#    Nên thêm "plain white cheeks" ngay trong chuỗi phong cách, đúng chỗ nó
+#    được gọi ra, chứ không chỉ cấm chung chung ở BASE_STYLE.
+#
+# 2. MẶT MỌC LÊN MỌI THỨ. "big round head, simple dot eyes, happy smile" nói
+#    vô điều kiện, nên khi chủ thể là bó hoa hồng thì Flux vẫn phải gắn mặt
+#    vào — ra bông hoa có mặt người. Đó chính là mấy trang Bao thấy "logic
+#    chưa hợp lý".
+#    Thêm "on animals and characters only" để buộc điều kiện. Với chủ đề hoa
+#    lá đồ vật thì nên dùng style=decorative, và recipe giờ cảnh báo.
 STYLE = {
-    "kawaii": ("cute kawaii cartoon style, big round head, "
-               "simple dot eyes, happy smile"),
-    "cartoon": "friendly cartoon style, rounded shapes",
-    "decorative": "decorative ornamental line art, symmetrical patterns",
+    "kawaii": ("cute kawaii cartoon style, rounded chunky shapes, "
+               "plain white cheeks, "
+               "dot eyes and a small smile on animals only"),
+    "cartoon": "friendly cartoon style, rounded shapes, plain white cheeks",
+    "decorative": ("decorative ornamental line art, symmetrical patterns, "
+                   "no faces, no eyes"),
 }
 
 # Bốn mức theo độ tuổi, khớp với AGE_DETAIL bên llm.py để chỉ dẫn cho
@@ -177,6 +203,56 @@ DENSITY = {
 # Đặt tên ở đây để lệnh và công thức sách khỏi phải nhớ, và để sau đổi thì
 # đổi một chỗ.
 KIDS_PRESET = {"complexity": "simple", "density": "normal", "style": "kawaii"}
+
+
+# Số từ tối đa cho phần CHỦ THỂ, theo độ tuổi.
+#
+# Đây là cùng lúc lời giải cho HAI thứ Bao phàn nàn, nên đáng nói kỹ.
+#
+# Các dòng trong themes/ do LM Studio viết, dài 23-26 từ và có ba mệnh đề:
+#     "a wise old owl on a fence post, holding a bell in its talon,
+#      snow falling around it"
+# Bắt Flux dựng ba thứ cùng lúc thì nó phải tự quyết cái nào che cái nào, to
+# nhỏ ra sao — và đó chính là chỗ đẻ ra mấy trang "logic chưa hợp lý": con
+# vật dính vào cột, đồ vật lơ lửng, tay chân mọc sai chỗ.
+#
+# Mệnh đề đuôi còn hại lần thứ hai: nó gần như luôn là nền ("snow falling
+# around it", "seaweed filling the background") — toàn thứ vẽ bằng nét mảnh,
+# đúng thứ hỏng nhiều nhất khi in.
+#
+# Cắt bớt mệnh đề đuôi vì thế vừa làm bố cục hợp lý hơn, vừa bớt nét mảnh,
+# vừa kéo prompt về dưới ngưỡng 100 từ. Một thay đổi, ba cái lợi.
+SUBJECT_MAX_WORDS = {
+    "simple": 14,      # 3-5 tuổi: một chủ thể, một hành động
+    "medium": 18,
+    "detailed": 22,
+    "intricate": 22,
+}
+
+
+def shorten_subject(subject: str, limit: int) -> str:
+    """
+    Bỏ bớt mệnh đề ở CUỐI cho tới khi vừa `limit` từ.
+
+    Cắt theo dấu phẩy chứ không cắt giữa chừng: cắt cụt một mệnh đề sẽ để lại
+    câu vô nghĩa kiểu "a wise old owl on a fence post holding a" và Flux vẽ ra
+    thứ còn kỳ hơn.
+
+    Mệnh đề ĐẦU luôn được giữ dù nó dài quá — đó là chủ thể, mất nó thì trang
+    không còn gì.
+    """
+    clauses = [c.strip() for c in subject.split(",") if c.strip()]
+    if not clauses:
+        return subject.strip()
+
+    kept, total = [clauses[0]], len(clauses[0].split())
+    for c in clauses[1:]:
+        n = len(c.split())
+        if total + n > limit:
+            break
+        kept.append(c)
+        total += n
+    return ", ".join(kept)
 
 
 @dataclass
@@ -288,6 +364,8 @@ def make_prompts(
             composition = ""
             page_density = ""
         else:
+            # Cắt mệnh đề đuôi TRƯỚC khi ghép prompt. Xem SUBJECT_MAX_WORDS.
+            subject = shorten_subject(subject, SUBJECT_MAX_WORDS[complexity])
             composition = COMPOSITIONS[i % len(COMPOSITIONS)]
             page_density = DENSITY[density]
 

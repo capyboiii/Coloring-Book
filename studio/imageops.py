@@ -71,15 +71,27 @@ class Metrics:
     border_touch: bool      # nét có chạm vùng ngoài safety margin không
     width: int
     height: int
-    colour_ratio: float = 0.0  # tỉ lệ pixel CÓ MÀU — trang ruột phải bằng 0
+    colour_ratio: float = 0.0  # tỉ lệ pixel có MẢNG MÀU ĐẬM (má hồng, vật tô)
+    colour_tint: float = 0.0   # độ ám màu TRUNG BÌNH trên nét (ảnh phủ sắc)
 
     def problems(self) -> list[str]:
         out = []
         # Đặt đầu tiên vì đây là lỗi nặng nhất: trang ruột mà đã tô sẵn thì
         # trẻ không còn gì để tô.
+        #
+        # HAI phép đo, vì có HAI kiểu hỏng khác hẳn nhau và một phép chỉ bắt
+        # được một kiểu. Đo trên 20 ảnh thật của Bao mới thấy:
+        #   · mảng màu đậm  má hồng trên mặt nhân vật — chỉ 0.4% diện tích
+        #                   nhưng chói. Bản cũ để ngưỡng 1% nên lọt hết.
+        #   · ám màu        cả ảnh phủ một lớp sắc nâu nhạt. Lệch kênh chỉ
+        #                   8-30 nên bản cũ (chỉ đếm lệch > 30) đo ra ĐÚNG
+        #                   0.00% và báo sạch.
         if self.colour_ratio > config.COLOUR_RATIO_MAX:
-            out.append(f"ẢNH ĐÃ BỊ TÔ MÀU ({self.colour_ratio:.1%} pixel có "
-                       f"màu) — trang ruột phải để trắng cho trẻ tô")
+            out.append(f"CÓ MẢNG MÀU ({self.colour_ratio:.2%} diện tích) — "
+                       f"thường là má hồng nhân vật; trang ruột phải trắng")
+        if self.colour_tint > config.COLOUR_TINT_MAX:
+            out.append(f"ẢNH BỊ ÁM MÀU (lệch kênh {self.colour_tint:.1f}) — "
+                       f"cả trang phủ một lớp sắc, không phải đen trắng thật")
         if self.ink_ratio < config.INK_RATIO_MIN:
             out.append(f"gần như trắng (ink {self.ink_ratio:.2%})")
         if self.ink_ratio > config.INK_RATIO_MAX:
@@ -95,6 +107,7 @@ class Metrics:
             "ink_ratio": round(self.ink_ratio, 5),
             "thin_line_score": round(self.thin_line_score, 3),
             "colour_ratio": round(self.colour_ratio, 5),
+            "colour_tint": round(self.colour_tint, 2),
             "border_touch": self.border_touch,
             "width": self.width,
             "height": self.height,
@@ -102,31 +115,50 @@ class Metrics:
         }
 
 
-def colour_amount(img: Image.Image, threshold: int = 30) -> float:
+def colour_report(img: Image.Image) -> tuple[float, float]:
     """
-    Tỉ lệ pixel thực sự có màu.
+    Trả về (tỉ lệ mảng màu đậm, độ ám màu trung bình trên nét).
 
-    Đo bằng độ lệch giữa ba kênh RGB: ảnh đen trắng thì R=G=B nên lệch bằng 0.
-    Vùng được tô màu thì lệch lớn.
+    Đo bằng độ lệch giữa ba kênh RGB: ảnh đen trắng thật thì R=G=B nên lệch
+    bằng 0. Cần thiết vì `prepare_page` chuyển sang thang xám ngay từ đầu —
+    lúc đó má hồng thành xám nhạt rồi thành trắng, nhìn PDF không thấy gì lạ.
+    Nhưng ảnh gốc thì đã hỏng. Phải bắt TRƯỚC khi khử màu.
 
-    Cần thiết vì `prepare_page` chuyển sang thang xám ngay từ đầu — lúc đó
-    quả cầu màu vàng thành xám nhạt rồi thành trắng, nhìn PDF không thấy gì
-    lạ. Nhưng ảnh gốc thì đã hỏng, và mấy ảnh khác trong cùng mẻ cũng vậy.
-    Phải bắt TRƯỚC khi khử màu.
+    VÌ SAO HAI SỐ CHỨ KHÔNG PHẢI MỘT
+    Bản cũ chỉ đếm pixel lệch > 30 rồi so với ngưỡng 1%. Chạy trên 20 ảnh
+    thật thì nó bỏ lọt CẢ HAI kiểu hỏng mà Bao nhìn thấy bằng mắt:
+
+      má hồng   chỉ chiếm 0.4% diện tích, dưới ngưỡng 1% -> báo sạch
+      ám màu    lệch kênh chỉ 8-30, dưới ngưỡng 30 -> đo ra ĐÚNG 0.00%
+
+    Hai kiểu hỏng ngược nhau: một cái ĐẬM mà HẸP, một cái NHẠT mà RỘNG. Không
+    có con số đơn nào bắt được cả hai, nên tách làm hai.
+
+    Ngưỡng lấy từ số đo thật, không phải bịa:
+      mảng màu  ảnh bẩn 0.37-21%   ảnh sạch <= 0.15%   -> cắt ở 0.2%
+      ám màu    ảnh bẩn 8.1 va 82  ảnh sạch <= 2.6     -> cắt ở 4.0
     """
+    import numpy as np
+
     if img.mode != "RGB":
         img = img.convert("RGB")
-    small = img.resize((256, 256), Image.BILINEAR)
-    r, g, b = small.split()
-    px_r, px_g, px_b = r.load(), g.load(), b.load()
+    a = np.asarray(img.resize((256, 256), Image.BILINEAR), dtype=np.int16)
+    spread = a.max(axis=2) - a.min(axis=2)
 
-    coloured = 0
-    for y in range(256):
-        for x in range(256):
-            vals = (px_r[x, y], px_g[x, y], px_b[x, y])
-            if max(vals) - min(vals) > threshold:
-                coloured += 1
-    return coloured / (256 * 256)
+    # Lệch > 60 mới tính là mảng màu thật. Nhét ngưỡng thấp vào đây sẽ đếm cả
+    # nhiễu nén JPEG quanh nét đen.
+    patch = float((spread > 60).mean())
+
+    # Ám màu chỉ đo trên pixel CÓ MỰC. Nền trắng luôn trung tính nên tính cả
+    # nền vào sẽ pha loãng con số xuống gần 0 với mọi ảnh.
+    ink = a.mean(axis=2) < 200
+    tint = float(spread[ink].mean()) if ink.any() else 0.0
+    return patch, tint
+
+
+def colour_amount(img: Image.Image, threshold: int = 30) -> float:
+    """Giữ lại cho code cũ. Chỉ trả về phần mảng màu."""
+    return colour_report(img)[0]
 
 
 def _ink_ratio(img: Image.Image, threshold: int = 128) -> float:
@@ -191,7 +223,7 @@ def prepare_page(
     with Image.open(path) as src:
         rgb = src.convert("RGB")
         # Đo màu TRƯỚC khi chuyển thang xám — sau đó là không còn dấu vết
-        colour_ratio = colour_amount(rgb)
+        colour_ratio, colour_tint = colour_report(rgb)
         gray = rgb.convert("L")
 
     if autocontrast:
@@ -223,6 +255,7 @@ def prepare_page(
 
     metrics = measure(art)
     metrics.colour_ratio = colour_ratio
+    metrics.colour_tint = colour_tint
 
     # 3. Dán vào trang trắng đủ khổ, canh giữa vùng vẽ
     page = Image.new("L", (config.PAGE_W_PX, config.PAGE_H_PX), 255)
