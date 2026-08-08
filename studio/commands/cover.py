@@ -72,6 +72,9 @@ def register(subparsers) -> None:
                    help="Gu tô màu. pencil = tô tay bút chì màu, có vân giấy "
                         "(mặc định). flat = mảng phẳng kiểu vector. "
                         "HAI KIỂU LOẠI TRỪ NHAU, không trộn được")
+    p.add_argument("--barcode", action="store_true",
+                   help="Chừa ô trắng cho mã vạch ISBN ở góc dưới phải bìa "
+                        "sau. Chỉ bật khi sách đã có ISBN thật")
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--steps", type=int, default=None)
     p.set_defaults(func=run)
@@ -138,33 +141,28 @@ def _draw_block(draw, lines, font, cx: int, top: int, fill, spacing=1.25,
     return y
 
 
-def _scrim(cover: Image.Image, box: tuple[int, int, int, int],
-           strength: int = 90, from_top: bool = True,
-           power: float = 1.6) -> None:
+def _text_colours(cover: Image.Image, box: tuple[int, int, int, int]):
     """
-    Phủ một lớp tối MỜ DẦN lên vùng chữ, đậm ở mép và tan hẳn vào trong.
+    Chọn màu chữ theo ĐỘ SÁNG của vùng tranh ngay sau chữ.
 
-    Khác hẳn dải màu đặc trước đây: dải đặc nhìn như miếng dán đè lên tranh,
-    còn lớp mờ dần thì mắt đọc thành bóng trời — chữ vẫn nằm TRONG tranh.
+    THAY CHO LỚP PHỦ, và đây là chỗ tôi vừa làm sai.
 
-    `power` quyết định lớp tối tan nhanh hay chậm. Số nhỏ thì đậm lên ngay từ
-    mép, số lớn thì chỉ đậm ở sát mép rồi tan rất nhanh.
+    Để chữ đọc được trên tranh, tôi đã phủ một lớp tối mờ dần lên vùng chữ.
+    Nó chạy đúng chức năng, nhưng màu tôi chọn là (25, 35, 55) — xanh đen.
+    Kết quả: nửa dưới bìa sau và cả vùng trời bìa trước bị ám một vệt xanh
+    xám. Bao nhìn ra ngay. Bôi bẩn tranh để chữ đọc được là cái giá không
+    đáng trả, nhất là khi có cách khác không mất gì.
 
-    Chỗ này tôi làm sai lần đầu: để 1.6 cho cả hai mặt, mà chữ bìa sau nằm ở
-    giữa vùng phủ chứ không ở sát mép, nên rơi đúng chỗ lớp tối đã tan gần
-    hết — tính ra chỉ còn 11/150. Chữ vẫn đọc được nhờ viền, nhưng lớp phủ
-    coi như không làm gì. Bìa sau giờ dùng 0.6.
+    Cách khác: đo luôn độ sáng chỗ sắp đặt chữ rồi chọn màu tương phản.
+    Nền sáng thì chữ đen viền trắng, nền tối thì chữ trắng viền đen. Cộng
+    thêm viền dày và bóng đổ đã có sẵn là đủ đọc trên mọi nền, mà không đụng
+    một pixel nào của tranh.
     """
-    x0, y0, x1, y1 = box
-    h = max(1, y1 - y0)
-    grad = Image.new("L", (1, h))
-    for i in range(h):
-        t = i / (h - 1) if h > 1 else 0
-        if from_top:
-            t = 1 - t
-        grad.putpixel((0, i), int(strength * (t ** power)))
-    mask = grad.resize((x1 - x0, h))
-    cover.paste(Image.new("RGB", (x1 - x0, h), (25, 35, 55)), (x0, y0), mask)
+    patch = cover.crop(box).convert("L")
+    mean = sum(patch.getdata()) / max(1, patch.width * patch.height)
+    if mean > 140:      # nền sáng
+        return (30, 22, 18), (255, 255, 255)
+    return (255, 255, 255), (45, 30, 22)
 
 
 # --------------------------------------------------------------------------
@@ -380,6 +378,7 @@ def run(args) -> int:
         back_scene=getattr(args, "back_scene", None),
         back_image=getattr(args, "back_image", None),
         no_back_art=getattr(args, "no_back_art", False),
+        barcode=getattr(args, "barcode", False),
         colors=getattr(args, "colors", None),
         colors2=getattr(args, "colors2", None),
         bg_colors=getattr(args, "bg_colors", None),
@@ -394,7 +393,7 @@ def make_cover(settings, slug: str, *, image: str | None = None,
                colors2: str | None = None, bg_colors: str | None = None,
                finish: str = DEFAULT_COVER_FINISH,
                back_scene: str | None = None, back_image: str | None = None,
-               no_back_art: bool = False) -> int:
+               no_back_art: bool = False, barcode: bool = False) -> int:
     """
     Dựng bìa. Tách khỏi `run` để `build` gọi lại được — người dùng không phải
     nhớ chạy thêm một lệnh nữa.
@@ -404,7 +403,7 @@ def make_cover(settings, slug: str, *, image: str | None = None,
                            colors=colors, colors2=colors2,
                            bg_colors=bg_colors, finish=finish,
                            back_scene=back_scene, back_image=back_image,
-                           no_back_art=no_back_art)
+                           no_back_art=no_back_art, barcode=barcode)
     out = config.out_dir(settings, slug)
 
     pages = _page_count(settings, slug)
@@ -471,26 +470,25 @@ def make_cover(settings, slug: str, *, image: str | None = None,
     # thứ, không phải bằng dải màu:
     #   · viền chữ dày (stroke) — tách chữ khỏi nền dù nền màu gì
     #   · bóng đổ nhẹ           — chữ nổi lên khỏi mặt tranh
-    #   · một lớp tối MỜ DẦN    — đậm ở mép trên, tan hẳn vào giữa tranh;
-    #                             mắt đọc thành bóng trời chứ không thành dải
-    _scrim(cover, (front_left, 0, W, int(H * 0.30)), strength=95)
-
+    #   · màu chữ chọn theo nền — xem _text_colours()
     text_w = W - bleed - safety - (front_left + safety)
     text_cx = front_left + safety + text_w // 2
 
     font_title, lines = _fit_text(
         draw, title, text_w, int(H * 0.16), start=int(H * 0.085))
+    fill_f, stroke_f = _text_colours(
+        cover, (front_left, int(H * 0.03), W - bleed, int(H * 0.22)))
     stroke = max(3, int(font_title.size * 0.10))
     y = _draw_block(draw, lines, font_title, text_cx, int(H * 0.045),
-                    (255, 255, 255), stroke=stroke,
+                    fill_f, stroke=stroke, stroke_fill=stroke_f,
                     shadow=max(2, int(font_title.size * 0.05)))
 
     if args.subtitle:
         font_sub = load_font(int(H * 0.028))
         _draw_block(draw, _wrap(draw, args.subtitle, font_sub, text_w),
-                    font_sub, text_cx, y + 16, (255, 245, 200),
+                    font_sub, text_cx, y + 16, fill_f,
                     stroke=max(2, int(font_sub.size * 0.10)),
-                    shadow=2)
+                    stroke_fill=stroke_f, shadow=2)
 
     # --------------------------------------------------- bìa sau: cũng có ảnh
     back_cx = back_left + panel // 2
@@ -498,32 +496,37 @@ def make_cover(settings, slug: str, *, image: str | None = None,
 
     if back_art is not None:
         cover.paste(_cover_fit(back_art, panel + bleed, H), (0, 0))
-        # Chữ bìa sau nằm ở nửa dưới, nên lớp mờ đi từ dưới lên
-        _scrim(cover, (0, int(H * 0.52), back_left + panel, H),
-               strength=165, from_top=False, power=0.5)
-        back_fg, back_stroke = (255, 255, 255), 3
+        back_fg, back_stroke = _text_colours(
+            cover, (back_left, int(H * 0.62), back_left + panel, int(H * 0.82)))
+        stroke_w = 3
     else:
-        back_fg, back_stroke = fg, 0
+        back_fg, back_stroke, stroke_w = fg, (45, 30, 22), 0
 
     font_back, back_lines = _fit_text(
         draw, title, back_w, int(H * 0.14), start=int(H * 0.042))
     yb = _draw_block(draw, back_lines, font_back, back_cx, int(H * 0.66),
-                     back_fg, stroke=back_stroke, shadow=2 if back_art else 0)
+                     back_fg, stroke=stroke_w, stroke_fill=back_stroke,
+                     shadow=2 if back_art is not None else 0)
 
     font_note = load_font(int(H * 0.024))
     draw.text((back_cx, yb + 18), f"{(pages - 2) // 2} trang tô màu",
               font=font_note, fill=back_fg, anchor="ma",
-              stroke_width=back_stroke, stroke_fill=(45, 30, 22))
+              stroke_width=stroke_w, stroke_fill=back_stroke)
 
-    # Ô MÃ VẠCH — Lulu in mã vạch ISBN vào góc dưới phải bìa sau. Vùng đó phải
-    # sáng và không có hình, nếu không máy quét đọc không ra. Hồi bìa sau còn
-    # là mảng màu trơn thì không cần; giờ có ảnh thì bắt buộc chừa.
-    bw = config.inch_to_px(config.BARCODE_W_IN)
-    bh = config.inch_to_px(config.BARCODE_H_IN)
-    bm = config.inch_to_px(config.BARCODE_MARGIN_IN)
-    bx1 = back_left + panel - bm
-    by1 = H - bleed - bm
-    draw.rectangle((bx1 - bw, by1 - bh, bx1, by1), fill=(255, 255, 255))
+    # Ô MÃ VẠCH — mặc định TẮT.
+    #
+    # Lulu in mã vạch ISBN vào góc dưới phải bìa sau, và vùng đó phải sáng,
+    # không có hình. Nhưng ô trắng ấy chỉ cần khi sách THẬT SỰ có ISBN, mà
+    # Bao chưa tới bước đó — để sẵn thì nó chỉ là một vết trắng đục giữa
+    # tranh.
+    # Giữ lại sau cờ --barcode, để lúc đăng ký ISBN xong bật một chữ là có.
+    if getattr(args, "barcode", False):
+        bw = config.inch_to_px(config.BARCODE_W_IN)
+        bh = config.inch_to_px(config.BARCODE_H_IN)
+        bm = config.inch_to_px(config.BARCODE_MARGIN_IN)
+        bx1 = back_left + panel - bm
+        by1 = H - bleed - bm
+        draw.rectangle((bx1 - bw, by1 - bh, bx1, by1), fill=(255, 255, 255))
 
     # ---------------------------------------------------------------- gáy
     if spine_in >= config.SPINE_TEXT_MIN_IN:

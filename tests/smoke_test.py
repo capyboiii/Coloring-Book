@@ -622,7 +622,7 @@ def main() -> int:
                            no_back_art=False, bg="#1B7A8C",
                            subtitle="Kiểm thử", seed=1, steps=None,
                            colors=None, colors2=None, bg_colors=None,
-                           finish="pencil"))
+                           finish="pencil", barcode=True))
     finally:
         Image.Image.save = _orig_save
 
@@ -642,8 +642,36 @@ def main() -> int:
         bx1, by1 = bleed2 + panel2 - bm, H2 - bleed2 - bm
         patch2 = _np2.asarray(page.crop((bx1 - bw + 10, by1 - bh + 10,
                                          bx1 - 10, by1 - 10)))
-        check("Bìa sau chừa ô trắng cho mã vạch ISBN",
+        check("Bật --barcode thì bìa sau chừa ô trắng cho mã vạch ISBN",
               patch2.min() > 250, f"tối nhất {patch2.min()}")
+
+        # Mac dinh TAT. O trang do chi can khi sach THAT SU co ISBN; de san
+        # thi no la mot vet trang duc giua tranh.
+        grabbed.pop("img", None)
+        Image.Image.save = _spy
+        try:
+            cover_cmd.run(Args(slug=slug, scene=None, image=str(art),
+                               back_image=str(back_src), back_scene=None,
+                               no_back_art=False, bg="#1B7A8C",
+                               subtitle="Kiểm thử", seed=1, steps=None,
+                               colors=None, colors2=None, bg_colors=None,
+                               finish="pencil"))
+        finally:
+            Image.Image.save = _orig_save
+        p2 = _np2.asarray(grabbed["img"].crop(
+            (bx1 - bw + 10, by1 - bh + 10, bx1 - 10, by1 - 10)))
+        check("Mặc định KHÔNG có ô mã vạch", p2.min() < 250,
+              f"tối nhất {p2.min()}")
+
+        # Khong con lop phu xanh den: vung tranh phai giu nguyen mau anh goc.
+        # Anh bia sau trong kiem thu la mau xanh dac (40,120,200); lop phu cu
+        # keo no ve phia (25,35,55) nen kenh do se tut han.
+        mid = _np2.asarray(grabbed["img"].crop(
+            (bleed2 + 100, int(H2 * 0.70), bleed2 + 300, int(H2 * 0.78))))
+        check("Không còn lớp phủ làm sạm màu tranh",
+              abs(int(mid[..., 0].mean()) - 40) < 12
+              and abs(int(mid[..., 2].mean()) - 200) < 12,
+              f"RGB trung bình {mid.reshape(-1,3).mean(axis=0).round(0)}")
 
         # Bia sau phai co ANH, khong con la mang mau tron
         back_mid = _np2.asarray(page.crop((bleed2 + 100, int(H2 * 0.1),
