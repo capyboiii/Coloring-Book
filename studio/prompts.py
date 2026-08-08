@@ -55,11 +55,33 @@ from pathlib import Path
 # "no X". Đúng như prompt tay của Bao: "No color / No shading / No gradients".
 # Chuỗi NEGATIVE bên dưới chỉ để ghi vào metadata và để dùng nếu sau này đổi
 # sang SDXL — nó không có tác dụng gì với Flux.
+# Bản trước nói ĐỘ DÀY ba lần bằng ba cách: "extremely thick uniform black
+# outlines", "heavy solid black lines", "bold black outlines only". Lặp lại
+# một ý không làm nó mạnh hơn, chỉ đẩy chủ thể ra xa đầu prompt.
+#
+# Gộp lại còn một lần, lấy chỗ trống cho ba thứ trước giờ THIẾU HẲN:
+#
+#   · "even"        — nét ĐỀU. Trước chỉ đòi dày, không đòi đều. Mà đo được
+#                     rằng chỗ hỏng luôn là chỗ nét mảnh: viền con vật dày thì
+#                     đen đặc, cỏ mây đường nước mảnh thì xám và đứt.
+#   · "large open white spaces to fill"
+#                   — đây mới là yêu cầu THẬT của sách tô màu. Trẻ con cần
+#                     mảng đủ to để đặt bút chì màu vào. Trước giờ prompt chỉ
+#                     tả cái NÉT, chưa bao giờ tả cái KHOẢNG TRỐNG giữa các nét.
+#   · "no frame, no border"
+#                   — vá lỗ hổng. Luật này nằm trong chỉ dẫn cho LM Studio từ
+#                     lâu nhưng KHÔNG HỀ có trong prompt ảnh, nên Flux vẫn vẽ
+#                     khung viền trang trí. Khung viền vừa tốn mực in vừa toàn
+#                     nét mảnh — đúng thứ hỏng nhiều nhất.
+#
+# Bỏ chữ "professional": mấy chữ khen chất lượng chung chung ("professional",
+# "high quality", "8k") kéo Flux sang phía tả thực, kết cấu và đổ bóng.
 BASE_STYLE = (
-    "professional children's coloring book page, clean vector style, "
-    "extremely thick uniform black outlines, heavy solid black lines, "
-    "bold black outlines only, "
-    "no gray, no shading, no gradients, no thin or broken lines"
+    "children's coloring book page, clean vector style, "
+    "extremely thick even black outlines, "
+    "large open white spaces to fill, "
+    "no gray, no shading, no gradients, no thin or broken lines, "
+    "no frame, no border"
 )
 
 # --------------------------------------------------------------------------
@@ -84,7 +106,10 @@ STYLE = {
 # Bốn mức theo độ tuổi, khớp với AGE_DETAIL bên llm.py để chỉ dẫn cho
 # LM Studio và prompt cho Flux nói cùng một thứ.
 COMPLEXITY = {
-    "simple": "very simple, large shapes, minimal details, for ages 3 to 5",
+    # "few large shapes" chứ không phải "large shapes": số lượng mới là thứ
+    # quyết định. Hình to mà nhiều thì trang vẫn rối, và mỗi hình thêm vào là
+    # thêm một chỗ Flux có thể vẽ nét mảnh.
+    "simple": "few large shapes, minimal details, for ages 3 to 5",
     "medium": "simple details, for ages 5 to 8",
     "detailed": "moderately detailed, for ages 8 to 12",
     "intricate": "intricate decorative detail, adult coloring book",
@@ -135,10 +160,23 @@ COMPOSITIONS = [
 # phải là giấy trắng, vì trang tô màu đẹp luôn có nhiều khoảng trắng.
 DENSITY = {
     "single": "one subject alone on plain white background",
+    # "one or two simple background things" -> "one simple background element".
+    # Cho phép hai thứ thì Flux gần như luôn vẽ hai, và thứ hai hay là cỏ/mây/
+    # gợn nước — toàn nét mảnh. Cho đúng một thì nó chọn thứ to và chắc.
+    #
+    # Bỏ "lots of white space": BASE_STYLE đã có "large open white spaces to
+    # fill" rồi. Nói hai lần không mạnh hơn, chỉ tốn chỗ — đúng cái lỗi vừa
+    # sửa ở khối độ dày nét.
     "normal": ("one subject filling most of the page, "
-               "one or two simple background things, lots of white space"),
+               "one simple background element"),
     "rich": "one subject with a simple decorative background",
 }
+
+# Bộ dành cho sách trẻ con. Ba trục này phải đi CÙNG NHAU mới ăn: hình to
+# (simple) + ít thứ trên trang (normal) + phong cách đầu tròn (kawaii).
+# Đặt tên ở đây để lệnh và công thức sách khỏi phải nhớ, và để sau đổi thì
+# đổi một chỗ.
+KIDS_PRESET = {"complexity": "simple", "density": "normal", "style": "kawaii"}
 
 
 @dataclass

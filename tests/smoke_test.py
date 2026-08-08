@@ -465,10 +465,33 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     check("Chủ thể đứng ĐẦU prompt, không bị chìm ở giữa",
           pr.startswith("a smiling fox"), pr[:34])
 
+    # Phep do tren MOT chu the nga^n tu bia ra khong bat duoc gi. Cac dong
+    # trong themes/ dai gap doi, va chinh chung moi la thu chay that.
+    from studio.prompts import KIDS_PRESET, load_subjects, list_themes
+    longest = max(
+        (build_prompt(s, composition=max(COMPOSITIONS, key=len), **KIDS_PRESET)
+         for t in list_themes() for s in load_subjects(t)),
+        key=lambda p: len(p.split()))
+    n_long = len(longest.split())
+    check("Dòng chủ thể DÀI NHẤT trong themes/ vẫn dưới 100 từ",
+          n_long < 100, f"{n_long} từ")
+
+    # Moi y CHI duoc noi mot lan. Bản trước nói độ dày nét ba lần và nói
+    # khoảng trắng hai lần — prompt phình ra mà không mạnh thêm.
+    kid = build_prompt("a fox", composition="front view", **KIDS_PRESET)
+    for phrase in ("white space", "thick", "simple"):
+        check(f"Không nhắc lại '{phrase}' quá hai lần",
+              kid.count(phrase) <= 2, f"{kid.count(phrase)} lần")
+    check("Có cấm khung viền trong prompt ẢNH, không chỉ trong chỉ dẫn LLM",
+          "no frame" in kid and "no border" in kid)
+    check("Có đòi nét ĐỀU, không chỉ đòi nét dày", "even" in kid)
+    check("Có tả khoảng trống để tô, không chỉ tả nét",
+          "spaces to fill" in kid)
+
     # Flux chay CFG=1 nen BO QUA negative prompt. Moi thu muon cam phai nam
     # trong positive duoi dang "no X" - dung nhu prompt tay cua Bao.
-    for must in ("extremely thick uniform black outlines",
-                 "heavy solid black lines", "clean vector style",
+    for must in ("extremely thick even black outlines",
+                 "clean vector style",
                  "no gray", "no shading", "no thin or broken lines"):
         check(f"Positive prompt có {must!r}", must in pr)
 
@@ -507,13 +530,13 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     check("Có khuôn thì KHÔNG kèm COMPOSITIONS",
           "front view" not in with_tpl[0].prompt)
     check("Có khuôn thì KHÔNG kèm DENSITY",
-          "lots of white space" not in with_tpl[0].prompt)
+          "one simple background element" not in with_tpl[0].prompt)
 
     no_tpl = make_prompts("x", 1, "simple", load_subjects("giang-sinh"),
                           seed_start=1, density="normal")
     check("Không có khuôn thì vẫn dùng COMPOSITIONS + DENSITY",
           "front view" in no_tpl[0].prompt
-          and "lots of white space" in no_tpl[0].prompt)
+          and "one simple background element" in no_tpl[0].prompt)
 
     # CẮT chữ cái lạc chứ không bỏ cả dòng — phần còn lại vẫn dùng được.
     # File khung-long.txt của Bao hỏng 19/24 dòng đúng kiểu này, bỏ hết thì
