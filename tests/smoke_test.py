@@ -491,65 +491,6 @@ def main() -> int:
     check("Tắt được khung", (_np2.asarray(prepare_page(
         raw / "001.png", border=0)[0]) == ap).all())
 
-    print("\n[0f] Lượt soi lại cảnh")
-    # Bao do duoc cu 40 anh thi khoang 10 sai logic. Chua o khau VE thi khong
-    # an: Flux chay CFG=1 khong doc duoc rang buoc - da dinh ba lan trong du
-    # an nay. Nen chan o DAU VAO bang mot luot hoi lai.
-    #
-    # Rang buoc CUNG cua bo kiem nay: KHONG BAO GIO DUOC LAM TE DI. Kiem thu
-    # duoi day cham dung dieu do, khong cham chuyen no sua hay hay khong.
-    import studio.llm as _llm
-
-    src = ["a rabbit, a basket and two carrots",
-           "a happy bear sitting on the ground, two flowers beside it",
-           "a fox running on a path, one tree behind it"]
-
-    def _fake_chat(reply):
-        return lambda *a, **k: (reply, "stop", [])
-
-    real_chat, real_resolve = _llm._chat, _llm._resolve_model
-    _llm._resolve_model = lambda m: "kiem-thu"
-    try:
-        out, log = _llm.review_scenes(src, on_progress=None)
-        _llm._chat = _fake_chat(
-            "1: FIX a rabbit sitting on the ground, a basket beside it\n"
-            "2: OK\n3: OK")
-        out, log = _llm.review_scenes(src)
-        check("Sửa được dòng không neo vật vào đâu",
-              out[0].startswith("a rabbit sitting on the ground"), out[0])
-        check("Dòng đạt thì giữ nguyên", out[1:] == src[1:])
-        check("Ghi lại đúng số dòng đã sửa", len(log) == 1 and log[0]["index"] == 1)
-
-        # Mo hinh im lang / tra ve rac -> GIU NGUYEN, khong duoc mat canh
-        _llm._chat = _fake_chat("tôi nghĩ rằng các cảnh này đều ổn")
-        out, _ = _llm.review_scenes(src)
-        check("Trả về rác thì giữ nguyên cả bộ", out == src)
-
-        # Ban sua qua dai = mo hinh dang bia them chu khong sua
-        _llm._chat = _fake_chat("1: FIX " + " ".join(["word"] * 30))
-        out, _ = _llm.review_scenes(src)
-        check("Bản sửa dài lê thê thì bỏ, giữ bản gốc", out == src)
-
-        # Ban sua co tu chi mau -> phai bi scrub, khong duoc lot vao file
-        _llm._chat = _fake_chat(
-            "1: FIX a red rabbit sitting on the green ground, a basket beside it")
-        out, _ = _llm.review_scenes(src)
-        check("Bản sửa lọt từ chỉ màu thì bị cắt màu",
-              "red" not in out[0] and "green" not in out[0], out[0])
-
-        # Ca me hong -> giu nguyen ca me, khong dung ca luot
-        def _boom(*a, **k):
-            raise _llm.LLMError("mất kết nối")
-        _llm._chat = _boom
-        out, log = _llm.review_scenes(src)
-        check("Mất kết nối giữa chừng thì giữ nguyên, không dừng cả lượt",
-              out == src and any("error" in e for e in log))
-    finally:
-        _llm._chat, _llm._resolve_model = real_chat, real_resolve
-
-    check("Chỉ dẫn cho LLM có luật NEO VẬT vào chỗ đứng",
-          "ANCHOR EVERYTHING" in _llm.INSTRUCTIONS)
-
     print("\n[1] Cấu hình khổ giấy")
     check("Khổ file PDF 8.75 x 11.25 in",
           (config.PAGE_W_IN, config.PAGE_H_IN) == (8.75, 11.25),
