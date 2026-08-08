@@ -48,6 +48,13 @@ def register(subparsers) -> None:
                         "đầu tiên trong bộ chủ thể của sách")
     p.add_argument("--image", default=None,
                    help="Dùng file ảnh có sẵn thay vì để Flux vẽ")
+    p.add_argument("--back-scene", dest="back_scene", default=None,
+                   help="Cảnh cho BÌA SAU, tiếng Anh. Không có thì lấy chủ "
+                        "thể thứ hai trong bộ — cùng gu, khác hình")
+    p.add_argument("--back-image", dest="back_image", default=None,
+                   help="Dùng file ảnh có sẵn cho bìa sau")
+    p.add_argument("--no-back-art", dest="no_back_art", action="store_true",
+                   help="Bìa sau để nền màu trơn như trước")
     p.add_argument("--bg", default=DEFAULT_BG,
                    help=f"Màu nền dạng #RRGGBB (mặc định {DEFAULT_BG})")
     p.add_argument("--subtitle", default=None,
@@ -108,13 +115,56 @@ def _fit_text(draw, text: str, max_w: int, max_h: int,
     return font, _wrap(draw, text, font, max_w)
 
 
-def _draw_block(draw, lines, font, cx: int, top: int, fill, spacing=1.25) -> int:
+def _draw_block(draw, lines, font, cx: int, top: int, fill, spacing=1.25,
+                stroke: int = 0, stroke_fill=(45, 30, 22),
+                shadow: int = 0) -> int:
+    """
+    Vẽ khối chữ. `stroke` là viền quanh chữ, `shadow` là bóng đổ lệch xuống.
+
+    Hai thứ đó là cách sách thiếu nhi đặt tiêu đề THẲNG LÊN TRANH mà vẫn đọc
+    được, thay vì phải dán một dải màu đè lên hình. Xem chú thích ở chỗ vẽ
+    bìa trước.
+    """
     y = top
     step = int(font.size * spacing) if hasattr(font, "size") else 40
     for line in lines:
-        draw.text((cx, y), line, font=font, fill=fill, anchor="ma")
+        if shadow:
+            draw.text((cx + shadow, y + shadow), line, font=font,
+                      fill=(0, 0, 0, 90), anchor="ma",
+                      stroke_width=stroke, stroke_fill=(0, 0, 0))
+        draw.text((cx, y), line, font=font, fill=fill, anchor="ma",
+                  stroke_width=stroke, stroke_fill=stroke_fill)
         y += step
     return y
+
+
+def _scrim(cover: Image.Image, box: tuple[int, int, int, int],
+           strength: int = 90, from_top: bool = True,
+           power: float = 1.6) -> None:
+    """
+    Phủ một lớp tối MỜ DẦN lên vùng chữ, đậm ở mép và tan hẳn vào trong.
+
+    Khác hẳn dải màu đặc trước đây: dải đặc nhìn như miếng dán đè lên tranh,
+    còn lớp mờ dần thì mắt đọc thành bóng trời — chữ vẫn nằm TRONG tranh.
+
+    `power` quyết định lớp tối tan nhanh hay chậm. Số nhỏ thì đậm lên ngay từ
+    mép, số lớn thì chỉ đậm ở sát mép rồi tan rất nhanh.
+
+    Chỗ này tôi làm sai lần đầu: để 1.6 cho cả hai mặt, mà chữ bìa sau nằm ở
+    giữa vùng phủ chứ không ở sát mép, nên rơi đúng chỗ lớp tối đã tan gần
+    hết — tính ra chỉ còn 11/150. Chữ vẫn đọc được nhờ viền, nhưng lớp phủ
+    coi như không làm gì. Bìa sau giờ dùng 0.6.
+    """
+    x0, y0, x1, y1 = box
+    h = max(1, y1 - y0)
+    grad = Image.new("L", (1, h))
+    for i in range(h):
+        t = i / (h - 1) if h > 1 else 0
+        if from_top:
+            t = 1 - t
+        grad.putpixel((0, i), int(strength * (t ** power)))
+    mask = grad.resize((x1 - x0, h))
+    cover.paste(Image.new("RGB", (x1 - x0, h), (25, 35, 55)), (x0, y0), mask)
 
 
 # --------------------------------------------------------------------------
@@ -132,6 +182,88 @@ def _page_count(settings, slug: str) -> int | None:
     return None
 
 
+def _pick_scene(args, book: dict, back: bool) -> str:
+    """
+    Chọn cảnh cho bìa trước hoặc bìa sau.
+
+    Bìa sau lấy chủ thể THỨ HAI trong bộ chủ đề, không phải chủ thể đầu. Hai
+    mặt cùng bộ nên cùng gu và cùng bảng màu, nhưng vẽ y hệt nhau thì nhìn
+    như in lỗi.
+    """
+    explicit = args.back_scene if back else args.scene
+    if explicit:
+        return explicit
+
+    theme = book.get("theme")
+    if theme:
+        try:
+            subjects = load_subjects(theme)
+            if subjects:
+                scene = subjects[1 % len(subjects)] if back else subjects[0]
+                info(f"Cảnh {'sau ' if back else 'bìa '} : lấy từ bộ '{theme}'")
+                return scene
+        except (FileNotFoundError, IndexError):
+            pass
+
+    scene = book.get("topic") or book.get("title") or "a cheerful scene"
+    if has_non_ascii(scene):
+        warn(f"Cảnh bìa {scene!r} là tiếng Việt — Flux sẽ bỏ qua. "
+             f"Dùng --scene \"<mô tả tiếng Anh>\"")
+    return scene
+
+
+def _make_back_art(settings, args, book: dict) -> Image.Image | None:
+    """
+    Ảnh bìa sau. Trả về None nếu tắt bằng --no-back-art hoặc sinh hỏng.
+
+    Bìa sau hỏng KHÔNG được làm chết cả lệnh: bìa trước mới là thứ bán hàng,
+    còn bìa sau không có ảnh thì vẫn in được trên nền màu như trước.
+    """
+    if args.no_back_art:
+        return None
+    if args.back_image:
+        path = Path(args.back_image)
+        if not path.exists():
+            raise FileNotFoundError(f"Không thấy ảnh {path}")
+        with Image.open(path) as im:
+            return im.convert("RGB")
+
+    scene = _pick_scene(args, book, back=True)
+    prompt = build_cover_prompt(
+        scene,
+        main_colors=getattr(args, "colors", None),
+        secondary_colors=getattr(args, "colors2", None),
+        background_colors=getattr(args, "bg_colors", None),
+        finish=getattr(args, "finish", None) or DEFAULT_COVER_FINISH,
+    )
+    provider = get_provider(settings, "comfyui", cover=True)
+
+    import random
+    req = GenRequest(
+        prompt=prompt, negative="",
+        # Lệch seed đi để không ra đúng ảnh bìa trước, nhưng vẫn suy ra được
+        # từ seed đã ghi — tái tạo lại cả hai mặt bằng một con số.
+        seed=(args.seed + 1) if args.seed is not None
+        else random.randint(1, 2**31 - 1),
+        width=config.COVER_GEN_W, height=config.COVER_GEN_H,
+        steps=args.steps if args.steps is not None else settings.steps,
+        guidance=settings.guidance,
+    )
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "back.png"
+            path.write_bytes(provider.generate(req))
+            with Image.open(path) as im:
+                art = im.convert("RGB")
+    except ProviderError as exc:
+        warn(f"Không sinh được ảnh bìa sau ({exc}). Dùng nền màu trơn.")
+        return None
+
+    sat, pale = cover_vividness(art)
+    info(f"Bìa sau   : bão hoà {sat:.0f}/255, {pale:.0%} nhạt")
+    return art
+
+
 def _make_art(settings, args, book: dict) -> Image.Image:
     """Ảnh bìa: lấy từ --image, hoặc để Flux vẽ."""
     if args.image:
@@ -144,20 +276,7 @@ def _make_art(settings, args, book: dict) -> Image.Image:
         with Image.open(path) as im:
             return im.convert("RGB")
 
-    scene = args.scene
-    if not scene:
-        theme = book.get("theme")
-        if theme:
-            try:
-                scene = load_subjects(theme)[0]
-                info(f"Cảnh bìa  : lấy từ bộ '{theme}'")
-            except (FileNotFoundError, IndexError):
-                scene = None
-    if not scene:
-        scene = book.get("topic") or book.get("title") or "a cheerful scene"
-        if has_non_ascii(scene):
-            warn(f"Cảnh bìa {scene!r} là tiếng Việt — Flux sẽ bỏ qua. "
-                 f"Dùng --scene \"<mô tả tiếng Anh>\"")
+    scene = _pick_scene(args, book, back=False)
 
     prompt = build_cover_prompt(
         scene,
@@ -226,6 +345,9 @@ def run(args) -> int:
         config.load_settings(), args.slug,
         image=args.image, scene=args.scene, bg=args.bg,
         subtitle=args.subtitle, seed=args.seed, steps=args.steps,
+        back_scene=getattr(args, "back_scene", None),
+        back_image=getattr(args, "back_image", None),
+        no_back_art=getattr(args, "no_back_art", False),
         colors=getattr(args, "colors", None),
         colors2=getattr(args, "colors2", None),
         bg_colors=getattr(args, "bg_colors", None),
@@ -238,7 +360,9 @@ def make_cover(settings, slug: str, *, image: str | None = None,
                subtitle: str | None = None, seed: int | None = None,
                steps: int | None = None, colors: str | None = None,
                colors2: str | None = None, bg_colors: str | None = None,
-               finish: str = DEFAULT_COVER_FINISH) -> int:
+               finish: str = DEFAULT_COVER_FINISH,
+               back_scene: str | None = None, back_image: str | None = None,
+               no_back_art: bool = False) -> int:
     """
     Dựng bìa. Tách khỏi `run` để `build` gọi lại được — người dùng không phải
     nhớ chạy thêm một lệnh nữa.
@@ -246,7 +370,9 @@ def make_cover(settings, slug: str, *, image: str | None = None,
     args = SimpleNamespace(image=image, scene=scene, bg=bg,
                            subtitle=subtitle, seed=seed, steps=steps,
                            colors=colors, colors2=colors2,
-                           bg_colors=bg_colors, finish=finish)
+                           bg_colors=bg_colors, finish=finish,
+                           back_scene=back_scene, back_image=back_image,
+                           no_back_art=no_back_art)
     out = config.out_dir(settings, slug)
 
     pages = _page_count(settings, slug)
@@ -274,6 +400,12 @@ def make_cover(settings, slug: str, *, image: str | None = None,
         print(f"LỖI: {exc}")
         return 1
 
+    try:
+        back_art = _make_back_art(settings, args, book)
+    except FileNotFoundError as exc:
+        print(f"LỖI: {exc}")
+        return 1
+
     # ---------------------------------------------------------- toạ độ (px)
     W = config.inch_to_px(cover_w_in)
     H = config.inch_to_px(cover_h_in)
@@ -297,38 +429,69 @@ def make_cover(settings, slug: str, *, image: str | None = None,
     front_w = W - front_left            # gồm cả bleed phải
     cover.paste(_cover_fit(art, front_w, H), (front_left, 0))
 
-    # ------------------------------------------------ bìa trước: dải chữ trên
-    band_h = int(H * 0.24)
-    band = Image.new("RGBA", (front_w, band_h), (*bg, 225))
-    cover.paste(Image.alpha_composite(
-        cover.crop((front_left, 0, W, band_h)).convert("RGBA"), band
-    ).convert("RGB"), (front_left, 0))
+    # ---------------------------------------- bìa trước: tiêu đề NẰM TRONG tranh
+    #
+    # Trước đây tôi dán một dải màu đặc (alpha 225) cao 24% trang lên đầu bìa
+    # rồi viết chữ trắng lên. Nhìn ra ngay là miếng dán đè lên hình — hai lớp
+    # rời nhau, không phải một tấm bìa.
+    #
+    # Sách thiếu nhi thật đặt tiêu đề THẲNG lên tranh và giữ đọc được bằng ba
+    # thứ, không phải bằng dải màu:
+    #   · viền chữ dày (stroke) — tách chữ khỏi nền dù nền màu gì
+    #   · bóng đổ nhẹ           — chữ nổi lên khỏi mặt tranh
+    #   · một lớp tối MỜ DẦN    — đậm ở mép trên, tan hẳn vào giữa tranh;
+    #                             mắt đọc thành bóng trời chứ không thành dải
+    _scrim(cover, (front_left, 0, W, int(H * 0.30)), strength=95)
 
     text_w = W - bleed - safety - (front_left + safety)
     text_cx = front_left + safety + text_w // 2
 
     font_title, lines = _fit_text(
-        draw, title, text_w, int(band_h * 0.55), start=int(H * 0.075))
-    y = _draw_block(draw, lines, font_title,
-                    text_cx, int(H * 0.045), (255, 255, 255) if on_dark else fg)
+        draw, title, text_w, int(H * 0.16), start=int(H * 0.085))
+    stroke = max(3, int(font_title.size * 0.10))
+    y = _draw_block(draw, lines, font_title, text_cx, int(H * 0.045),
+                    (255, 255, 255), stroke=stroke,
+                    shadow=max(2, int(font_title.size * 0.05)))
 
     if args.subtitle:
-        font_sub = load_font(int(H * 0.026))
+        font_sub = load_font(int(H * 0.028))
         _draw_block(draw, _wrap(draw, args.subtitle, font_sub, text_w),
-                    font_sub, text_cx, y + 20,
-                    (255, 255, 255) if on_dark else fg)
+                    font_sub, text_cx, y + 16, (255, 245, 200),
+                    stroke=max(2, int(font_sub.size * 0.10)),
+                    shadow=2)
 
-    # ------------------------------------------------------------- bìa sau
+    # --------------------------------------------------- bìa sau: cũng có ảnh
     back_cx = back_left + panel // 2
     back_w = panel - 2 * safety
-    font_back, back_lines = _fit_text(
-        draw, title, back_w, int(H * 0.2), start=int(H * 0.045))
-    _draw_block(draw, back_lines, font_back, back_cx, int(H * 0.40), fg)
 
-    font_note = load_font(int(H * 0.022))
-    draw.text((back_cx, int(H * 0.62)),
-              f"{(pages - 2) // 2} trang tô màu", font=font_note,
-              fill=fg, anchor="ma")
+    if back_art is not None:
+        cover.paste(_cover_fit(back_art, panel + bleed, H), (0, 0))
+        # Chữ bìa sau nằm ở nửa dưới, nên lớp mờ đi từ dưới lên
+        _scrim(cover, (0, int(H * 0.45), back_left + panel, H),
+               strength=150, from_top=False, power=0.6)
+        back_fg, back_stroke = (255, 255, 255), 3
+    else:
+        back_fg, back_stroke = fg, 0
+
+    font_back, back_lines = _fit_text(
+        draw, title, back_w, int(H * 0.14), start=int(H * 0.042))
+    yb = _draw_block(draw, back_lines, font_back, back_cx, int(H * 0.56),
+                     back_fg, stroke=back_stroke, shadow=2 if back_art else 0)
+
+    font_note = load_font(int(H * 0.024))
+    draw.text((back_cx, yb + 18), f"{(pages - 2) // 2} trang tô màu",
+              font=font_note, fill=back_fg, anchor="ma",
+              stroke_width=back_stroke, stroke_fill=(45, 30, 22))
+
+    # Ô MÃ VẠCH — Lulu in mã vạch ISBN vào góc dưới phải bìa sau. Vùng đó phải
+    # sáng và không có hình, nếu không máy quét đọc không ra. Hồi bìa sau còn
+    # là mảng màu trơn thì không cần; giờ có ảnh thì bắt buộc chừa.
+    bw = config.inch_to_px(config.BARCODE_W_IN)
+    bh = config.inch_to_px(config.BARCODE_H_IN)
+    bm = config.inch_to_px(config.BARCODE_MARGIN_IN)
+    bx1 = back_left + panel - bm
+    by1 = H - bleed - bm
+    draw.rectangle((bx1 - bw, by1 - bh, bx1, by1), fill=(255, 255, 255))
 
     # ---------------------------------------------------------------- gáy
     if spine_in >= config.SPINE_TEXT_MIN_IN:

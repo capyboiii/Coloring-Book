@@ -247,6 +247,14 @@ COVER_PALE_MAX = 0.35
 #     chihuahua 1.8%  <- gần như không có nét, nhìn không ra sách tô màu
 COVER_OUTLINE_MIN = 0.04
 
+# Ô mã vạch trên BÌA SAU. Lulu in mã vạch ISBN vào góc dưới bên phải bìa sau,
+# và vùng đó phải sáng màu, không có hình. Trước đây bìa sau chỉ là một mảng
+# màu trơn nên chuyện này không thành vấn đề; giờ bìa sau có ảnh thì phải
+# chừa chỗ, nếu không mã vạch đè lên hình và máy quét đọc không ra.
+BARCODE_W_IN = 2.0
+BARCODE_H_IN = 1.2
+BARCODE_MARGIN_IN = 0.25
+
 # Ngưỡng cảnh báo tự động (Phase 2 sẽ dùng để lọc trước khi mắt người nhìn)
 INK_RATIO_MIN = 0.005  # dưới 0.5% -> trang gần như trắng
 INK_RATIO_MAX = 0.40   # trên 40%  -> trang đen kịt

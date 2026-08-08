@@ -482,6 +482,73 @@ def main() -> int:
     ))
     check("cover trả về 0", rc == 0)
     check("cover.pdf tồn tại", (out / "cover.pdf").exists())
+
+    # Dung lai anh PIL truoc khi ep sang PDF de kiem tra CAI DA VE, khong
+    # phai kiem tra tham so. Muc [0c] da cho thay do tham so thi bo lot.
+    grabbed = {}
+    _orig_save = Image.Image.save
+
+    def _spy(self, fp, *a, **k):
+        if str(fp).endswith("cover.jpg"):
+            grabbed["img"] = self.copy()
+        return _orig_save(self, fp, *a, **k)
+
+    Image.Image.save = _spy
+    try:
+        back_src = tmp / "back-art.png"
+        Image.new("RGB", (896, 1152), (40, 120, 200)).save(back_src)
+        cover_cmd.run(Args(slug=slug, scene=None, image=str(art),
+                           back_image=str(back_src), back_scene=None,
+                           no_back_art=False, bg="#1B7A8C",
+                           subtitle="Kiểm thử", seed=1, steps=None,
+                           colors=None, colors2=None, bg_colors=None,
+                           finish="pencil"))
+    finally:
+        Image.Image.save = _orig_save
+
+    if "img" in grabbed:
+        page = grabbed["img"]
+        cw, ch = config.cover_size_in(_pages_for_cover := 10)
+        W2, H2 = page.size
+        bleed2 = config.inch_to_px(config.BLEED_IN)
+        panel2 = config.inch_to_px(config.TRIM_W_IN)
+
+        # O MA VACH: Lulu in ma vach ISBN vao goc duoi phai bia sau. Vung do
+        # phai sang va khong co hinh. Hoi bia sau con la mang mau tron thi
+        # khong can; gio co anh thi bat buoc chua.
+        bw = config.inch_to_px(config.BARCODE_W_IN)
+        bh = config.inch_to_px(config.BARCODE_H_IN)
+        bm = config.inch_to_px(config.BARCODE_MARGIN_IN)
+        bx1, by1 = bleed2 + panel2 - bm, H2 - bleed2 - bm
+        patch2 = _np2.asarray(page.crop((bx1 - bw + 10, by1 - bh + 10,
+                                         bx1 - 10, by1 - 10)))
+        check("Bìa sau chừa ô trắng cho mã vạch ISBN",
+              patch2.min() > 250, f"tối nhất {patch2.min()}")
+
+        # Bia sau phai co ANH, khong con la mang mau tron
+        back_mid = _np2.asarray(page.crop((bleed2 + 100, int(H2 * 0.1),
+                                           bleed2 + panel2 - 100, int(H2 * 0.35))))
+        check("Bìa sau có ảnh chứ không phải nền màu trơn",
+              tuple(back_mid.reshape(-1, 3)[0]) != (27, 122, 140),
+              str(tuple(back_mid.reshape(-1, 3)[0])))
+
+        # Tieu de phai NAM TRONG tranh.
+        # Do do lech mau thi khong an, vi anh gia trong kiem thu von la mot
+        # mang mau tron - do kieu gi cung ra phang. Thu PHAN BIET duoc hai
+        # cach lam la CHO NOI: dai mau dac co mot duong BIEN sac net o day
+        # dai, con lop mo dan thi khong co buoc nhay nao.
+        # Lay dai hep sat mep phai de chu (canh giua) khong lot vao.
+        front_left2 = W2 - config.inch_to_px(config.TRIM_W_IN) - bleed2
+        strip = _np2.asarray(page.crop(
+            (W2 - bleed2 - 120, 0, W2 - bleed2 - 20,
+             int(H2 * 0.40))).convert("L")).astype(int)
+        rows = strip.mean(axis=1)
+        jump = float(_np2.abs(_np2.diff(rows)).max())
+        check("Tiêu đề nằm trong tranh, không có biên dải màu dán đè",
+              jump < 12, f"bước nhảy lớn nhất {jump:.1f}")
+        check("Lớp phủ mờ dần thật, không phải phủ đều",
+              float(rows.max() - rows.min()) > 8,
+              f"chênh {rows.max() - rows.min():.1f}")
     check("web/cover.webp tồn tại", (out / "web" / "cover.webp").exists())
 
     try:
