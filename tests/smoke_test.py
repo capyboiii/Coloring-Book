@@ -235,9 +235,13 @@ def main() -> int:
     # phu dinh. Nhac "text" la GOI text. Va "space at the top for A TITLE" la
     # cau dat hang thang mot cai tieu de.
     cover_p = build_cover_prompt("a happy penguin")
+    # So theo BIEN TU chu khong phai chuoi con: "text" nam trong "texture",
+    # ma "no texture" thi hoan toan hop le. Kiem thu bat nham cung te ngang
+    # kiem thu bo lot - no lam minh sua mot thu dang dung.
+    import re as _re
     for w in ("text", "letter", "word", "title", "typography", "font"):
         check(f"Prompt bìa KHÔNG nhắc '{w}' (nhắc là Flux viết chữ sai)",
-              w not in cover_p.lower(), cover_p)
+              not _re.search(rf"\b{w}s?\b", cover_p.lower()), cover_p)
     check("Chủ thể bìa đứng đầu prompt", cover_p.startswith("a happy penguin"))
 
     # LAN SUA TRUOC CUA TOI LAM BIA XAU DI. Viet "a colored-in coloring book
@@ -248,14 +252,37 @@ def main() -> int:
     # la trieu hoi no.
     check("Prompt bìa KHÔNG chứa 'coloring book' (nhắc là Flux để trắng)",
           "coloring book" not in COVER_STYLE.lower(), COVER_STYLE)
-    for w in ("fully painted in color", "nothing left white or uncolored",
-              "clean even dark outlines", "filling the whole page",
-              "several cute characters"):
+    for w in ("clean black outlines", "flat colors filled neatly inside",
+              "nothing left white or uncolored", "harmonious palette",
+              "very soft shading", "clear separation between objects",
+              "no gradients", "no texture", "no photorealism"):
         check(f"Prompt bìa đòi '{w}'", w in COVER_STYLE)
-    # Sach mau CO chuyen sac nhe va van giay. Cam het di thi tranh bet.
-    for w in ("no gradients", "no shading", "no soft edges"):
-        check(f"Prompt bìa KHÔNG cấm '{w}' (sách mẫu có sắc độ nhẹ)",
-              w not in COVER_STYLE)
+
+    # BON CAU TRONG BAN YEU CAU CUA BAO KHONG DUNG DUOC O DAY, bo di la CO Y.
+    # Chung viet cho quy trinh to len anh CO SAN (img2img). Flux o day ve tu
+    # so ngau nhien, khong co anh net nao de ma giu - bao no "dung sua net co
+    # san" la bao dung sua mot thu khong ton tai.
+    # Te hon: o CFG=1 khong doc duoc phu dinh, nen "no colors OUTSIDE THE
+    # OUTLINES" chi to nhac no nghi toi chuyen mau tran ra ngoai.
+    for w in ("existing", "preserve", "do not alter", "outside the outlines",
+              "bleeding", "redraw"):
+        check(f"Prompt bìa KHÔNG chứa '{w}' (chỉ có nghĩa với img2img)",
+              w not in COVER_STYLE.lower())
+
+    # Bang mau dat duoc theo tung cuon - hai cuon cung bo ma bia lech tong
+    # nhau thi nhin khong ra mot bo.
+    from studio.prompts import build_colour_hint
+    tinted = build_cover_prompt("a turtle", main_colors="sea green",
+                                secondary_colors="coral pink",
+                                background_colors="sky blue")
+    for w in ("main colors sea green", "secondary colors coral pink",
+              "background in sky blue"):
+        check(f"Bảng màu đặt được: '{w}'", w in tinted)
+    check("Bảng màu đứng ngay sau chủ thể, trước khối phong cách",
+          tinted.index("sea green") < tinted.index("professionally colored"))
+    check("Bỏ trống bảng màu thì không ghép ô rỗng vào prompt",
+          build_colour_hint() == ""
+          and "main colors" not in build_cover_prompt("a turtle"))
 
     # Canh bia mac dinh lay dong DAU trong file theme - dai 23-26 tu, ba menh
     # de. Bat Flux dung ba thu cung luc tren tam anh QUAN TRONG NHAT cua cuon
@@ -266,7 +293,7 @@ def main() -> int:
     # phai to duoc; bia can ram vi no la tam anh BAN HANG.
     long_scene = load_subjects("ocean")[0]
     cp = build_cover_prompt(long_scene)
-    subject = cp.split(", kawaii cartoon cover")[0]
+    subject = cp.split(", professionally colored")[0]
     check("Cảnh bìa KHÔNG bị cắt cụt (bìa cần cảnh giàu)",
           subject == long_scene.rstrip("."),
           f"{len(long_scene.split())} → {len(subject.split())} từ")

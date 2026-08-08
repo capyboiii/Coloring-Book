@@ -333,14 +333,61 @@ class PagePrompt:
 # Bản này tả thẳng cái ĐÍCH — một bức tranh màu hoàn chỉnh, kín trang — thay
 # vì tả cái quá trình "tô vào trang trắng".
 COVER_STYLE = (
-    "kawaii cartoon cover illustration, fully painted in color, "
-    "every shape filled with cheerful flat colors, "
-    "clean even dark outlines, bright warm palette, "
-    "a rich detailed scene filling the whole page from edge to edge, "
-    "painted sky, painted ground, painted background scenery, "
+    "professionally colored children's book illustration, "
+    "clean black outlines with bright flat colors filled neatly inside them, "
+    "smooth even color, simple harmonious palette, "
+    "vivid but soft child-friendly colors, "
+    "very soft shading only where needed to give a little depth, "
+    "clear separation between objects, cute and playful, "
+    "a rich scene colored all the way to the edges, "
     "nothing left white or uncolored, "
-    "several cute characters together, cheerful and inviting"
+    "no gradients, no texture, no photorealism, no complex lighting"
 )
+
+# BỐN CÂU TRONG BẢN YÊU CẦU CỦA BAO KHÔNG DÙNG ĐƯỢC Ở ĐÂY, và bỏ đi là cố ý:
+#
+#     "Color the existing line-art illustration"
+#     "while preserving the original line-art exactly"
+#     "Do not alter, redraw, distort, or remove any existing black outlines"
+#     "No colors outside the outlines" / "No color bleeding"
+#
+# Bốn câu đó viết cho quy trình TÔ LÊN MỘT ẢNH CÓ SẴN (img2img). Ở đây Flux
+# vẽ từ con số ngẫu nhiên, KHÔNG có ảnh nét nào để mà giữ — bảo nó "đừng sửa
+# nét có sẵn" là bảo nó đừng sửa một thứ không tồn tại.
+#
+# Tệ hơn: ở CFG=1 Flux không đọc được phủ định, nên "no colors OUTSIDE THE
+# OUTLINES" chỉ có tác dụng nhắc nó nghĩ tới chuyện màu tràn ra ngoài. Đúng
+# cái bẫy đã làm bìa penguin để trắng gần hết.
+#
+# Nên phần "giữ nét" được viết lại thành yêu cầu THUẬN: "clean black outlines
+# with bright flat colors filled neatly INSIDE them".
+#
+# Muốn đúng nghĩa "tô lên ảnh nét có sẵn" thì phải dựng đường img2img —
+# nạp một trang ruột đã duyệt, VAEEncode, chạy denoise thấp. Làm được, và
+# làm xong thì bìa chính là một trang trong sách đã tô, khớp tuyệt đối với
+# ruột. Nhưng đó là workflow mới chứ không phải sửa prompt.
+
+
+def build_colour_hint(main: str | None = None, secondary: str | None = None,
+                      background: str | None = None) -> str:
+    """
+    Ghép phần chỉ định bảng màu vào prompt bìa.
+
+    Bao yêu cầu ba ô [MAIN COLORS] / [SECONDARY COLORS] / [BACKGROUND] — đây
+    là ý hay và tôi giữ nguyên: nó biến bảng màu thành thứ đặt được theo từng
+    cuốn, thay vì phó mặc Flux bốc màu ngẫu nhiên mỗi lần chạy. Hai cuốn cùng
+    bộ sách mà bìa lệch tông nhau thì nhìn không ra một bộ.
+
+    Bỏ trống thì không ghép gì — thêm ô rỗng vào prompt chỉ tổ loãng.
+    """
+    parts = []
+    if main:
+        parts.append(f"main colors {main.strip().rstrip('.')}")
+    if secondary:
+        parts.append(f"secondary colors {secondary.strip().rstrip('.')}")
+    if background:
+        parts.append(f"background in {background.strip().rstrip('.')}")
+    return ", ".join(parts)
 
 # NGƯỢC HẲN trang ruột: bìa cần cảnh GIÀU nhất, không phải gọn nhất.
 #
@@ -355,16 +402,22 @@ COVER_STYLE = (
 COVER_SUBJECT_MAX_WORDS = 28
 
 
-def build_cover_prompt(scene: str) -> str:
+def build_cover_prompt(scene: str, main_colors: str | None = None,
+                       secondary_colors: str | None = None,
+                       background_colors: str | None = None) -> str:
     """
-    Bìa KHÔNG bị ràng buộc đen trắng — đây là trang tô màu ĐÃ ĐƯỢC TÔ.
+    Bìa KHÔNG bị ràng buộc đen trắng — đây là tranh màu hoàn chỉnh.
 
     Chữ tiêu đề do Pillow ghép vào sau, nên prompt tuyệt đối không được nhắc
     tới chữ nghĩa dưới bất kỳ hình thức nào. Xem chú thích ở COVER_STYLE.
     """
     scene = shorten_subject(scene.strip().rstrip("."),
                             COVER_SUBJECT_MAX_WORDS)
-    return f"{scene}, {COVER_STYLE}"
+    # Bảng màu đặt NGAY SAU chủ thể, trước khối phong cách: nó nói về chủ
+    # thể nên phải đứng cạnh chủ thể.
+    hint = build_colour_hint(main_colors, secondary_colors, background_colors)
+    parts = [scene] + ([hint] if hint else []) + [COVER_STYLE]
+    return ", ".join(parts)
 
 
 def has_non_ascii(text: str) -> bool:

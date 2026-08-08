@@ -50,6 +50,14 @@ def register(subparsers) -> None:
                    help=f"Màu nền dạng #RRGGBB (mặc định {DEFAULT_BG})")
     p.add_argument("--subtitle", default=None,
                    help="Dòng chữ nhỏ dưới tiêu đề")
+    p.add_argument("--colors", default=None, metavar="<màu chính>",
+                   help='Màu chủ đạo cho chủ thể, tiếng Anh. '
+                        'Ví dụ: "warm pink and cream"')
+    p.add_argument("--colors2", default=None, metavar="<màu phụ>",
+                   help='Màu phụ. Ví dụ: "soft yellow and mint green"')
+    p.add_argument("--bg-colors", dest="bg_colors", default=None,
+                   metavar="<màu nền>",
+                   help='Màu nền. Ví dụ: "sky blue and sandy beige"')
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--steps", type=int, default=None)
     p.set_defaults(func=run)
@@ -144,7 +152,12 @@ def _make_art(settings, args, book: dict) -> Image.Image:
             warn(f"Cảnh bìa {scene!r} là tiếng Việt — Flux sẽ bỏ qua. "
                  f"Dùng --scene \"<mô tả tiếng Anh>\"")
 
-    prompt = build_cover_prompt(scene)
+    prompt = build_cover_prompt(
+        scene,
+        main_colors=getattr(args, "colors", None),
+        secondary_colors=getattr(args, "colors2", None),
+        background_colors=getattr(args, "bg_colors", None),
+    )
     info(f"Prompt bìa: {prompt[:110]}...")
 
     provider = get_provider(settings, "comfyui", cover=True)
@@ -205,19 +218,26 @@ def run(args) -> int:
         config.load_settings(), args.slug,
         image=args.image, scene=args.scene, bg=args.bg,
         subtitle=args.subtitle, seed=args.seed, steps=args.steps,
+        colors=getattr(args, "colors", None),
+        colors2=getattr(args, "colors2", None),
+        bg_colors=getattr(args, "bg_colors", None),
     )
 
 
 def make_cover(settings, slug: str, *, image: str | None = None,
                scene: str | None = None, bg: str = DEFAULT_BG,
                subtitle: str | None = None, seed: int | None = None,
-               steps: int | None = None) -> int:
+               steps: int | None = None, colors: str | None = None,
+               colors2: str | None = None,
+               bg_colors: str | None = None) -> int:
     """
     Dựng bìa. Tách khỏi `run` để `build` gọi lại được — người dùng không phải
     nhớ chạy thêm một lệnh nữa.
     """
     args = SimpleNamespace(image=image, scene=scene, bg=bg,
-                           subtitle=subtitle, seed=seed, steps=steps)
+                           subtitle=subtitle, seed=seed, steps=steps,
+                           colors=colors, colors2=colors2,
+                           bg_colors=bg_colors)
     out = config.out_dir(settings, slug)
 
     pages = _page_count(settings, slug)
