@@ -354,22 +354,46 @@ class PagePrompt:
 COVER_STYLE = (
     "children's book illustration, "
     "clean dark outlines with the colors filled neatly inside them, "
-    "simple harmonious palette, child-friendly colors, "
+    # "simple harmonious palette" là chữ TÔI viết, và chính nó ghìm số màu
+    # xuống. Giữ phần "hài hoà" vì đó là thứ làm bìa không loè loẹt, nhưng bỏ
+    # chữ "simple" đi.
+    "varied harmonious palette, bright child-friendly colors, "
     "clear separation between objects, cute and playful, "
     "a rich scene colored all the way to the edges, "
-    "nothing left white or uncolored, no photorealism"
+    # Nói THUẬN thay vì cấm: ở CFG=1 câu "nothing left white" chỉ tổ nhắc tới
+    # màu trắng. Tả cái muốn có — nền cũng phải được tô — thì ăn hơn.
+    "the sky and the ground and every background shape all fully colored, "
+    "no photorealism"
 )
 
 COVER_FINISH = {
     # Đúng bốn nhóm Bao vừa đưa: chất liệu, cách tô, ánh sáng, phong cách.
     # Mỗi nhóm lấy 2-3 từ mạnh nhất — đưa hết 19 chuỗi vào thì prompt phình
     # lên gấp đôi và chủ thể lại chìm, đúng lỗi cũ.
+    # Bao báo nét tô tay đã đạt, chỉ cần RỰC hơn. Nên chỉ động vào mấy chữ
+    # làm nhạt màu, giữ nguyên phần tạo ra chất tay vẽ.
+    #
+    # Đo 3 bìa đã sinh: bão hoà 30-42/255, 79% diện tích gần như không màu.
+    # Sách mẫu là 131.9 và 15.9%. Nhưng SỐ MÀU thì đã đủ rồi — 11-12 trên 12
+    # cung màu, ngang sách mẫu. Nên vấn đề không phải "ít màu" mà là
+    # MÀU NHẠT và GIẤY TRẮNG CÒN HỞ NHIỀU QUÁ.
+    #
+    # Ba chữ tôi tự đưa vào mà chính chúng làm nhạt:
+    #   "vintage"             kiểu cũ = màu bạc màu. Bỏ.
+    #   "soft pigment buildup" chữ "soft" ở đây làm mực nhạt đi, trong khi
+    #                          bút chì màu thật hoàn toàn có thể đè rất đậm.
+    #   "warm ambient light"  bó cả tranh vào tông ấm, mất hẳn xanh lá và
+    #                          xanh dương.
+    # Và "slight paper texture" mời gọi để hở giấy trắng — đổi sang "vân giấy
+    # HIỆN LÊN QUA lớp màu", tức là vẫn có vân nhưng màu phủ kín bên trên.
     "pencil": (
         "hand-colored with colored pencils and soft crayons, "
-        "visible pencil texture, slight paper texture, "
-        "natural uneven coloring, layered strokes, soft pigment buildup, "
-        "soft natural shading, gentle shadows, warm ambient light, "
-        "vintage warm storybook illustration, cozy children's picture book"
+        "visible pencil strokes, paper grain showing through the color, "
+        "natural uneven coloring, layered strokes, "
+        "heavy pigment buildup, richly saturated pencil colors, "
+        "deep vivid tones, many different bright colors, "
+        "soft natural shading, gentle shadows, bright cheerful light, "
+        "warm storybook illustration, cozy children's picture book"
     ),
     # Kiểu cũ, giữ lại nguyên vẹn để đổi qua đổi lại mà không mất gì.
     "flat": (

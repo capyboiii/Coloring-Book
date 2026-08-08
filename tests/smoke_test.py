@@ -253,9 +253,19 @@ def main() -> int:
     check("Prompt bìa KHÔNG chứa 'coloring book' (nhắc là Flux để trắng)",
           "coloring book" not in COVER_STYLE.lower(), COVER_STYLE)
     for w in ("clean dark outlines", "filled neatly inside",
-              "nothing left white or uncolored", "harmonious palette",
-              "clear separation between objects", "no photorealism"):
+              "harmonious palette", "clear separation between objects",
+              "no photorealism"):
         check(f"Prompt bìa đòi '{w}'", w in COVER_STYLE)
+
+    # Do 3 bia da sinh: bao hoa 30-42/255, 79% dien tich gan nhu khong mau,
+    # trong khi sach mau la 131.9 va 15.9%. Nhung SO MAU thi da du - 11-12
+    # tren 12 cung mau, ngang sach mau.
+    # Nen van de khong phai "it mau" ma la MAU NHAT va GIAY TRANG CON HO.
+    check("Bỏ 'simple' khỏi bảng màu (chính nó ghìm số màu xuống)",
+          "simple harmonious" not in COVER_STYLE, COVER_STYLE)
+    check("Nói THUẬN chuyện phủ kín, không cấm 'white'",
+          "every background shape all fully colored" in COVER_STYLE
+          and "nothing left white" not in COVER_STYLE)
 
     # HAI YEU CAU CUA BAO DANH NHAU TRUC TIEP:
     #   lan truoc "no texture" / "smooth even" / "no gradients"
@@ -264,11 +274,25 @@ def main() -> int:
     # loi da mac o COMPOSITIONS vs DENSITY. Nen tach lam hai kieu loai tru.
     from studio.prompts import COVER_FINISH, DEFAULT_COVER_FINISH
     pencil, flat = COVER_FINISH["pencil"], COVER_FINISH["flat"]
-    for w in ("colored pencils", "pencil texture", "paper texture",
+    for w in ("colored pencils", "pencil strokes", "paper grain",
               "natural uneven coloring", "pigment buildup",
-              "soft natural shading", "gentle shadows", "warm ambient light",
+              "soft natural shading", "gentle shadows",
               "storybook", "cozy children's picture book"):
         check(f"Kiểu 'pencil' có '{w}'", w in pencil)
+
+    # Ba chu chinh TOI dua vao ma chinh chung lam nhat mau:
+    #   vintage             kieu cu = mau bac mau
+    #   soft pigment        but chi mau that hoan toan de dam duoc
+    #   warm ambient light  bo ca tranh vao tong am, mat xanh la va xanh duong
+    for w in ("vintage", "soft pigment", "warm ambient light"):
+        check(f"Kiểu 'pencil' KHÔNG còn '{w}' (chữ này làm nhạt màu)",
+              w not in pencil)
+    for w in ("richly saturated", "deep vivid tones",
+              "many different bright colors", "heavy pigment buildup"):
+        check(f"Kiểu 'pencil' đòi '{w}'", w in pencil)
+    # Van phai giu duoc chat tay ve - Bao bao phan do da dat roi
+    for w in ("hand-colored", "colored pencils", "natural uneven coloring"):
+        check(f"Vẫn giữ chất tay vẽ: '{w}'", w in pencil)
     for w in ("no texture", "smooth even", "no gradients"):
         check(f"Kiểu 'flat' giữ '{w}'", w in flat)
 
