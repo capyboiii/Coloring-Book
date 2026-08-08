@@ -1,0 +1,205 @@
+{
+  "last_node_id": 11,
+  "last_link_id": 11,
+  "nodes": [
+    {
+      "id": 11,
+      "type": "Note",
+      "pos": [20, 40],
+      "size": [740, 400],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "BAN VE TAY - SDXL + LoRA\n\nFile nay de VE THU trong giao dien. Code khong doc file nay; code doc\nsdxl_lineart.api.json. Thu trong day thay dep thi chep tham so sang ben do.\n\n=== KHAC FLUX O DAU ===\nSDXL chay CFG THAT (7.0) nen o NEGATIVE CO TAC DUNG.\nFlux schnell chay CFG=1, phan negative bi bo qua hoan toan - do la ly do\ntruoc gio phai nhet \"no gray, no shading\" vao o positive.\nO day thi khong can nua: dua het cac thu KHONG muon xuong o negative.\n\n=== NODE LoRA DANG BI TAT ===\nNode LoraLoader (mau tim) dang o che do bypass, tuc la chay thang tu\ncheckpoint sang sampler, y het nhu khong co no.\nKhi nao tai duoc LoRA line art (bo vao ComfyUI/models/loras/):\n  1. Bam vao node LoraLoader\n  2. Ctrl+B de bat lai\n  3. Chon file o o lora_name\nMuon tat lai thi Ctrl+B lan nua.\n\n=== VIET PROMPT ===\nCHU THE DUNG DAU. Day la thu quan trong nhat.\nPrompt cua Bao chay tay hoi truoc chi 27 tu va dep hon ban 163 tu cua toi -\nvi cang nhet nhieu tu phong cach len truoc thi chu the cang chim.\n\n=== DOI MOT THU MOI LAN ===\nDoi cung luc 3 tham so thi khong biet cai nao an thua.\nSeed dang de randomize. Muon so hai prompt cho cong bang thi doi seed sang\nfixed truoc da.\n\n=== CAC NUT DANG VAN DUOC ===\nsteps 28      duoi 20 net bi got. Tren 35 hau nhu khong khac.\ncfg 7.0       cao hon 9 net dam nhung hinh bat dau bien dang.\n832 x 1152    SDXL quen ~1 MP. Day len 1.5 MP tro len la net di loang choang.\n              Da thu roi va do duoc: nang do phan giai lam TE DI."
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "pos": [20, 500],
+      "size": [340, 98],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "MODEL", "type": "MODEL", "links": [1], "slot_index": 0},
+        {"name": "CLIP", "type": "CLIP", "links": [2], "slot_index": 1},
+        {"name": "VAE", "type": "VAE", "links": [10], "slot_index": 2}
+      ],
+      "properties": {"Node name for S&R": "CheckpointLoaderSimple"},
+      "widgets_values": ["sd_xl_base_1.0.safetensors"]
+    },
+    {
+      "id": 10,
+      "type": "LoraLoader",
+      "pos": [420, 500],
+      "size": [340, 126],
+      "flags": {},
+      "order": 2,
+      "mode": 4,
+      "inputs": [
+        {"name": "model", "type": "MODEL", "link": 1},
+        {"name": "clip", "type": "CLIP", "link": 2}
+      ],
+      "outputs": [
+        {"name": "MODEL", "type": "MODEL", "links": [3], "slot_index": 0},
+        {"name": "CLIP", "type": "CLIP", "links": [4, 5], "slot_index": 1}
+      ],
+      "properties": {"Node name for S&R": "LoraLoader"},
+      "widgets_values": ["coloring-book-lineart.safetensors", 0.9, 0.9],
+      "title": "LoraLoader  (Ctrl+B de bat)"
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [820, 480],
+      "size": [460, 220],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [{"name": "clip", "type": "CLIP", "link": 4}],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [6], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "CLIPTextEncode"},
+      "widgets_values": [
+        "a small brontosaurus munching on tall grass, one simple tree behind it, professional children's coloring book page, clean vector style, extremely thick uniform black outlines, cute kawaii cartoon style, big round head, simple dot eyes, happy smile, very simple, large shapes, minimal details, one subject filling most of the page, lots of white space"
+      ],
+      "title": "POSITIVE - chu the dung dau",
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "pos": [820, 750],
+      "size": [460, 200],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [{"name": "clip", "type": "CLIP", "link": 5}],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [7], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "CLIPTextEncode"},
+      "widgets_values": [
+        "thin lines, uneven lines, broken lines, sketchy lines, gray, grayscale, shading, gradients, shadows, hatching, cross-hatching, texture, noise, color, painting, photo, 3d render, ornate frame, decorative border, vignette, text, letters, watermark, signature, blurry"
+      ],
+      "title": "NEGATIVE - o nay CO tac dung (khac Flux)",
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "pos": [820, 1000],
+      "size": [320, 106],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "LATENT", "type": "LATENT", "links": [8], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "EmptyLatentImage"},
+      "widgets_values": [832, 1152, 1]
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "pos": [1340, 480],
+      "size": [320, 262],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {"name": "model", "type": "MODEL", "link": 3},
+        {"name": "positive", "type": "CONDITIONING", "link": 6},
+        {"name": "negative", "type": "CONDITIONING", "link": 7},
+        {"name": "latent_image", "type": "LATENT", "link": 8}
+      ],
+      "outputs": [
+        {"name": "LATENT", "type": "LATENT", "links": [9], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "KSampler"},
+      "widgets_values": [0, "randomize", 28, 7.0, "dpmpp_2m", "karras", 1.0]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [1720, 480],
+      "size": [210, 46],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {"name": "samples", "type": "LATENT", "link": 9},
+        {"name": "vae", "type": "VAE", "link": 10}
+      ],
+      "outputs": [
+        {"name": "IMAGE", "type": "IMAGE", "links": [11], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "VAEDecode"},
+      "widgets_values": []
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "pos": [1720, 580],
+      "size": [460, 520],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [{"name": "images", "type": "IMAGE", "link": 11}],
+      "outputs": [],
+      "properties": {"Node name for S&R": "SaveImage"},
+      "widgets_values": ["studio/tay-sdxl"]
+    }
+  ],
+  "links": [
+    [1, 4, 0, 10, 0, "MODEL"],
+    [2, 4, 1, 10, 1, "CLIP"],
+    [3, 10, 0, 3, 0, "MODEL"],
+    [4, 10, 1, 6, 0, "CLIP"],
+    [5, 10, 1, 7, 0, "CLIP"],
+    [6, 6, 0, 3, 1, "CONDITIONING"],
+    [7, 7, 0, 3, 2, "CONDITIONING"],
+    [8, 5, 0, 3, 3, "LATENT"],
+    [9, 3, 0, 8, 0, "LATENT"],
+    [10, 4, 2, 8, 1, "VAE"],
+    [11, 8, 0, 9, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "1. Model",
+      "bounding": [0, 440, 780, 220],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "title": "2. Prompt  <- sua o day",
+      "bounding": [800, 440, 500, 690],
+      "color": "#8A8",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "title": "3. Ve",
+      "bounding": [1320, 440, 380, 330],
+      "color": "#b58b2a",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
