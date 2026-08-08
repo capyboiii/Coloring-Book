@@ -255,6 +255,21 @@ BARCODE_W_IN = 2.0
 BARCODE_H_IN = 1.2
 BARCODE_MARGIN_IN = 0.25
 
+# VIỀN ĐEN quanh trang ruột.
+#
+# Đừng nhầm với "no frame, no border" trong prompt ảnh. Hai thứ khác hẳn:
+#   · prompt cấm Flux TỰ vẽ khung trang trí — khung đó lệch lạc, toàn nét
+#     mảnh, và mỗi trang một kiểu
+#   · cái này là khung do studio vẽ, thẳng thớm, giống hệt nhau ở mọi trang
+#
+# Vẽ đúng trên đường bao vùng vẽ an toàn, nới ra một chút để không chạm hình.
+# Vùng vẽ đã cách mép xén 0.5 in nên khung không bao giờ bị xén mất.
+#
+# Bo góc cho hợp sách trẻ em; đặt 0 thì ra góc vuông.
+PAGE_BORDER_PX = 8         # 0 = tắt hẳn
+PAGE_BORDER_INSET_IN = 0.06
+PAGE_BORDER_RADIUS_PX = 45
+
 # Ngưỡng cảnh báo tự động (Phase 2 sẽ dùng để lọc trước khi mắt người nhìn)
 INK_RATIO_MIN = 0.005  # dưới 0.5% -> trang gần như trắng
 INK_RATIO_MAX = 0.40   # trên 40%  -> trang đen kịt

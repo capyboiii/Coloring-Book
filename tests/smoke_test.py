@@ -163,9 +163,17 @@ def main() -> int:
     # .gitignore nen may khac se khong co - bo qua, khong bao hong.
     real = ROOT / "library"
     known_bad = {"floral/001", "floral/002", "thu-net-deu/001", "bienca/001"}
+    # CHI cham 5 cuon da soi tung anh bang mat. Bao sinh sach moi lien tuc, ma
+    # anh moi thi toi chua nhin - cham no la cham mo, va kiem thu se hong moi
+    # khi Bao gen them sach du code khong doi gi. Da vap dung loi nay o muc
+    # cham nguong bia.
+    judged_books = {"bienca", "floral", "giang-sinh-cua-be", "thu-net-deu",
+                    "vuon-hoa"}
     if real.exists():
         seen = missed = false_alarm = 0
         for p in sorted(real.glob("*/raw/*.png")):
+            if p.parent.parent.name not in judged_books:
+                continue
             key = f"{p.parent.parent.name}/{p.stem}"
             with Image.open(p) as im:
                 pa, ti = colour_report(im.convert("RGB"))
@@ -203,7 +211,9 @@ def main() -> int:
 
     art0 = fit_within(fine, config.ART_W_PX, config.ART_H_PX)
     ink0 = (_np2.asarray(art0) < 128).mean()
-    page, _m = prepare_page(fine_path)
+    # border=0: muc nay do CHAT LUONG XU LY anh. Khung den la net do
+    # studio ve them, tinh ca vao thi thanh do nham thu khac.
+    page, _m = prepare_page(fine_path, border=0)
     # Mau so la dien tich VUNG VE, khong phai ca trang - trang co le trang
     # rong, tinh ca vao thi ti le nao cung be va so sanh mat y nghia.
     ink1 = (_np2.asarray(page) < 128).sum() / (art0.width * art0.height)
@@ -429,6 +439,37 @@ def main() -> int:
                  if k in verdicts and verdicts[k] != want]
         check(f"Ngưỡng bìa phân loại đúng {len(judged & verdicts.keys())} "
               f"bìa đã soi bằng mắt", not wrong, str(wrong))
+
+    print("\n[0e] Khung đen quanh trang ruột")
+    # Dung nham voi "no frame, no border" trong prompt anh. Hai thu khac han:
+    # prompt cam FLUX tu ve khung trang tri (lech lac, toan net manh, moi
+    # trang mot kieu); con day la khung do studio ve, thang thom, giong het
+    # nhau o moi trang.
+    p_border, m_border = prepare_page(raw / "001.png")
+    p_plain, m_plain = prepare_page(raw / "001.png", border=0)
+    ab, ap = _np2.asarray(p_border), _np2.asarray(p_plain)
+    check("Có vẽ khung thì mực nhiều hơn không vẽ",
+          (ab < 128).sum() > (ap < 128).sum())
+
+    # Khung phai nam tren duong bao VUNG VE, khong phai mep giay: cach mep xen
+    # 0.5 in nen may xen lech vai mm cung khong cat phai.
+    inset = config.inch_to_px(config.PAGE_BORDER_INSET_IN)
+    bx = config.inch_to_px(config.ART_LEFT_IN) - inset
+    by = config.inch_to_px(config.ART_TOP_IN) - inset
+    col = ab[:, bx:bx + config.PAGE_BORDER_PX]
+    check("Cạnh trái khung nằm đúng mép vùng vẽ",
+          (col < 128).any(), f"x={bx}")
+    check("Khung cách mép giấy tối thiểu 0.4 in",
+          bx >= config.inch_to_px(0.4) and by >= config.inch_to_px(0.4),
+          f"trái {bx / config.DPI:.2f} in, trên {by / config.DPI:.2f} in")
+
+    # Ve khung SAU khi do chat luong, va co y nhu vay: `measure` co chi so
+    # "net cham mep"; ve khung truoc thi trang nao cung dinh, bao dong gia o
+    # ca 40 trang.
+    check("Khung không làm hỏng chỉ số đo",
+          m_border.to_dict() == m_plain.to_dict())
+    check("Tắt được khung", (_np2.asarray(prepare_page(
+        raw / "001.png", border=0)[0]) == ap).all())
 
     print("\n[1] Cấu hình khổ giấy")
     check("Khổ file PDF 8.75 x 11.25 in",

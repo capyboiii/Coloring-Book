@@ -49,6 +49,11 @@ def register(subparsers) -> None:
                         "Bật nếu ảnh Flux ra nền xám nhiều")
     p.add_argument("--black-point", type=int, default=config.LEVELS_BLACK)
     p.add_argument("--white-point", type=int, default=config.LEVELS_WHITE)
+    p.add_argument("--no-border", action="store_true",
+                   help="Đừng vẽ khung đen quanh trang ruột")
+    p.add_argument("--border", type=int, default=None, metavar="PX",
+                   help=f"Độ dày khung, px @300dpi "
+                        f"(mặc định {config.PAGE_BORDER_PX}, 0 = tắt)")
     p.add_argument("--no-cover", action="store_true",
                    help="Chỉ dựng ruột, không dựng bìa")
     p.add_argument("--subtitle", default=None,
@@ -134,6 +139,13 @@ def run(args) -> int:
          f"({config.PAGE_W_PX}x{config.PAGE_H_PX} px @ {config.DPI} DPI)")
     info("")
 
+    # --no-border thắng --border: gõ cả hai thì rõ ràng là muốn tắt.
+    border = 0 if getattr(args, "no_border", False) else (
+        config.PAGE_BORDER_PX if getattr(args, "border", None) is None
+        else args.border)
+    info(f"Khung : {border} px" if border else "Khung : không vẽ")
+    info("")
+
     # ---------------------------------------------------------- xử lý ảnh
     art_pages: list[Image.Image] = []
     problems: list[dict] = []
@@ -144,6 +156,7 @@ def run(args) -> int:
             autocontrast=args.autocontrast,
             black_point=args.black_point,
             white_point=args.white_point,
+            border=border,
         )
         art_pages.append(page)
 

@@ -248,6 +248,7 @@ def prepare_page(
     autocontrast: bool = False,
     black_point: int = config.LEVELS_BLACK,
     white_point: int = config.LEVELS_WHITE,
+    border: int = config.PAGE_BORDER_PX,
 ) -> tuple[Image.Image, Metrics]:
     """
     Đọc một ảnh raw -> trả về trang in đủ khổ 2625x3375 px (đã gồm bleed)
@@ -296,7 +297,36 @@ def prepare_page(
     top = config.inch_to_px(config.ART_TOP_IN) + (config.ART_H_PX - art.height) // 2
     page.paste(art, (left, top))
 
+    if border > 0:
+        draw_page_border(page, border)
+
     return page, metrics
+
+
+def draw_page_border(page: Image.Image, width: int = config.PAGE_BORDER_PX,
+                     radius: int = config.PAGE_BORDER_RADIUS_PX) -> None:
+    """
+    Vẽ khung đen quanh vùng vẽ của trang.
+
+    Vẽ SAU khi đã đo chất lượng, và cố ý như vậy. `measure()` có một chỉ số
+    "nét chạm mép" để bắt hình bị xén; nếu vẽ khung trước thì trang nào cũng
+    có nét sát mép và chỉ số đó báo động giả ở cả 40 trang.
+
+    Khung nằm trên đường bao VÙNG VẼ AN TOÀN chứ không phải mép giấy, nên nó
+    cách mép xén 0.5 in — máy xén lệch vài mm cũng không cắt phải.
+    """
+    inset = config.inch_to_px(config.PAGE_BORDER_INSET_IN)
+    x0 = config.inch_to_px(config.ART_LEFT_IN) - inset
+    y0 = config.inch_to_px(config.ART_TOP_IN) - inset
+    x1 = x0 + config.ART_W_PX + 2 * inset
+    y1 = y0 + config.ART_H_PX + 2 * inset
+
+    draw = ImageDraw.Draw(page)
+    if radius > 0:
+        draw.rounded_rectangle((x0, y0, x1, y1), radius=radius,
+                               outline=0, width=width)
+    else:
+        draw.rectangle((x0, y0, x1, y1), outline=0, width=width)
 
 
 def blank_page() -> Image.Image:
