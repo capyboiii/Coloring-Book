@@ -451,15 +451,35 @@ def main() -> int:
     check("Có vẽ khung thì mực nhiều hơn không vẽ",
           (ab < 128).sum() > (ap < 128).sum())
 
-    # Khung phai nam tren duong bao VUNG VE, khong phai mep giay: cach mep xen
-    # 0.5 in nen may xen lech vai mm cung khong cat phai.
+    # Khung phai OM SAT HINH THAT, khong phai om cai hop co dinh. Hinh thu
+    # theo ti le goc nen gan nhu luon hut mot chieu vai pixel; ve theo hop thi
+    # ho mot khe, ve theo hinh thi khung an sat net ve.
+    ink_cols = _np2.where((ab < 128).any(axis=0))[0]
+    ink_rows = _np2.where((ab < 128).any(axis=1))[0]
+    bx, by = int(ink_cols[0]), int(ink_rows[0])
+    bx2 = int(ink_cols[-1])
+
+    # So voi HINH CHU NHAT ANH da dan, khong phai voi vet muc ben trong no:
+    # anh kiem thu ve mot vong tron giua trang trang, muc cach mep anh 310 px.
+    # Khung om mep ANH moi dung; om vet muc thi moi trang mot co khung khac
+    # nhau, sach nhin nhu in loi.
+    with Image.open(raw / "001.png") as _src:
+        _art = fit_within(_src.convert("L"), config.ART_W_PX, config.ART_H_PX)
+    exp_x = (config.inch_to_px(config.ART_LEFT_IN)
+             + (config.ART_W_PX - _art.width) // 2)
     inset = config.inch_to_px(config.PAGE_BORDER_INSET_IN)
-    bx = config.inch_to_px(config.ART_LEFT_IN) - inset
-    by = config.inch_to_px(config.ART_TOP_IN) - inset
-    col = ab[:, bx:bx + config.PAGE_BORDER_PX]
-    check("Cạnh trái khung nằm đúng mép vùng vẽ",
-          (col < 128).any(), f"x={bx}")
-    check("Khung cách mép giấy tối thiểu 0.4 in",
+    check("Khung ôm sát mép ảnh, không hở khe",
+          abs(bx - (exp_x - inset)) <= 2,
+          f"lệch {abs(bx - (exp_x - inset))} px, cách mép ảnh {exp_x - bx} px")
+
+    # Goc VUONG: hang tren cung cua khung phai keo lien tu trai sang phai.
+    # Bo goc thi hai dau hang do bi khuyet.
+    top_row = ab[by:by + max(1, config.PAGE_BORDER_PX // 2)] < 128
+    check("Góc vuông, không bo tròn",
+          top_row[:, bx:bx2 + 1].all(axis=0).mean() > 0.98,
+          f"{top_row[:, bx:bx2 + 1].all(axis=0).mean():.1%} liền mạch")
+
+    check("Khung vẫn cách mép giấy tối thiểu 0.4 in",
           bx >= config.inch_to_px(0.4) and by >= config.inch_to_px(0.4),
           f"trái {bx / config.DPI:.2f} in, trên {by / config.DPI:.2f} in")
 

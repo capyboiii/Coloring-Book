@@ -265,10 +265,20 @@ BARCODE_MARGIN_IN = 0.25
 # Vẽ đúng trên đường bao vùng vẽ an toàn, nới ra một chút để không chạm hình.
 # Vùng vẽ đã cách mép xén 0.5 in nên khung không bao giờ bị xén mất.
 #
-# Bo góc cho hợp sách trẻ em; đặt 0 thì ra góc vuông.
 PAGE_BORDER_PX = 8         # 0 = tắt hẳn
-PAGE_BORDER_INSET_IN = 0.06
-PAGE_BORDER_RADIUS_PX = 45
+
+# Khung ôm sát HÌNH THẬT, không phải ôm cái hộp cố định.
+#
+# Hình được thu vào hộp vùng vẽ theo tỉ lệ gốc nên gần như luôn hụt một chiều
+# vài pixel. Vẽ khung ở mép hộp thì hở ra một khe, còn vẽ ở mép hình thì khung
+# ăn sát nét vẽ — đúng như sách tô màu thật.
+#
+# 0.02 in = 6 px: đủ để nét vẽ không dính vào khung, mà mắt vẫn thấy là sát.
+PAGE_BORDER_INSET_IN = 0.02
+
+# 0 = góc vuông. Bo góc nhìn mềm hơn nhưng làm khung tách khỏi hình, mà hình
+# thì góc vuông.
+PAGE_BORDER_RADIUS_PX = 0
 
 # Ngưỡng cảnh báo tự động (Phase 2 sẽ dùng để lọc trước khi mắt người nhìn)
 INK_RATIO_MIN = 0.005  # dưới 0.5% -> trang gần như trắng

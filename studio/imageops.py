@@ -298,35 +298,38 @@ def prepare_page(
     page.paste(art, (left, top))
 
     if border > 0:
-        draw_page_border(page, border)
+        draw_page_border(page, (left, top, left + art.width, top + art.height),
+                         border)
 
     return page, metrics
 
 
-def draw_page_border(page: Image.Image, width: int = config.PAGE_BORDER_PX,
+def draw_page_border(page: Image.Image, art_box: tuple[int, int, int, int],
+                     width: int = config.PAGE_BORDER_PX,
                      radius: int = config.PAGE_BORDER_RADIUS_PX) -> None:
     """
-    Vẽ khung đen quanh vùng vẽ của trang.
+    Vẽ khung đen ôm sát hình.
+
+    `art_box` là vị trí HÌNH THẬT đã dán, không phải hộp vùng vẽ cố định.
+    Hình thu theo tỉ lệ gốc nên gần như luôn hụt một chiều vài pixel; vẽ theo
+    hộp thì hở một khe, vẽ theo hình thì khung ăn sát nét vẽ.
 
     Vẽ SAU khi đã đo chất lượng, và cố ý như vậy. `measure()` có một chỉ số
     "nét chạm mép" để bắt hình bị xén; nếu vẽ khung trước thì trang nào cũng
     có nét sát mép và chỉ số đó báo động giả ở cả 40 trang.
 
-    Khung nằm trên đường bao VÙNG VẼ AN TOÀN chứ không phải mép giấy, nên nó
-    cách mép xén 0.5 in — máy xén lệch vài mm cũng không cắt phải.
+    Khung vẫn nằm trong vùng an toàn, cách mép xén ~0.5 in, nên máy xén lệch
+    vài mm cũng không cắt phải.
     """
     inset = config.inch_to_px(config.PAGE_BORDER_INSET_IN)
-    x0 = config.inch_to_px(config.ART_LEFT_IN) - inset
-    y0 = config.inch_to_px(config.ART_TOP_IN) - inset
-    x1 = x0 + config.ART_W_PX + 2 * inset
-    y1 = y0 + config.ART_H_PX + 2 * inset
+    x0, y0, x1, y1 = art_box
+    box = (x0 - inset, y0 - inset, x1 + inset, y1 + inset)
 
     draw = ImageDraw.Draw(page)
     if radius > 0:
-        draw.rounded_rectangle((x0, y0, x1, y1), radius=radius,
-                               outline=0, width=width)
+        draw.rounded_rectangle(box, radius=radius, outline=0, width=width)
     else:
-        draw.rectangle((x0, y0, x1, y1), outline=0, width=width)
+        draw.rectangle(box, outline=0, width=width)
 
 
 def blank_page() -> Image.Image:
