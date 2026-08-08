@@ -297,36 +297,62 @@ class PagePrompt:
 #    Bỏ HẾT mọi chữ dính tới text/title/letters. Muốn chừa chỗ trên đầu thì
 #    tả bằng hình ("simple open sky above"), không tả bằng chữ "title".
 #    Đây đúng cùng một bài học với "dot eyes on animals only".
-# BÌA = ĐÚNG TRANG RUỘT NHƯNG ĐÃ ĐƯỢC TÔ MÀU.
+# BÌA — LẦN SỬA TRƯỚC CỦA TÔI LÀM HỎNG, ĐÂY LÀ BẢN CHỮA.
 #
-# Đây là ý hay về mặt bán hàng: khách nhìn bìa là biết ngay bên trong tô ra
-# sẽ thành cái gì. Bìa vẽ kiểu minh hoạ mềm mại thì đẹp thật nhưng nói dối —
-# nó không giống thứ khách nhận được.
+# Bao muốn bìa nhìn như một trang tô màu ĐÃ ĐƯỢC TÔ. Tôi hiểu đúng ý nhưng
+# viết prompt sai hoàn toàn, và làm bìa xấu đi cả nét lẫn màu lẫn nội dung.
 #
-# Nên bìa phải giữ ĐÚNG nét đen dày của trang ruột, chỉ khác là các mảng bên
-# trong được đổ màu phẳng. Đo trên 4 bìa cũ, tỉ lệ pixel nét đen:
-#     thu-hoa 14.2%   <- đúng thứ cần, nhìn ra ngay là line art đã tô
-#     manmat 7.3%     mảng màu phẳng nhưng gần như không có nét đen
-#     ngay-hoi-bien 5.5%
-#     chihuahua 1.8%  <- gần như không có nét
+# Số đo, so bìa tôi vừa sinh với cuốn sách mẫu Bao đưa:
 #
-# "no gradients, no shading" quan trọng ngang phần màu: tô màu sáp thì ra
-# mảng phẳng, chứ không ra chuyển sắc mượt như máy.
+#                       bão hoà   nhạt    nét đen
+#     sách mẫu Hawaii     131.9   15.9%    14.0%
+#     bìa penguin tôi      23.6   87.0%    10.7%
+#
+# Nét đen thì tôi đạt (10.7 so với 14.0). Hỏng nằm nguyên ở phần MÀU: 87%
+# diện tích gần như không màu, trong khi sách mẫu chỉ 16%.
+#
+# BỐN LỖI TRONG PROMPT CŨ:
+#
+# 1. Viết "a colored-in coloring book page". Flux đọc "coloring book page"
+#    TRƯỚC rồi mới tới "colored-in", nên nó vẽ đúng một trang tô màu và để
+#    trắng gần hết — thân chim, bông tuyết đều chỉ có nét, không có màu.
+#    Đây LẠI LÀ đúng bài học "no text thì Flux viết text": ở CFG=1, nhắc tới
+#    một thứ là triệu hồi nó. Prompt bìa từ giờ KHÔNG được chứa chữ
+#    "coloring book" dưới bất kỳ dạng nào.
+#
+# 2. "flat color fills INSIDE THE OUTLINES" củng cố thêm cách đọc "tô vào
+#    trong khung" — tức là tô một phần, còn lại để trắng.
+#
+# 3. "one big friendly subject, simple open sky above it" làm tranh trống
+#    huếch. Sách mẫu có HAI con lợn, một con thỏ, đàn ukulele, hai cây dừa,
+#    biển, đồi, mây, hoa — kín đặc từ mép này sang mép kia.
+#
+# 4. "no gradients, no shading, no soft edges" là tôi tự thêm. Sách mẫu CÓ
+#    chuyển sắc nhẹ và có vân giấy. Cấm hết đi thì tranh bẹt và rẻ tiền.
+#
+# Bản này tả thẳng cái ĐÍCH — một bức tranh màu hoàn chỉnh, kín trang — thay
+# vì tả cái quá trình "tô vào trang trắng".
 COVER_STYLE = (
-    "a colored-in coloring book page, "
-    "thick black outlines around every shape, "
-    "flat bright color fills inside the outlines, "
-    "bold saturated colors, no gradients, no shading, no soft edges, "
-    "colorful background filling every corner, no white background, "
-    "one big friendly subject in the lower two thirds, "
-    "simple open sky above it"
+    "kawaii cartoon cover illustration, fully painted in color, "
+    "every shape filled with cheerful flat colors, "
+    "clean even dark outlines, bright warm palette, "
+    "a rich detailed scene filling the whole page from edge to edge, "
+    "painted sky, painted ground, painted background scenery, "
+    "nothing left white or uncolored, "
+    "several cute characters together, cheerful and inviting"
 )
 
-# Bìa chỉ được MỘT chủ thể rõ ràng — chặt hơn cả trang ruột cho bé 3 tuổi.
-# Cảnh bìa mặc định lấy dòng ĐẦU trong file theme, mà mấy dòng đó dài 23-26
-# từ với ba mệnh đề. Bắt Flux dựng ba thứ cùng lúc trên tấm ảnh quan trọng
-# nhất của cuốn sách là cách chắc chắn nhất để ra bố cục phi lý.
-COVER_SUBJECT_MAX_WORDS = 12
+# NGƯỢC HẲN trang ruột: bìa cần cảnh GIÀU nhất, không phải gọn nhất.
+#
+# Lần trước tôi cắt cảnh bìa xuống 12 từ, lấy lý do "một chủ thể rõ ràng".
+# Sai. Trang ruột cần gọn vì trẻ phải tô được; bìa cần rậm vì nó là tấm ảnh
+# bán hàng, phải đập vào mắt giữa hàng trăm cuốn khác trên kệ.
+# Sách mẫu chứng minh cảnh rậm vẫn hợp lý được — rậm không phải nguyên nhân
+# gây bố cục phi lý, mệnh đề mâu thuẫn mới là.
+#
+# Giữ một trần rộng để phòng dòng chủ thể dài bất thường, chứ trên thực tế
+# các dòng trong themes/ (23-26 từ) không bị cắt.
+COVER_SUBJECT_MAX_WORDS = 28
 
 
 def build_cover_prompt(scene: str) -> str:

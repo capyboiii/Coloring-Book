@@ -238,29 +238,37 @@ def main() -> int:
     for w in ("text", "letter", "word", "title", "typography", "font"):
         check(f"Prompt bìa KHÔNG nhắc '{w}' (nhắc là Flux viết chữ sai)",
               w not in cover_p.lower(), cover_p)
-    check("Prompt bìa vẫn chừa chỗ trên đầu, tả bằng HÌNH không bằng chữ",
-          "sky above" in COVER_STYLE)
     check("Chủ thể bìa đứng đầu prompt", cover_p.startswith("a happy penguin"))
-    for w in ("saturated", "colorful", "no white background"):
-        check(f"Prompt bìa có đòi '{w}'", w in COVER_STYLE)
 
-    # BIA = TRANG RUOT DA DUOC TO. Khach nhin bia la biet ben trong to ra
-    # thanh cai gi. Bia ve kieu minh hoa mem mai thi dep nhung NOI DOI - no
-    # khong giong thu khach nhan duoc.
-    for w in ("coloring book page", "thick black outlines",
-              "flat bright color fills", "no gradients", "no shading"):
+    # LAN SUA TRUOC CUA TOI LAM BIA XAU DI. Viet "a colored-in coloring book
+    # page" thi Flux doc "coloring book page" TRUOC, ve dung mot trang to mau
+    # va de trang gan het - than chim, bong tuyet chi co net khong co mau.
+    # Do 87% dien tich gan nhu khong mau, trong khi sach mau chi 16%.
+    # Lai dung bai hoc "no text thi Flux viet text": o CFG=1 nhac toi mot thu
+    # la trieu hoi no.
+    check("Prompt bìa KHÔNG chứa 'coloring book' (nhắc là Flux để trắng)",
+          "coloring book" not in COVER_STYLE.lower(), COVER_STYLE)
+    for w in ("fully painted in color", "nothing left white or uncolored",
+              "clean even dark outlines", "filling the whole page",
+              "several cute characters"):
         check(f"Prompt bìa đòi '{w}'", w in COVER_STYLE)
+    # Sach mau CO chuyen sac nhe va van giay. Cam het di thi tranh bet.
+    for w in ("no gradients", "no shading", "no soft edges"):
+        check(f"Prompt bìa KHÔNG cấm '{w}' (sách mẫu có sắc độ nhẹ)",
+              w not in COVER_STYLE)
 
     # Canh bia mac dinh lay dong DAU trong file theme - dai 23-26 tu, ba menh
     # de. Bat Flux dung ba thu cung luc tren tam anh QUAN TRONG NHAT cua cuon
     # sach la cach chac chan nhat de ra bo cuc phi ly.
     from studio.prompts import COVER_SUBJECT_MAX_WORDS, load_subjects
+    # NGUOC HAN trang ruot: bia can canh GIAU nhat, khong phai gon nhat.
+    # Lan truoc toi cat canh bia xuong 12 tu - sai. Trang ruot can gon vi tre
+    # phai to duoc; bia can ram vi no la tam anh BAN HANG.
     long_scene = load_subjects("ocean")[0]
     cp = build_cover_prompt(long_scene)
-    subject = cp.split(", a colored-in")[0]
-    check("Cảnh bìa bị cắt còn một chủ thể rõ ràng",
-          len(subject.split()) <= COVER_SUBJECT_MAX_WORDS + 4
-          and len(subject.split()) < len(long_scene.split()),
+    subject = cp.split(", kawaii cartoon cover")[0]
+    check("Cảnh bìa KHÔNG bị cắt cụt (bìa cần cảnh giàu)",
+          subject == long_scene.rstrip("."),
           f"{len(long_scene.split())} → {len(subject.split())} từ")
 
     from studio.imageops import cover_outline_ratio

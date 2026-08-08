@@ -227,8 +227,17 @@ INK_GROWTH_MAX = 0.28
 #     chihuahua 83 · 71.7%
 #     ngay-hoi-bien 27 · 92.1%   <- nền trắng xoá, lên kệ là chìm nghỉm
 # Cắt ở 90 và 55%: đủ để bắt hai bìa nhạt mà không đụng hai bìa đạt.
-COVER_SAT_MIN = 90.0
-COVER_PALE_MAX = 0.55
+# SIẾT LẠI theo cuốn sách mẫu Bao đưa, thay vì theo bìa tự sinh của mình.
+# Lấy bìa mình làm chuẩn thì chỉ chuẩn hoá được cái mức đang có; lấy sách
+# thương mại làm chuẩn thì mới biết còn cách đích bao xa.
+#
+#     sách mẫu Hawaii     bão hoà 131.9   nhạt 15.9%   <- ĐÍCH
+#     manmat              202    0.5%
+#     thu-hoa             115   32.2%
+#     chihuahua            83   69.1%
+#     bìa penguin          24   87.0%     <- prompt cũ của tôi đẻ ra
+COVER_SAT_MIN = 100.0
+COVER_PALE_MAX = 0.35
 
 # Bìa phải trông như TRANG TÔ MÀU ĐÃ ĐƯỢC TÔ — nét đen giữ nguyên, chỉ khác
 # là bên trong đổ màu. Khách nhìn bìa là biết bên trong tô ra thành cái gì.
