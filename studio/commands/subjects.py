@@ -221,8 +221,13 @@ def _run_graph(args, name: str, path) -> int:
     def progress(rnd, have, total, ask):
         info(f"  mẻ {rnd}: đã có {have}/{total}, xin thêm {ask}...")
 
-    def result(rnd, ask, added, dupes, bad):
+    def result(rnd, ask, added, dupes, bad, parsed):
         detail = []
+        if not parsed:
+            # Phân biệt rõ hai chuyện khác hẳn nhau: "không đọc nổi định dạng"
+            # với "đọc được nhưng cảnh hỏng". Bản trước in cùng một dòng cho
+            # cả hai, nên 13 mẻ hỏng liên tiếp mà không ai biết tại sao.
+            detail.append("KHÔNG ĐỌC ĐƯỢC ĐỊNH DẠNG")
         if dupes:
             detail.append(f"{dupes} trùng")
         if bad:
@@ -259,6 +264,12 @@ def _run_graph(args, name: str, path) -> int:
     if len(graphs) < args.count:
         info("")
         warn(f"Chỉ được {len(graphs)}/{args.count} cảnh đạt.")
+
+    # Không ghi file rỗng đè lên. Bản trước ghi cả file 0 cảnh rồi vẫn in
+    # dòng "✓ Ghi 0 cảnh" như thể xong việc.
+    if not graphs:
+        print("\nLỖI: không thu được cảnh nào, không ghi file.")
+        return 1
 
     if args.dry_run:
         info("")

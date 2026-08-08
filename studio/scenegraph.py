@@ -95,10 +95,35 @@ FORBIDDEN = {
 }
 
 ARROW = re.compile(r"^\s*(.+?)\s*--\s*([a-z_]+)\s*-->\s*(.+?)\s*$", re.I)
+
+# re.M là BẮT BUỘC, không phải cho đẹp.
+#
+# Thiếu nó thì `$` chỉ khớp cuối CHUỖI, nên `FIELD.search(<cả khối>)` luôn trả
+# về None — và `parse_many` dùng đúng phép đó để lọc khối hợp lệ. Kết quả:
+# đọc từng dòng thì chạy, đọc cả khối thì rỗng. Mẻ nào cũng "dùng được 0" mà
+# không báo gì, vì không có đồ thị nào để mà loại.
+#
+# Kiểm thử của tôi chỉ gọi `parse_block` nên không đụng vào đường này. Đúng
+# cái lỗi đã mắc hai lần trong dự án: kiểm thử một đường, chạy thật một đường
+# khác.
 FIELD = re.compile(r"^\s*(SUBJECT|ACTION|OBJECTS|RELATIONSHIPS|CONSTRAINTS)"
-                   r"\s*:\s*(.*)$", re.I)
+                   r"\s*:\s*(.*)$", re.I | re.M)
+
+# Mô hình nhỏ hay gói nhãn vào markdown hoặc đánh số. Gỡ trước khi đọc thay vì
+# nhồi thêm nhánh vào FIELD — dễ đọc hơn và không làm biểu thức phình ra.
+DECOR = re.compile(r"^\s*(?:[-*+•]\s*|\d+[.)]\s*)?[*_#`]*\s*"
+                   r"(SUBJECT|ACTION|OBJECTS|RELATIONSHIPS|CONSTRAINTS)"
+                   r"[*_#`]*\s*:\s*", re.I)
+
+
 # Chèn dấu ngắt vào giữa hai quan hệ viết liền nhau, xem parse_block()
 SPLIT = re.compile(r"(-->\s*[\w ]+?)(?=\s+[\w_]+\s*--\s*[a-z_]+\s*-->)", re.I)
+
+
+def tidy(text: str) -> str:
+    """Bỏ markdown và đánh số quanh nhãn, để phần đọc chỉ lo một dạng."""
+    return "\n".join(DECOR.sub(lambda m: m.group(1).upper() + ": ", ln)
+                     for ln in text.splitlines())
 
 # Chỗ đứng mặc định — không phải "vật" mà là nền, nên không cần khai ở OBJECTS
 GROUNDS = {"ground", "grass", "floor", "snow", "sand", "water", "sea",
@@ -258,6 +283,7 @@ def parse_block(block: str) -> SceneGraph:
     định dạng lặt vặt (dùng dấu `;` thay `,`, viết hoa khác đi), mà những
     chuyện đó không ảnh hưởng gì tới việc cảnh có vẽ được hay không.
     """
+    block = tidy(block)
     g = SceneGraph()
     current = None
     buf: dict[str, list[str]] = {}
@@ -295,6 +321,7 @@ def parse_block(block: str) -> SceneGraph:
 
 def parse_many(text: str) -> list[SceneGraph]:
     """Tách nhiều khối. Mỗi khối mở đầu bằng `SUBJECT:`."""
+    text = tidy(text)
     blocks = re.split(r"\n(?=\s*SUBJECT\s*:)", text.strip(), flags=re.I)
     return [parse_block(b) for b in blocks if FIELD.search(b or "")]
 

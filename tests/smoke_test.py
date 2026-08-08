@@ -553,6 +553,43 @@ def main() -> int:
               "RELATIONSHIPS: cat --sitting_on--> floor; "
               "ball --associated_with--> cat").problems()))
 
+    # LOI DA SHIP: FIELD thieu re.M nen `$` chi khop cuoi CHUOI, khien
+    # FIELD.search(<ca khoi>) luon None - ma parse_many dung dung phep do de
+    # loc khoi hop le. Doc TUNG DONG thi chay, doc CA KHOI thi rong. Bao chay
+    # 13 me deu ra 0 canh, khong mot loi nao in ra.
+    # Kiem thu cu chi goi parse_block nen khong dung vao duong nay. Lan thu BA
+    # trong du an mac dung loi: kiem thu mot duong, chay that mot duong khac.
+    check("parse_many đọc được khối nhiều dòng (không chỉ parse_block)",
+          len(sg.parse_many(
+              "SUBJECT: panda\nACTION: eating\nOBJECTS: bamboo\n"
+              "RELATIONSHIPS: panda --sitting_on--> ground; "
+              "bamboo --beside--> panda")) == 1)
+    check("Tách được nhiều đồ thị trong một trả lời",
+          len(sg.parse_many(
+              "SUBJECT: panda\nACTION: eating\nOBJECTS: bamboo\n"
+              "RELATIONSHIPS: panda --sitting_on--> ground\n\n"
+              "SUBJECT: bear\nACTION: fishing\nOBJECTS: stone\n"
+              "RELATIONSHIPS: bear --standing_on--> grass")) == 2)
+
+    for label, txt in [
+        ("markdown đậm",
+         "**SUBJECT:** panda\n**ACTION:** eating\n**OBJECTS:** bamboo\n"
+         "**RELATIONSHIPS:** panda --sitting_on--> ground; "
+         "bamboo --beside--> panda"),
+        ("đánh số",
+         "1. SUBJECT: panda\nACTION: eating\nOBJECTS: bamboo\n"
+         "RELATIONSHIPS: panda --sitting_on--> ground; "
+         "bamboo --beside--> panda"),
+        ("gạch đầu dòng",
+         "- SUBJECT: panda\n- ACTION: eating\n- OBJECTS: bamboo\n"
+         "- RELATIONSHIPS: panda --sitting_on--> ground; "
+         "bamboo --beside--> panda"),
+    ]:
+        got = sg.parse_many(txt)
+        check(f"Đọc được kể cả khi model bọc {label}",
+              len(got) == 1 and not got[0].problems(),
+              str(got[0].problems()) if got else "0 đồ thị")
+
     # Do thi KHONG di thang vao Flux - Flux an van xuoi. Giu ham nay de do
     # chu khong de dung mac dinh.
     check("Có sẵn dạng thô để đo thử với Flux",

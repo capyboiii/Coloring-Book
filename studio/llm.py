@@ -630,6 +630,7 @@ def generate_graphs(topic: str, count: int = 24, audience: str = "all",
     good: list = []
     rejected: list[tuple] = []
     seen: set[str] = set()
+    samples: list[str] = []      # trả lời thô của mẻ không đọc được mẻ nào
     max_rounds = -(-count // batch) + 3
 
     for rnd in range(1, max_rounds + 1):
@@ -655,8 +656,22 @@ def generate_graphs(topic: str, count: int = 24, audience: str = "all",
                                      ask * 190 + 500, think)
         raw = strip_thinking(raw)
 
+        # Bắt ngay ở mẻ đầu, đúng như `generate_subjects` đã làm. Không có
+        # chốt này thì phải grind 13 mẻ để cuối cùng thu về con số 0 trần
+        # trụi — đúng thứ vừa xảy ra với Bao.
+        if rnd == 1 and not think and looks_like_reasoning(raw):
+            raise LLMError(
+                "Mô hình trả về phần suy luận thay vì đồ thị. Tắt reasoning "
+                "trong LM Studio, hoặc đổi sang model instruct.")
+
+        graphs = parse_many(raw)
+        if not graphs:
+            # Đọc được 0 đồ thị KHÁC HẲN với 'đồ thị nào cũng hỏng'. Giữ lại
+            # bản thô để in ra, nếu không thì người chạy chẳng biết vì sao.
+            samples.append(raw[:400] if raw.strip() else "(rỗng)")
+
         added = dupes = bad = 0
-        for g in parse_many(raw):
+        for g in graphs:
             key = g.subject.strip().lower()
             if not key or key in seen:
                 dupes += 1
@@ -673,7 +688,17 @@ def generate_graphs(topic: str, count: int = 24, audience: str = "all",
                 break
 
         if on_result:
-            on_result(rnd, ask, added, dupes, bad)
+            on_result(rnd, ask, added, dupes, bad, bool(graphs))
+
+    if not good and samples:
+        raise LLMError(
+            "Không đọc được đồ thị nào từ trả lời của mô hình.\n"
+            "Mô hình trả về (400 ký tự đầu của mẻ cuối):\n"
+            "----------\n" + samples[-1] + "\n----------\n"
+            "Định dạng cần: mỗi dòng một trường SUBJECT: / ACTION: / "
+            "OBJECTS: / RELATIONSHIPS:, các đồ thị cách nhau một dòng trống.\n"
+            "Model nhỏ quá hay chiều chuộng định dạng kém — thử model 7B trở "
+            "lên, hoặc bỏ --graph để dùng chế độ văn xuôi.")
 
     return good[:count], rejected, model
 
