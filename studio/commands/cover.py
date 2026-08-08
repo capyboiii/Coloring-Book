@@ -29,7 +29,7 @@ from ..imageops import (cover_outline_ratio, cover_vividness,
                         load_font)
 from ..prompts import (COVER_FINISH, DEFAULT_COVER_FINISH,
                        build_cover_prompt, has_non_ascii,
-                       load_subjects)
+                       load_subjects, summarise_scenes)
 from ..providers import GenRequest, ProviderError, get_provider
 from ..util import image_files, info, read_json, warn, write_json
 
@@ -182,28 +182,58 @@ def _page_count(settings, slug: str) -> int | None:
     return None
 
 
-def _pick_scene(args, book: dict, back: bool) -> str:
+def _book_subjects(settings, slug: str) -> list[str]:
+    """
+    Chủ thể của những trang THẬT SỰ NẰM TRONG SÁCH.
+
+    Đọc từ approved/ chứ không phải từ file theme: theme là thứ định sinh,
+    approved là thứ đã qua mắt Bao và thật sự vào sách. Bìa phải nói về cuốn
+    sách có thật, không phải về ý định ban đầu.
+    """
+    out = []
+    for meta in sorted(config.approved_dir(settings, slug).glob("*.json")):
+        subject = (read_json(meta, {}) or {}).get("subject")
+        if subject:
+            out.append(subject)
+    return out
+
+
+def _pick_scene(args, book: dict, back: bool, settings=None,
+                slug: str | None = None) -> str:
     """
     Chọn cảnh cho bìa trước hoặc bìa sau.
 
-    Bìa sau lấy chủ thể THỨ HAI trong bộ chủ đề, không phải chủ thể đầu. Hai
-    mặt cùng bộ nên cùng gu và cùng bảng màu, nhưng vẽ y hệt nhau thì nhìn
-    như in lỗi.
+    Ưu tiên GỘP nhiều chủ thể trong sách thành một cảnh chung — xem
+    summarise_scenes(). Bìa sau lấy bộ lệch đi, cùng sách khác hình.
     """
     explicit = args.back_scene if back else args.scene
     if explicit:
         return explicit
 
-    theme = book.get("theme")
-    if theme:
+    subjects = _book_subjects(settings, slug) if slug else []
+    source = "các trang đã duyệt"
+    if not subjects and book.get("theme"):
         try:
-            subjects = load_subjects(theme)
-            if subjects:
-                scene = subjects[1 % len(subjects)] if back else subjects[0]
-                info(f"Cảnh {'sau ' if back else 'bìa '} : lấy từ bộ '{theme}'")
-                return scene
-        except (FileNotFoundError, IndexError):
-            pass
+            subjects = load_subjects(book["theme"])
+            source = f"bộ '{book['theme']}'"
+        except FileNotFoundError:
+            subjects = []
+
+    if subjects:
+        # Bìa sau ÍT nhân vật hơn và cảnh tĩnh hơn: nó là panel nhỏ, lại phải
+        # chừa chỗ cho chữ và ô mã vạch. Sách thật cũng làm vậy.
+        scene = summarise_scenes(
+            subjects,
+            count=2 if back else 3,
+            offset=1 if back else 0,
+            ending=("in a calm simple scene with open space around them"
+                    if back else
+                    "all together in one cheerful group scene"),
+        )
+        if scene:
+            info(f"Cảnh {'sau' if back else 'trước'}  : gộp từ {source} "
+                 f"({len(subjects)} trang)")
+            return scene
 
     scene = book.get("topic") or book.get("title") or "a cheerful scene"
     if has_non_ascii(scene):
@@ -212,7 +242,8 @@ def _pick_scene(args, book: dict, back: bool) -> str:
     return scene
 
 
-def _make_back_art(settings, args, book: dict) -> Image.Image | None:
+def _make_back_art(settings, args, book: dict,
+                   slug: str | None = None) -> Image.Image | None:
     """
     Ảnh bìa sau. Trả về None nếu tắt bằng --no-back-art hoặc sinh hỏng.
 
@@ -228,7 +259,7 @@ def _make_back_art(settings, args, book: dict) -> Image.Image | None:
         with Image.open(path) as im:
             return im.convert("RGB")
 
-    scene = _pick_scene(args, book, back=True)
+    scene = _pick_scene(args, book, back=True, settings=settings, slug=slug)
     prompt = build_cover_prompt(
         scene,
         main_colors=getattr(args, "colors", None),
@@ -264,7 +295,8 @@ def _make_back_art(settings, args, book: dict) -> Image.Image | None:
     return art
 
 
-def _make_art(settings, args, book: dict) -> Image.Image:
+def _make_art(settings, args, book: dict,
+              slug: str | None = None) -> Image.Image:
     """Ảnh bìa: lấy từ --image, hoặc để Flux vẽ."""
     if args.image:
         path = Path(args.image)
@@ -276,7 +308,7 @@ def _make_art(settings, args, book: dict) -> Image.Image:
         with Image.open(path) as im:
             return im.convert("RGB")
 
-    scene = _pick_scene(args, book, back=False)
+    scene = _pick_scene(args, book, back=False, settings=settings, slug=slug)
 
     prompt = build_cover_prompt(
         scene,
@@ -395,13 +427,13 @@ def make_cover(settings, slug: str, *, image: str | None = None,
     info("")
 
     try:
-        art = _make_art(settings, args, book)
+        art = _make_art(settings, args, book, slug)
     except (ProviderError, FileNotFoundError) as exc:
         print(f"LỖI: {exc}")
         return 1
 
     try:
-        back_art = _make_back_art(settings, args, book)
+        back_art = _make_back_art(settings, args, book, slug)
     except FileNotFoundError as exc:
         print(f"LỖI: {exc}")
         return 1
@@ -467,15 +499,15 @@ def make_cover(settings, slug: str, *, image: str | None = None,
     if back_art is not None:
         cover.paste(_cover_fit(back_art, panel + bleed, H), (0, 0))
         # Chữ bìa sau nằm ở nửa dưới, nên lớp mờ đi từ dưới lên
-        _scrim(cover, (0, int(H * 0.45), back_left + panel, H),
-               strength=150, from_top=False, power=0.6)
+        _scrim(cover, (0, int(H * 0.52), back_left + panel, H),
+               strength=165, from_top=False, power=0.5)
         back_fg, back_stroke = (255, 255, 255), 3
     else:
         back_fg, back_stroke = fg, 0
 
     font_back, back_lines = _fit_text(
         draw, title, back_w, int(H * 0.14), start=int(H * 0.042))
-    yb = _draw_block(draw, back_lines, font_back, back_cx, int(H * 0.56),
+    yb = _draw_block(draw, back_lines, font_back, back_cx, int(H * 0.66),
                      back_fg, stroke=back_stroke, shadow=2 if back_art else 0)
 
     font_note = load_font(int(H * 0.024))

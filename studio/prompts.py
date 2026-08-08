@@ -405,6 +405,96 @@ DEFAULT_COVER_FINISH = "pencil"
 # ruột. Nhưng đó là workflow mới chứ không phải sửa prompt.
 
 
+# Giới từ mở đầu phần BỔ NGỮ. Cắt ở đây thì phần còn lại là chủ thể trần.
+_PREPS = {"with", "in", "on", "at", "beside", "next", "under", "over",
+          "through", "among", "near", "behind", "above", "below", "by",
+          "around", "into", "onto", "from"}
+_ARTICLES = {"a", "an", "the", "two", "three", "several", "some"}
+
+
+def _head_noun(core: str) -> str:
+    """
+    Đoán danh từ chính của một mệnh đề, CHỈ để bắt trùng lặp.
+
+    Không cần đúng ngữ pháp, chỉ cần đủ để "a red fox running" và "a brown fox
+    sleeping" ra cùng một khoá. Lấy từ cuối thì ra "running" với "sleeping" —
+    khác nhau, và hai con cáo lọt cả vào bìa.
+
+    Cách làm: cắt ở giới từ đầu tiên (bỏ phần bổ ngữ), bỏ mạo từ và bỏ từ
+    đuôi -ing (phân từ, không phải danh từ), rồi lấy từ còn lại cuối cùng.
+
+        "a cat with a scarf"        -> cắt ở 'with' -> "a cat"     -> cat
+        "a red fox running"         -> bỏ -ing      -> "a red fox" -> fox
+        "a sea turtle swimming
+         through a coral reef"      -> cắt ở 'through', bỏ -ing    -> turtle
+    """
+    words = []
+    for w in core.lower().replace("-", " ").split():
+        if w in _PREPS:
+            break
+        if w in _ARTICLES or w.endswith("ing"):
+            continue
+        words.append(w)
+    return words[-1] if words else core.lower()
+
+
+def summarise_scenes(subjects: list[str], count: int = 3,
+                     offset: int = 0,
+                     ending: str = "all together in one cheerful group scene"
+                     ) -> str:
+    """
+    Gộp nhiều chủ thể trong sách thành MỘT cảnh chung cho bìa.
+
+    VÌ SAO — bìa phải nói được cuốn sách có gì.
+
+    Trước đây bìa lấy đúng `subjects[0]` và bìa sau lấy `subjects[1]`. Kết quả
+    là một cuốn tên "Ngày hội biển" có bìa trước vẽ mỗi con chim cánh cụt và
+    bìa sau vẽ con cú đậu dưới trăng — hai mặt chẳng liên quan gì tới nhau,
+    cũng chẳng nói được bên trong sách có gì. Khách nhìn bìa không đoán nổi
+    mình mua cái gì.
+
+    Sách mẫu thương mại làm ngược lại: bìa là một cảnh có NHIỀU nhân vật của
+    sách tụ lại. Đó vừa là bìa đẹp hơn vừa là quảng cáo trung thực hơn.
+
+    Cách gộp:
+      · lấy mệnh đề ĐẦU của mỗi dòng — đó là chủ thể, phần đuôi là nền
+      · bỏ trùng theo danh từ chính, để không ra "một con lợn và một con lợn"
+      · lấy RẢI ĐỀU trong danh sách chứ không lấy mấy dòng đầu, cho đủ đa dạng
+
+    `offset` để bìa sau lấy bộ khác bìa trước — cùng sách, khác hình.
+
+    Sách ít trang thì hai mặt sẽ trùng dàn nhân vật, không tránh được. Lúc đó
+    `ending` mới là thứ tạo khác biệt: bìa trước là cảnh tụ tập đông vui, bìa
+    sau là cảnh nhỏ và tĩnh hơn — đúng cách sách thật làm, vì bìa sau còn phải
+    chừa chỗ cho chữ.
+    """
+    cores, seen = [], set()
+    for s in subjects:
+        core = s.split(",")[0].strip().rstrip(".")
+        if not core:
+            continue
+        key = _head_noun(core)
+        if key in seen:
+            continue
+        seen.add(key)
+        cores.append(core)
+
+    if not cores:
+        return ""
+    if len(cores) <= count:
+        picked = cores
+    else:
+        step = len(cores) / count
+        picked = [cores[int((i * step + offset) % len(cores))]
+                  for i in range(count)]
+        # Lấy rải đều vẫn có thể trùng khi danh sách ngắn
+        picked = list(dict.fromkeys(picked))
+
+    if len(picked) == 1:
+        return picked[0]
+    return ", ".join(picked[:-1]) + " and " + picked[-1] + ", " + ending
+
+
 def build_colour_hint(main: str | None = None, secondary: str | None = None,
                       background: str | None = None) -> str:
     """

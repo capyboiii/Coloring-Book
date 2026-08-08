@@ -283,6 +283,35 @@ def main() -> int:
           not any(w in build_cover_prompt("x", finish="flat")
                   for w in ("pencil texture", "uneven", "pigment")))
     check("Mặc định là kiểu tô tay", DEFAULT_COVER_FINISH == "pencil")
+
+    # BIA PHAI NOI DUOC CUON SACH CO GI.
+    # Truoc day bia lay dung subjects[0], bia sau lay subjects[1]. Ket qua:
+    # cuon "Ngay hoi bien" co bia truoc ve moi con chim canh cut va bia sau ve
+    # con cu dau duoi trang - hai mat chang lien quan gi nhau, cung chang noi
+    # duoc ben trong sach co gi.
+    from studio.prompts import summarise_scenes
+    pages = [
+        "a cheerful penguin waddling, standing next to simple snowflakes",
+        "an owl flying, beside a plain moon and two stars above",
+        "a cat with a scarf, sitting on clear grass beside two daisies",
+    ]
+    front_s = summarise_scenes(pages, count=3)
+    check("Cảnh bìa gộp nhiều nhân vật trong sách",
+          all(w in front_s for w in ("penguin", "owl", "cat")), front_s)
+    check("Chỉ lấy mệnh đề ĐẦU, bỏ phần nền",
+          "snowflakes" not in front_s and "daisies" not in front_s, front_s)
+
+    dup = summarise_scenes(["a red fox running", "a brown fox sleeping",
+                            "a small bear waving"], count=3)
+    check("Bỏ trùng theo danh từ chính, không ra 'cáo và cáo'",
+          dup.count("fox") == 1, dup)
+
+    back_s = summarise_scenes(pages, count=2, offset=1,
+                              ending="in a calm simple scene")
+    check("Bìa sau ít nhân vật hơn và cảnh tĩnh hơn",
+          "calm simple scene" in back_s and back_s != front_s, back_s)
+    check("Không có trang nào thì không dựng cảnh rỗng",
+          summarise_scenes([]) == "")
     try:
         build_cover_prompt("x", finish="khong-co")
         ok = False
