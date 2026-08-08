@@ -1,0 +1,288 @@
+{
+  "last_node_id": 30,
+  "last_link_id": 13,
+  "nodes": [
+    {
+      "id": 30,
+      "type": "Note",
+      "pos": [20, 40],
+      "size": [780, 430],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "FLUX.1 [dev] - BAN VE TAY, KHONG DUOC DUNG DE BAN\n\n=== DOC CHO NAY TRUOC ===\nFLUX.1 [dev] mang giay phep FLUX Non-Commercial. Ban sach in ra tu no la\nVI PHAM, tru khi mua giay phep thuong mai cua Black Forest Labs.\nDo la ly do file nay CHI o dinh dang giao dien. Toi khong noi dev vao\nstudio/ - de tranh mot hom nao do lo chay ca cuon sach bang no.\n\nDung file nay de tra loi DUNG MOT CAU HOI:\n  \"Tran chat luong co cao hon that khong?\"\nBiet cau tra loi roi thi moi quyet dinh duoc co dang mua giay phep khong.\n\n=== THU NAY DANG THU HON ===\nFLUX.2 [klein] 4B ra sau, giay phep APACHE 2.0 - ban hang thoai mai, khong\nphai xin ai. Ban GGUF Q4 chi ~2.6 GB, chay 4 buoc.\nMoi hon schnell (thang 8/2024) ca mot the he.\nHuong dan: docs.comfy.org/tutorials/flux/flux-2-klein\nNo dung bo node khac (text encoder Mistral chu khong phai T5), nen toi khong\ndoan cau hinh - lam theo trang tren.\n\n=== KHAC SCHNELL O DAU ===\n1. Co node FluxGuidance (mau cam). Schnell KHONG co.\n   Day la thu quan trong nhat. 3.5 la mac dinh. 2.0-2.5 net thoang hon,\n   4.0-5.0 bam prompt chat hon nhung de bi cung.\n2. Steps 24 chu khong phai 4. Schnell duoc chung cat cho 4 buoc, dev thi\n   khong - chay 4 buoc se ra be bet.\n3. Cham hon schnell khoang 6 lan. Tinh truoc thoi gian.\n\n=== VAN KHONG CO O NEGATIVE ===\nKien truc Flux chay CFG=1 nen phan negative bi bo qua, dev cung vay.\nCac thu KHONG muon phai viet vao o positive: \"no gray, no shading\".\nDay la cho khac SDXL, dung mang thoi quen tu ban SDXL sang.\n\n=== CAN TAI ===\nflux1-dev-Q4_K_S.gguf  ->  ComfyUI/models/unet/\nhuggingface.co/city96/FLUX.1-dev-gguf\nT5, clip_l, ae.safetensors thi da co san tu schnell roi, dung lai duoc."
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 12,
+      "type": "UnetLoaderGGUF",
+      "pos": [20, 530],
+      "size": [380, 58],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "MODEL", "type": "MODEL", "links": [1, 2], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "UnetLoaderGGUF"},
+      "widgets_values": ["flux1-dev-Q4_K_S.gguf"],
+      "title": "UnetLoaderGGUF  <- doi sang ban dev",
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 11,
+      "type": "DualCLIPLoader",
+      "pos": [20, 640],
+      "size": [380, 106],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "CLIP", "type": "CLIP", "links": [3], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "DualCLIPLoader"},
+      "widgets_values": [
+        "t5xxl_fp8_e4m3fn.safetensors",
+        "clip_l.safetensors",
+        "flux"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "VAELoader",
+      "pos": [20, 800],
+      "size": [380, 58],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "VAE", "type": "VAE", "links": [12], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "VAELoader"},
+      "widgets_values": ["ae.safetensors"]
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [460, 530],
+      "size": [480, 250],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [{"name": "clip", "type": "CLIP", "link": 3}],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [4], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "CLIPTextEncode"},
+      "widgets_values": [
+        "a small brontosaurus munching on tall grass, one simple tree behind it, professional children's coloring book page, clean vector style, extremely thick uniform black outlines, heavy solid black lines, bold black outlines only, cute kawaii cartoon style, big round head, simple dot eyes, happy smile, very simple, large shapes, minimal details, one subject filling most of the page, lots of white space, no gray, no shading, no gradients, no thin or broken lines, no ornate frame, no decorative border, no text"
+      ],
+      "title": "PROMPT - chu the dung dau, cai KHONG muon viet luon vao day",
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 26,
+      "type": "FluxGuidance",
+      "pos": [460, 830],
+      "size": [340, 58],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {"name": "conditioning", "type": "CONDITIONING", "link": 4}
+      ],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [5], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "FluxGuidance"},
+      "widgets_values": [3.5],
+      "title": "FluxGuidance  <- schnell KHONG co node nay",
+      "color": "#653",
+      "bgcolor": "#a67c33"
+    },
+    {
+      "id": 5,
+      "type": "EmptySD3LatentImage",
+      "pos": [460, 950],
+      "size": [340, 106],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "LATENT", "type": "LATENT", "links": [10], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "EmptySD3LatentImage"},
+      "widgets_values": [832, 1152, 1]
+    },
+    {
+      "id": 22,
+      "type": "BasicGuider",
+      "pos": [1000, 530],
+      "size": [280, 58],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {"name": "model", "type": "MODEL", "link": 1},
+        {"name": "conditioning", "type": "CONDITIONING", "link": 5}
+      ],
+      "outputs": [
+        {"name": "GUIDER", "type": "GUIDER", "links": [7], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "BasicGuider"},
+      "widgets_values": []
+    },
+    {
+      "id": 16,
+      "type": "KSamplerSelect",
+      "pos": [1000, 640],
+      "size": [280, 58],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "SAMPLER", "type": "SAMPLER", "links": [8], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "KSamplerSelect"},
+      "widgets_values": ["euler"]
+    },
+    {
+      "id": 17,
+      "type": "BasicScheduler",
+      "pos": [1000, 750],
+      "size": [280, 106],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [{"name": "model", "type": "MODEL", "link": 2}],
+      "outputs": [
+        {"name": "SIGMAS", "type": "SIGMAS", "links": [9], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "BasicScheduler"},
+      "widgets_values": ["simple", 24, 1.0],
+      "title": "BasicScheduler  <- 24 buoc, khong phai 4"
+    },
+    {
+      "id": 25,
+      "type": "RandomNoise",
+      "pos": [1000, 910],
+      "size": [280, 82],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "NOISE", "type": "NOISE", "links": [6], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "RandomNoise"},
+      "widgets_values": [0, "randomize"]
+    },
+    {
+      "id": 13,
+      "type": "SamplerCustomAdvanced",
+      "pos": [1340, 530],
+      "size": [300, 122],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {"name": "noise", "type": "NOISE", "link": 6},
+        {"name": "guider", "type": "GUIDER", "link": 7},
+        {"name": "sampler", "type": "SAMPLER", "link": 8},
+        {"name": "sigmas", "type": "SIGMAS", "link": 9},
+        {"name": "latent_image", "type": "LATENT", "link": 10}
+      ],
+      "outputs": [
+        {"name": "output", "type": "LATENT", "links": [11], "slot_index": 0},
+        {"name": "denoised_output", "type": "LATENT", "links": null, "slot_index": 1}
+      ],
+      "properties": {"Node name for S&R": "SamplerCustomAdvanced"},
+      "widgets_values": []
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [1340, 700],
+      "size": [220, 46],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {"name": "samples", "type": "LATENT", "link": 11},
+        {"name": "vae", "type": "VAE", "link": 12}
+      ],
+      "outputs": [
+        {"name": "IMAGE", "type": "IMAGE", "links": [13], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "VAEDecode"},
+      "widgets_values": []
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "pos": [1340, 800],
+      "size": [460, 500],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [{"name": "images", "type": "IMAGE", "link": 13}],
+      "outputs": [],
+      "properties": {"Node name for S&R": "SaveImage"},
+      "widgets_values": ["thu-nghiem/flux-dev-KHONG-BAN"]
+    }
+  ],
+  "links": [
+    [1, 12, 0, 22, 0, "MODEL"],
+    [2, 12, 0, 17, 0, "MODEL"],
+    [3, 11, 0, 6, 0, "CLIP"],
+    [4, 6, 0, 26, 0, "CONDITIONING"],
+    [5, 26, 0, 22, 1, "CONDITIONING"],
+    [6, 25, 0, 13, 0, "NOISE"],
+    [7, 22, 0, 13, 1, "GUIDER"],
+    [8, 16, 0, 13, 2, "SAMPLER"],
+    [9, 17, 0, 13, 3, "SIGMAS"],
+    [10, 5, 0, 13, 4, "LATENT"],
+    [11, 13, 0, 8, 0, "LATENT"],
+    [12, 10, 0, 8, 1, "VAE"],
+    [13, 8, 0, 9, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "1. Nap model",
+      "bounding": [0, 490, 420, 400],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "title": "2. Prompt + Guidance",
+      "bounding": [440, 490, 520, 590],
+      "color": "#8A8",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "title": "3. Sampler roi",
+      "bounding": [980, 490, 340, 530],
+      "color": "#b58b2a",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
