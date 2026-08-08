@@ -27,7 +27,9 @@ from reportlab.pdfgen import canvas
 from .. import config
 from ..imageops import (cover_outline_ratio, cover_vividness,
                         load_font)
-from ..prompts import build_cover_prompt, has_non_ascii, load_subjects
+from ..prompts import (COVER_FINISH, DEFAULT_COVER_FINISH,
+                       build_cover_prompt, has_non_ascii,
+                       load_subjects)
 from ..providers import GenRequest, ProviderError, get_provider
 from ..util import image_files, info, read_json, warn, write_json
 
@@ -58,6 +60,11 @@ def register(subparsers) -> None:
     p.add_argument("--bg-colors", dest="bg_colors", default=None,
                    metavar="<màu nền>",
                    help='Màu nền. Ví dụ: "sky blue and sandy beige"')
+    p.add_argument("--finish", default=DEFAULT_COVER_FINISH,
+                   choices=sorted(COVER_FINISH),
+                   help="Gu tô màu. pencil = tô tay bút chì màu, có vân giấy "
+                        "(mặc định). flat = mảng phẳng kiểu vector. "
+                        "HAI KIỂU LOẠI TRỪ NHAU, không trộn được")
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--steps", type=int, default=None)
     p.set_defaults(func=run)
@@ -157,6 +164,7 @@ def _make_art(settings, args, book: dict) -> Image.Image:
         main_colors=getattr(args, "colors", None),
         secondary_colors=getattr(args, "colors2", None),
         background_colors=getattr(args, "bg_colors", None),
+        finish=getattr(args, "finish", None) or DEFAULT_COVER_FINISH,
     )
     info(f"Prompt bìa: {prompt[:110]}...")
 
@@ -221,6 +229,7 @@ def run(args) -> int:
         colors=getattr(args, "colors", None),
         colors2=getattr(args, "colors2", None),
         bg_colors=getattr(args, "bg_colors", None),
+        finish=getattr(args, "finish", None) or DEFAULT_COVER_FINISH,
     )
 
 
@@ -228,8 +237,8 @@ def make_cover(settings, slug: str, *, image: str | None = None,
                scene: str | None = None, bg: str = DEFAULT_BG,
                subtitle: str | None = None, seed: int | None = None,
                steps: int | None = None, colors: str | None = None,
-               colors2: str | None = None,
-               bg_colors: str | None = None) -> int:
+               colors2: str | None = None, bg_colors: str | None = None,
+               finish: str = DEFAULT_COVER_FINISH) -> int:
     """
     Dựng bìa. Tách khỏi `run` để `build` gọi lại được — người dùng không phải
     nhớ chạy thêm một lệnh nữa.
@@ -237,7 +246,7 @@ def make_cover(settings, slug: str, *, image: str | None = None,
     args = SimpleNamespace(image=image, scene=scene, bg=bg,
                            subtitle=subtitle, seed=seed, steps=steps,
                            colors=colors, colors2=colors2,
-                           bg_colors=bg_colors)
+                           bg_colors=bg_colors, finish=finish)
     out = config.out_dir(settings, slug)
 
     pages = _page_count(settings, slug)

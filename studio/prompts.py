@@ -332,17 +332,54 @@ class PagePrompt:
 #
 # Bản này tả thẳng cái ĐÍCH — một bức tranh màu hoàn chỉnh, kín trang — thay
 # vì tả cái quá trình "tô vào trang trắng".
+# HAI YÊU CẦU CỦA BAO ĐÁNH NHAU TRỰC TIẾP, nên tách làm hai kiểu chọn được
+# chứ không chồng lên nhau:
+#
+#     lần trước          lần này
+#     "no texture"       "visible colored pencil texture"
+#     "smooth even"      "natural uneven coloring"
+#     "no gradients"     "soft pigment buildup", "layered coloring"
+#     "no complex        "warm ambient lighting", "gentle shadows",
+#      lighting"          "subtle highlights"
+#
+# Nhét cả hai vào một prompt thì nó tự cãi nhau, và Flux sẽ chọn bừa — đúng
+# lỗi đã mắc ở COMPOSITIONS vs DENSITY hồi trước.
+#
+# Hai kiểu này là hai gu khác nhau, không phải cái nào đúng cái nào sai:
+#   flat    kiểu vector hiện đại, giống cuốn "Cozy Hawaii" Bao đưa làm mẫu
+#   pencil  kiểu tô tay bút chì màu, sách thiếu nhi cũ, ấm và có vân giấy
+#
+# Phần nào ĐÚNG VỚI CẢ HAI thì để ở đây; phần nào chỉ đúng với một kiểu thì
+# đẩy xuống COVER_FINISH.
 COVER_STYLE = (
-    "professionally colored children's book illustration, "
-    "clean black outlines with bright flat colors filled neatly inside them, "
-    "smooth even color, simple harmonious palette, "
-    "vivid but soft child-friendly colors, "
-    "very soft shading only where needed to give a little depth, "
+    "children's book illustration, "
+    "clean dark outlines with the colors filled neatly inside them, "
+    "simple harmonious palette, child-friendly colors, "
     "clear separation between objects, cute and playful, "
     "a rich scene colored all the way to the edges, "
-    "nothing left white or uncolored, "
-    "no gradients, no texture, no photorealism, no complex lighting"
+    "nothing left white or uncolored, no photorealism"
 )
+
+COVER_FINISH = {
+    # Đúng bốn nhóm Bao vừa đưa: chất liệu, cách tô, ánh sáng, phong cách.
+    # Mỗi nhóm lấy 2-3 từ mạnh nhất — đưa hết 19 chuỗi vào thì prompt phình
+    # lên gấp đôi và chủ thể lại chìm, đúng lỗi cũ.
+    "pencil": (
+        "hand-colored with colored pencils and soft crayons, "
+        "visible pencil texture, slight paper texture, "
+        "natural uneven coloring, layered strokes, soft pigment buildup, "
+        "soft natural shading, gentle shadows, warm ambient light, "
+        "vintage warm storybook illustration, cozy children's picture book"
+    ),
+    # Kiểu cũ, giữ lại nguyên vẹn để đổi qua đổi lại mà không mất gì.
+    "flat": (
+        "professionally colored, bright flat colors, smooth even color, "
+        "very soft shading only where needed to give a little depth, "
+        "no gradients, no texture, no complex lighting"
+    ),
+}
+
+DEFAULT_COVER_FINISH = "pencil"
 
 # BỐN CÂU TRONG BẢN YÊU CẦU CỦA BAO KHÔNG DÙNG ĐƯỢC Ở ĐÂY, và bỏ đi là cố ý:
 #
@@ -404,19 +441,27 @@ COVER_SUBJECT_MAX_WORDS = 28
 
 def build_cover_prompt(scene: str, main_colors: str | None = None,
                        secondary_colors: str | None = None,
-                       background_colors: str | None = None) -> str:
+                       background_colors: str | None = None,
+                       finish: str = DEFAULT_COVER_FINISH) -> str:
     """
     Bìa KHÔNG bị ràng buộc đen trắng — đây là tranh màu hoàn chỉnh.
+
+    `finish` chọn gu tô màu: 'pencil' (tô tay bút chì màu, có vân giấy) hoặc
+    'flat' (mảng phẳng kiểu vector). Hai kiểu loại trừ nhau — xem COVER_FINISH.
 
     Chữ tiêu đề do Pillow ghép vào sau, nên prompt tuyệt đối không được nhắc
     tới chữ nghĩa dưới bất kỳ hình thức nào. Xem chú thích ở COVER_STYLE.
     """
+    if finish not in COVER_FINISH:
+        raise ValueError(
+            f"finish phải là một trong {list(COVER_FINISH)}, nhận '{finish}'")
     scene = shorten_subject(scene.strip().rstrip("."),
                             COVER_SUBJECT_MAX_WORDS)
     # Bảng màu đặt NGAY SAU chủ thể, trước khối phong cách: nó nói về chủ
     # thể nên phải đứng cạnh chủ thể.
     hint = build_colour_hint(main_colors, secondary_colors, background_colors)
-    parts = [scene] + ([hint] if hint else []) + [COVER_STYLE]
+    parts = ([scene] + ([hint] if hint else [])
+             + [COVER_FINISH[finish], COVER_STYLE])
     return ", ".join(parts)
 
 

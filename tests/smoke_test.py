@@ -252,11 +252,43 @@ def main() -> int:
     # la trieu hoi no.
     check("Prompt bìa KHÔNG chứa 'coloring book' (nhắc là Flux để trắng)",
           "coloring book" not in COVER_STYLE.lower(), COVER_STYLE)
-    for w in ("clean black outlines", "flat colors filled neatly inside",
+    for w in ("clean dark outlines", "filled neatly inside",
               "nothing left white or uncolored", "harmonious palette",
-              "very soft shading", "clear separation between objects",
-              "no gradients", "no texture", "no photorealism"):
+              "clear separation between objects", "no photorealism"):
         check(f"Prompt bìa đòi '{w}'", w in COVER_STYLE)
+
+    # HAI YEU CAU CUA BAO DANH NHAU TRUC TIEP:
+    #   lan truoc "no texture" / "smooth even" / "no gradients"
+    #   lan nay   "visible pencil texture" / "natural uneven" / "pigment buildup"
+    # Nhet ca hai vao mot prompt thi no tu cai nhau va Flux chon bua - dung
+    # loi da mac o COMPOSITIONS vs DENSITY. Nen tach lam hai kieu loai tru.
+    from studio.prompts import COVER_FINISH, DEFAULT_COVER_FINISH
+    pencil, flat = COVER_FINISH["pencil"], COVER_FINISH["flat"]
+    for w in ("colored pencils", "pencil texture", "paper texture",
+              "natural uneven coloring", "pigment buildup",
+              "soft natural shading", "gentle shadows", "warm ambient light",
+              "storybook", "cozy children's picture book"):
+        check(f"Kiểu 'pencil' có '{w}'", w in pencil)
+    for w in ("no texture", "smooth even", "no gradients"):
+        check(f"Kiểu 'flat' giữ '{w}'", w in flat)
+
+    # Diem cot loi: KHONG duoc de hai kieu lan vao nhau.
+    for a, b in (("texture", "no texture"), ("uneven", "smooth even")):
+        check(f"Khối chung không chứa '{a}' (thuộc về riêng một kiểu)",
+              a not in COVER_STYLE)
+    check("Chọn pencil thì KHÔNG dính từ của flat",
+          not any(w in build_cover_prompt("x", finish="pencil")
+                  for w in ("no texture", "smooth even", "no gradients")))
+    check("Chọn flat thì KHÔNG dính từ của pencil",
+          not any(w in build_cover_prompt("x", finish="flat")
+                  for w in ("pencil texture", "uneven", "pigment")))
+    check("Mặc định là kiểu tô tay", DEFAULT_COVER_FINISH == "pencil")
+    try:
+        build_cover_prompt("x", finish="khong-co")
+        ok = False
+    except ValueError:
+        ok = True
+    check("Gõ sai tên kiểu thì báo lỗi ngay", ok)
 
     # BON CAU TRONG BAN YEU CAU CUA BAO KHONG DUNG DUOC O DAY, bo di la CO Y.
     # Chung viet cho quy trinh to len anh CO SAN (img2img). Flux o day ve tu
@@ -279,7 +311,7 @@ def main() -> int:
               "background in sky blue"):
         check(f"Bảng màu đặt được: '{w}'", w in tinted)
     check("Bảng màu đứng ngay sau chủ thể, trước khối phong cách",
-          tinted.index("sea green") < tinted.index("professionally colored"))
+          tinted.index("sea green") < tinted.index("hand-colored"))
     check("Bỏ trống bảng màu thì không ghép ô rỗng vào prompt",
           build_colour_hint() == ""
           and "main colors" not in build_cover_prompt("a turtle"))
@@ -293,7 +325,7 @@ def main() -> int:
     # phai to duoc; bia can ram vi no la tam anh BAN HANG.
     long_scene = load_subjects("ocean")[0]
     cp = build_cover_prompt(long_scene)
-    subject = cp.split(", professionally colored")[0]
+    subject = cp.split(", hand-colored")[0]
     check("Cảnh bìa KHÔNG bị cắt cụt (bìa cần cảnh giàu)",
           subject == long_scene.rstrip("."),
           f"{len(long_scene.split())} → {len(subject.split())} từ")
