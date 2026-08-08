@@ -169,19 +169,33 @@ LEVELS_WHITE = 200   # >= giá trị này -> trắng tinh
 # Khử xám sau cùng để ép lại thành nét đen dứt khoát, không bị mờ.
 #
 # 0 = tắt. Trên 3.5 thì chi tiết nhỏ bắt đầu dính vào nhau.
-SMOOTH_RADIUS = 2.5
+#
+# HẠ 2.5 -> 1.0. Đây là một nửa nguyên nhân làm ảnh out vỡ nét.
+# Cơ chế: làm mờ đẩy mực loang ra ngoài, rồi khử xám ở mức 170 BẮT LẠI toàn
+# bộ phần loang đó thành đen tuyền. Hai bước cộng lại = một phép giãn nét
+# trá hình. Bán kính càng lớn nét càng phình.
+SMOOTH_RADIUS = 1.0
 
 # Nối khe hở trên nét bằng phép đóng hình thái (giãn rồi co).
 #
-# 9 chứ không phải 3. Lý do: **Flux vẽ đứt nét ngay từ ảnh gốc**, không phải
-# do khâu phóng to. Đo ở đúng pixel gốc 1392 đã thấy 31 đầu mút và 75 mảnh
-# rời. Kéo lên 2625 không tạo thêm chỗ đứt nào.
+# HẠ 9 -> 3. Đây là nửa còn lại.
 #
-# Mà đóng 3px chỉ nối được khe ~2px, trong khi khe của Flux rộng hơn nhiều.
-# Đo số mảnh rời sau xử lý: đóng 3 -> 83 mảnh, đóng 9 -> 42 mảnh. Giảm một nửa.
+# Tôi đặt 9 vì đo được số mảnh rời giảm từ 83 xuống 42. Con số đó đúng, nhưng
+# tôi CHỈ ĐO MỘT PHÍA. Phép đóng 9px lấp mọi khe trắng hẹp hơn 9px — mà tâm
+# bông hồng, đường xoắn, nụ hoa nhỏ đều có khe trắng cỡ đó. Chúng bị bít
+# thành mảng đen đặc. Bao nhìn ra ngay, còn chỉ số của tôi thì không, vì tôi
+# chưa bao giờ đo phần MỰC PHÌNH RA.
 #
-# Lớn hơn 13 thì chi tiết nhỏ bắt đầu dính vào nhau.
-CLOSE_GAPS = 9
+# Đo lại trên 4 ảnh thật, so với ảnh gốc đã phóng to:
+#
+#   làm mịn / khử xám / nối khe |  phình nét   còn xám   mảnh rời
+#   2.5 / 170 / 9  (cũ)         |    +38.1%     5.01%       12
+#   1.0 / 170 / 3  (mới)        |    +21.3%     3.92%       15
+#   0   / 170 / 1               |    +18.0%     3.43%       16
+#
+# Cấu hình cũ phình gần gấp đôi mà còn xám NHIỀU HƠN — nó thua ở cả hai cột
+# nó lẽ ra phải thắng. Đổi lại chỉ được 3 mảnh rời, quá đắt.
+CLOSE_GAPS = 3
 
 # Làm DÀY nét lên (chỉ giãn, không co lại).
 #
@@ -193,10 +207,18 @@ CLOSE_GAPS = 9
 # Phép giãn thì không phụ thuộc model: nét bao nhiêu cũng dày thêm đúng
 # ngần ấy pixel.
 #
-# Mặc định TẮT, vì `CLOSE_GAPS = 9` ở trên đã làm dày nét sẵn rồi — đo ra
-# 9-16 px tuỳ ảnh. Bật thêm cái này nữa thì lên 16-20 px, chi tiết nhỏ bắt
-# đầu bít lại. Vẫn giữ làm nút vặn: sách cho bé 3 tuổi có thể đặt 3.
+# Mặc định TẮT. Khâu làm mịn + khử xám ở trên đã làm dày nét sẵn (+21%).
+# Bật thêm cái này nữa thì chi tiết nhỏ bắt đầu bít lại — đúng lỗi vừa sửa.
+# Vẫn giữ làm nút vặn: sách cho bé 3 tuổi ít chi tiết có thể đặt 3.
 LINE_THICKEN = 0
+
+# Trần cho phép nét phình ra sau xử lý, so với ảnh gốc đã phóng to.
+#
+# Có con số này vì lỗi "ảnh raw đẹp mà ảnh out vỡ nét" trước đây KHÔNG có
+# chỉ số nào bắt được — tôi chỉ đo mảnh rời và độ xám, cả hai đều nói tốt
+# lên trong khi tranh thì hỏng đi. Giờ mỗi lần chỉnh ba tham số trên, kiểm
+# thử đối chiếu lại với ngưỡng này.
+INK_GROWTH_MAX = 0.28
 
 # Ngưỡng cảnh báo tự động (Phase 2 sẽ dùng để lọc trước khi mắt người nhìn)
 INK_RATIO_MIN = 0.005  # dưới 0.5% -> trang gần như trắng

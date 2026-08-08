@@ -183,6 +183,48 @@ def main() -> int:
         check(f"Không báo nhầm ảnh sạch (trên {seen} ảnh thật)",
               false_alarm == 0, f"báo nhầm {false_alarm}")
 
+    print("\n[0c] Xử lý ảnh không được làm vỡ nét")
+    # Bao bao: anh raw dat yeu cau nhung anh out vo net, chi tiet nho bit lai.
+    # Dung. Va KHONG chi so nao cua toi bat duoc - toi chi do manh roi va do
+    # xam, ca hai deu noi TOT LEN trong khi tranh thi hong di.
+    # Nguyen nhan: lam min r=2.5 day muc loang ra, roi khu xam o 170 BAT LAI
+    # toan bo phan loang do thanh den tuyen. Cong them noi khe ho k=9 lap moi
+    # khe trang hep hon 9px - tam bong hong, duong xoan deu co khe co do.
+    from studio.imageops import fit_within
+
+    # Anh thu: cac vong tron dong tam cach nhau 6px - dung co khe hep ma
+    # phep dong 9px se nuot mat.
+    fine = Image.new("L", (config.GEN_W, config.GEN_H), 255)
+    _d = ImageDraw.Draw(fine)
+    for r in range(40, 400, 9):   # khe trang ~6px sau khi phong to
+        _d.ellipse((500 - r, 700 - r, 500 + r, 700 + r), outline=0, width=3)
+    fine_path = raw.parent / "net-nho.png"
+    fine.save(fine_path)
+
+    art0 = fit_within(fine, config.ART_W_PX, config.ART_H_PX)
+    ink0 = (_np2.asarray(art0) < 128).mean()
+    page, _m = prepare_page(fine_path)
+    # Mau so la dien tich VUNG VE, khong phai ca trang - trang co le trang
+    # rong, tinh ca vao thi ti le nao cung be va so sanh mat y nghia.
+    ink1 = (_np2.asarray(page) < 128).sum() / (art0.width * art0.height)
+    growth = ink1 / ink0 - 1
+    check(f"Nét không phình quá {config.INK_GROWTH_MAX:.0%} sau xử lý",
+          growth <= config.INK_GROWTH_MAX, f"phình {growth:+.1%}")
+
+    # Khe trang giua cac vong PHAI con. Neu bi lap thi ca vung thanh den dac.
+    band = _np2.asarray(page)[
+        config.inch_to_px(config.ART_TOP_IN):
+        config.inch_to_px(config.ART_TOP_IN) + art0.height]
+    white_left = (band > 128).mean()
+    check("Khe trắng giữa các nét mảnh vẫn còn sau xử lý",
+          white_left > 0.5, f"{white_left:.1%} diện tích còn trắng")
+
+    check("Bán kính làm mịn không vượt 1.5 (trên nữa là nét phình)",
+          config.SMOOTH_RADIUS <= 1.5, str(config.SMOOTH_RADIUS))
+    check("Nối khe hở không vượt 5px (9px nuốt mất chi tiết nhỏ)",
+          config.CLOSE_GAPS <= 5, str(config.CLOSE_GAPS))
+    fine_path.unlink()
+
     print("\n[1] Cấu hình khổ giấy")
     check("Khổ file PDF 8.75 x 11.25 in",
           (config.PAGE_W_IN, config.PAGE_H_IN) == (8.75, 11.25),
@@ -690,8 +732,13 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     print("\n[14] Độ dày nét")
     # Do NET RA cuoi cung, khong kiem tra co bat co nao. CLOSE_GAPS lam day
     # net san roi nen LINE_THICKEN mac dinh tat.
-    check("Có nối khe hở đủ rộng (Flux vẽ đứt sẵn từ ảnh gốc)",
-          config.CLOSE_GAPS >= 7, f"{config.CLOSE_GAPS}px")
+    # Muc nay TRUOC DAY doi CLOSE_GAPS >= 7. Tuc la chinh bo kiem thu dang
+    # KHOA CHAT cai loi lam vo net: no bat buoc phai noi khe >= 7px, ma 9px
+    # thi nuot mat tam bong hong. Kiem thu ma khoa mot gia tri sai thi con
+    # nguy hon khong co kiem thu, vi no lam nguoi ta tin la da kiem tra roi.
+    # Doi thanh KHOANG, va phan tren ([0c]) do KET QUA chu khong do tham so.
+    check("Nối khe hở nằm trong khoảng an toàn 2-5px",
+          2 <= config.CLOSE_GAPS <= 5, f"{config.CLOSE_GAPS}px")
     check("Ngưỡng đen đủ cao để nét xám thành đen tuyền",
           config.LEVELS_BLACK >= 150, f"{config.LEVELS_BLACK}")
     art = tmp / "line-test.png"

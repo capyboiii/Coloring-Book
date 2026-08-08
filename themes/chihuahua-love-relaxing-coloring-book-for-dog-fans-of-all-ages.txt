@@ -1,0 +1,51 @@
+# Chihuahua Love – Relaxing Coloring Book for Dog Fans of All Ages — 40 cảnh
+#
+# Sinh tự động bằng `studio.py subjects` ngày 2026-08-08
+# Model local: qwen2.5-7b-instruct-1m
+# Sửa tay thoải mái — đây là file văn bản thuần, mỗi dòng một trang.
+#
+# Công thức mỗi dòng: MỘT chủ thể chính + hành động + tối đa 2 thứ nền đơn giản.
+# Viết bằng tiếng Anh, vì Flux không hiểu tiếng Việt.
+#
+# Dùng: python studio.py generate "Chihuahua Love – Relaxing Coloring Book for Dog Fans of All Ages" --theme chihuahua-love-relaxing-coloring-book-for-dog-fans-of-all-ages --count 40
+
+a chihuahua standing next to a simple wooden fence
+a cheerful dog sitting on a plain grassy field
+a cute pup playing with a small ball
+a smiling chihuahua lying beside two flowers
+a happy puppy beside a simple metal mailbox
+a tiny chihuahua running across a plain road
+a chubby dog standing next to one large rock
+a friendly chihuahua sitting on a small patch of grass
+a chihuahua barking at a simple balloon floating above it
+an excited pup sitting beside two big, open windows
+a cozy little dog sleeping beside an empty basket
+a playful chihuahua chasing a small frisbee
+a cheerful chihuahua standing next to a simple wooden fence
+a happy puppy sitting on top of one large stone step
+a cute pup eating from a small ceramic bowl
+a smiling chihuahua lying down beside two big, open doors
+a sweet chihuahua curled up beside a soft cushion
+a chubby chihuahua standing next to a simple metal mailbox
+a happy chihuahua sitting on top of one large stone step
+a cheerful chihuahua chasing a small frisbee across a plain field
+a playful chihuahua running across a plain road, past two flowers
+a joyful pup standing beside a simple wooden fence
+a sweet chihuahua lying down next to a soft cushion
+a chubby chihuahua sitting on top of one large stone step
+a smiling chihuahua curled up inside an empty basket
+a happy puppy playing with a small ball
+a content dog resting beside two big open doors
+an excited pup running across a plain field
+a playful chihuahua standing next to a simple metal mailbox
+a chubby chihuahua standing next to a simple wooden fence
+a sweet chihuahua lying down on soft grass
+a cheerful chihuahua sitting beside a small bush
+a chubby chihuahua playing with a small toy mouse
+a content dog resting under a tree with wide branches
+a playful chihuahua standing near a simple garden gate
+a happy puppy chasing after a feather
+a joyful pup curled up inside an empty basket
+a tiny chihuahua standing next to a simple fire hydrant
+a cheerful chihuahua lying down on soft grass beside a small rock
+an adorable chihuahua sitting next to a simple stone bench

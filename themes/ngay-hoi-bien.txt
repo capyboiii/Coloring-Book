@@ -1,0 +1,51 @@
+# Ngày hội biển — 40 cảnh
+#
+# Sinh tự động bằng `studio.py subjects` ngày 2026-08-08
+# Model local: qwen2.5-7b-instruct-1m
+# Sửa tay thoải mái — đây là file văn bản thuần, mỗi dòng một trang.
+#
+# Công thức mỗi dòng: MỘT chủ thể chính + hành động + tối đa 2 thứ nền đơn giản.
+# Viết bằng tiếng Anh, vì Flux không hiểu tiếng Việt.
+#
+# Dùng: python studio.py generate "Ngày hội biển" --theme ngay-hoi-bien --count 40
+
+a cheerful penguin waddling, standing next to simple snowflakes
+an owl flying, beside a plain moon and two stars above
+a cat with a scarf, sitting on clear grass beside two daisies
+a giraffe drinking from a pot, with simple leaves behind it
+a panda eating bamboo, beside a bamboo fence and two bamboo shoots
+a happy lion playing with a ball, beside a sandy hill
+an eagle soaring high, with one cloud above and one sun below
+a koala on a branch, looking at a round moon in the sky
+a cheerful fox standing next to simple mushrooms and a clear stream
+a squirrel holding a nut, sitting on plain pinecones and two oak leaves
+a beaver building a dam, with simple trees behind it and a calm lake beside
+a puppy running happily, beside a simple fence and a patch of daisies
+an owl perched quietly, facing a full moon above and three stars nearby
+a rabbit hopping cheerfully, standing next to clear grass and two carrots
+a parrot on a branch, looking at the sun high in the sky
+a koala napping peacefully, with a clear tree behind it and the simple outline of a distant mountain
+a dolphin swimming happily, beside smooth waves and a floating seashell
+a penguin standing tall, next to a snowy hill and one icy iceberg
+a giraffe reaching up high, with grass below and two fluffy clouds above
+an otter catching fish, near clear water and simple rocks on the shore
+a pelican flying low, under sky and one white cloud sailing by
+a kangaroo hopping joyfully, beside plain grass and two tall gum trees
+a chameleon resting quietly, facing a bright sun and a few flowers
+a peacock spreading its tail, beside meadow and one simple fence
+a seagull flying high, above the calm sea and white clouds floating by
+a pelican standing next to smooth waves with two seashells nearby
+a crab walking slowly on sandy beach, leaves of palm trees behind it
+a dolphin swimming happily under water with bubbles dancing around
+a penguin sitting quietly in snow, one icy iceberg beside him
+an otter catching fish near the shore with simple rocks scattered
+a pelican flying low over water, a white cloud sailing by above
+a crab walking slowly on sandy beach, a seashell to its side
+a dolphin swimming happily, beside calm sea and two floating buoys
+a giraffe standing next to simple grass, one butterfly nearby
+a koala sitting quietly, facing eucalyptus tree and two big leaves
+an owl resting peacefully, beside moonlit sky with a star above
+a camel walking slowly, on sandy desert with two distant palm trees
+a llama standing next to hills, two fluffy clouds drifting by
+a sheep grazing happily, on plain field with one simple fence nearby
+a fox sitting quietly, facing forest with three tall pine trees
