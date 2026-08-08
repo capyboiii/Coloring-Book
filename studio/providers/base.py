@@ -13,8 +13,12 @@ class GenRequest:
     seed: int
     width: int
     height: int
-    steps: int
-    guidance: float
+    steps: int | None
+    guidance: float | None
+    # Để trống nghĩa là không dùng LoRA. Workflow nào có node LoraLoader thì
+    # studio tự gỡ node đó ra và nối thẳng checkpoint vào sampler.
+    lora: str | None = None
+    lora_strength: float = 0.9
 
 
 class ImageProvider(ABC):

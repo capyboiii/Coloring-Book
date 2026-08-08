@@ -38,6 +38,8 @@ generate: 60          # sinh dư để còn chỗ loại. Tỷ lệ giữ lại 
 complexity: medium    # simple=3-5t | medium=5-8t | detailed=8-12t | intricate=NL
 density: rich         # single | normal | rich      — số ĐỐI TƯỢNG mỗi trang
 style: kawaii         # kawaii | cartoon | decorative — PHONG CÁCH vẽ
+lora:                 # tên file LoRA trong ComfyUI/models/loras/. Trống = không dùng
+lora_strength: 0.9    # 0.6-1.0. Cao quá thì LoRA nuốt mất chủ thể
 seed:                 # để trống là ngẫu nhiên. Điền số để sinh lại y hệt
 
 # ---- Bìa ----
@@ -72,6 +74,8 @@ class Recipe:
     complexity: str = "medium"
     density: str = "rich"
     style: str = "kawaii"
+    lora: str | None = None
+    lora_strength: float = 0.9
     seed: int | None = None
     cover: Cover = field(default_factory=Cover)
     collection: str = ""
@@ -168,6 +172,8 @@ def load(slug: str) -> Recipe:
         complexity=str(data.get("complexity") or "medium"),
         density=str(data.get("density") or "rich"),
         style=str(data.get("style") or "kawaii"),
+        lora=(str(data["lora"]) if data.get("lora") else None),
+        lora_strength=float(data.get("lora_strength") or 0.9),
         seed=data.get("seed") if data.get("seed") not in ("", None) else None,
         cover=Cover(
             scene=cover_raw.get("scene") or None,
@@ -213,6 +219,9 @@ def _validate(r: Recipe) -> None:
             f"duyệt xong sẽ không đủ trang")
     if r.slug != slugify(r.slug):
         problems.append(f"slug '{r.slug}' phải ở dạng slug: {slugify(r.slug)}")
+    if not 0.0 <= r.lora_strength <= 1.5:
+        problems.append(
+            f"lora_strength {r.lora_strength} ngoài khoảng hợp lý 0.0-1.5")
     bg = r.cover.bg.lstrip("#")
     if len(bg) != 6 or any(c not in "0123456789abcdefABCDEF" for c in bg):
         problems.append(f"cover.bg '{r.cover.bg}' phải dạng #RRGGBB")

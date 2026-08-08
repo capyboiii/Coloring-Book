@@ -123,9 +123,41 @@ class ComfyUIProvider(ImageProvider):
 
     # --------------------------------------------------------------- private
 
+    @staticmethod
+    def _bypass_node(wf: dict, node_id: str) -> None:
+        """
+        Gỡ một node ra khỏi mạch và nối thẳng đầu vào sang đầu ra.
+
+        Dùng cho LoraLoader khi công thức sách không khai LoRA. Cách này gọn
+        hơn việc giữ hai file workflow gần giống nhau — sửa một cái là quên
+        sửa cái kia.
+
+        LoraLoader nhận model+clip và trả về model+clip theo đúng thứ tự đó,
+        nên chỉ cần thay mọi tham chiếu [node, k] bằng chính đầu vào thứ k.
+        """
+        node = wf.get(node_id)
+        if not node:
+            return
+        # Thứ tự đầu vào phải khớp thứ tự đầu ra của node
+        passthrough = [v for v in node["inputs"].values() if isinstance(v, list)]
+
+        for other in wf.values():
+            for field, value in list(other.get("inputs", {}).items()):
+                if (isinstance(value, list) and len(value) == 2
+                        and str(value[0]) == node_id):
+                    slot = int(value[1])
+                    if slot < len(passthrough):
+                        other["inputs"][field] = passthrough[slot]
+        wf.pop(node_id, None)
+
     def _patch(self, req: GenRequest) -> dict:
         """Ghi tham số vào bản sao workflow theo file map."""
         wf = copy.deepcopy(self.workflow)
+
+        # Không khai LoRA thì gỡ hẳn node đó ra, trước khi ghi tham số
+        if "lora" in self.node_map and not req.lora:
+            self._bypass_node(wf, str(self.node_map["lora"]["node"]))
+
         values = {
             "prompt": req.prompt,
             "negative": req.negative,
@@ -134,13 +166,19 @@ class ComfyUIProvider(ImageProvider):
             "height": req.height,
             "steps": req.steps,
             "guidance": req.guidance,
+            "lora": req.lora,
+            "lora_strength": req.lora_strength,
+            "lora_strength_clip": req.lora_strength,
         }
         for key, ref in self.node_map.items():
             # None nghĩa là "giữ nguyên giá trị trong workflow". Cần vậy vì
             # mỗi model một kiểu: schnell 4 bước CFG 1, SDXL 28 bước CFG 7.
             if key not in values or values[key] is None:
                 continue
-            wf[str(ref["node"])]["inputs"][ref["field"]] = values[key]
+            node_id = str(ref["node"])
+            if node_id not in wf:      # node vừa bị gỡ ở trên
+                continue
+            wf[node_id]["inputs"][ref["field"]] = values[key]
         return wf
 
     def _queue(self, workflow: dict) -> str:

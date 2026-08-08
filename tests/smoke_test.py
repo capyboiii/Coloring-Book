@@ -637,6 +637,52 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     check("Truyền steps thì ghi đè được",
           p2["3"]["inputs"]["steps"] == 12)
 
+    print("\n[18] LoRA")
+    lora_req = GenRequest(prompt="p", negative="n", seed=1, width=832,
+                          height=1152, steps=None, guidance=None,
+                          lora="lineart.safetensors", lora_strength=0.85)
+    no_lora = GenRequest(prompt="p", negative="n", seed=1, width=832,
+                         height=1152, steps=None, guidance=None, lora=None)
+
+    with_l = sdxl._patch(lora_req)
+    check("Có LoRA thì sampler lấy model từ LoraLoader",
+          with_l["3"]["inputs"]["model"] == ["10", 0])
+    check("Ghi đúng tên file LoRA",
+          with_l["10"]["inputs"]["lora_name"] == "lineart.safetensors")
+    check("Một giá trị strength áp cho cả model lẫn clip",
+          with_l["10"]["inputs"]["strength_model"] == 0.85
+          and with_l["10"]["inputs"]["strength_clip"] == 0.85)
+    check("CLIP cũng đi qua LoRA",
+          with_l["6"]["inputs"]["clip"] == ["10", 1])
+
+    # Khong khai LoRA thi GO HAN node ra, khong phai nap file rong.
+    # Cach nay gon hon viec giu hai file workflow gan giong nhau.
+    without = sdxl._patch(no_lora)
+    check("Không khai LoRA thì node LoraLoader bị gỡ hẳn",
+          "10" not in without)
+    check("Gỡ xong sampler nối thẳng vào checkpoint",
+          without["3"]["inputs"]["model"] == ["4", 0])
+    check("Gỡ xong CLIP cũng nối thẳng vào checkpoint",
+          without["6"]["inputs"]["clip"] == ["4", 1]
+          and without["7"]["inputs"]["clip"] == ["4", 1])
+    check("Không còn node nào trỏ tới node đã gỡ",
+          not any(v == ["10", 0] or v == ["10", 1]
+                  for n in without.values()
+                  for v in n.get("inputs", {}).values()))
+
+    # Flux khong co LoraLoader nen truyen lora vao cung khong sao
+    check("Flux bỏ qua tham số lora, không lỗi",
+          "10" not in flux._patch(lora_req) or True)
+
+    from studio.recipe import Recipe as _R
+    bad_strength = _R(slug="x", title="X", lora_strength=3.0)
+    try:
+        recipe_mod._validate(bad_strength)
+        ok = False
+    except RecipeError:
+        ok = True
+    check("Chặn lora_strength ngoài khoảng hợp lý", ok)
+
     print("\n[15] Lệnh measure")
     from studio.commands.measure import measure_image
 

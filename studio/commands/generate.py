@@ -81,6 +81,11 @@ def register(subparsers) -> None:
                         "RẤT NÊN dùng — không có nó ảnh ra rất kém")
     p.add_argument("--list-themes", action="store_true",
                    help="Liệt kê các bộ chủ thể dựng sẵn rồi thoát")
+    p.add_argument("--lora", default=None,
+                   help="Tên file LoRA trong ComfyUI/models/loras/. "
+                        "Chỉ có tác dụng nếu workflow có node LoraLoader")
+    p.add_argument("--lora-strength", type=float, default=0.9,
+                   help="0.6-1.0. Cao quá thì LoRA nuốt mất chủ thể")
     p.add_argument("--seed", type=int, default=None,
                    help="Seed khởi đầu. Đặt cố định để sinh lại y hệt mẻ cũ")
     p.add_argument("--steps", type=int, default=None)
@@ -183,6 +188,7 @@ def run(args) -> int:
             "complexity": args.complexity,
             "density": args.density,
             "style": args.style,
+            "lora": args.lora,
             "theme": args.theme,
             "subject_count": len(subjects) if subjects else 0,
             "planned_count": args.count,
@@ -210,6 +216,8 @@ def run(args) -> int:
             continue
 
         req = GenRequest(
+            lora=args.lora,
+            lora_strength=args.lora_strength,
             prompt=item.prompt,
             negative=item.negative,
             seed=item.seed,
@@ -217,6 +225,8 @@ def run(args) -> int:
             height=config.GEN_H,
             steps=steps,
             guidance=guidance,
+            lora=args.lora,
+            lora_strength=args.lora_strength,
         )
 
         t0 = time.time()

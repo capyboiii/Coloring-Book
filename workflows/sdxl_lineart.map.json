@@ -1,24 +1,57 @@
 {
   "_ghi_chu": [
-    "Workflow SDXL. Khác Flux ở một điểm quyết định:",
+    "Workflow SDXL + LoRA. Khac Flux o hai diem:",
     "",
-    "  SDXL chạy CFG THẬT (7.0), nên NEGATIVE PROMPT CÓ TÁC DỤNG.",
+    "  1. SDXL chay CFG THAT (7.0) nen NEGATIVE PROMPT CO TAC DUNG.",
+    "     Flux schnell chay CFG=1, phan negative bi bo qua hoan toan.",
+    "  2. Co LoraLoader. LoRA line art la thu duy nhat HUAN LUYEN LAI model",
+    "     cho dung viec nay - manh hon moi cau chu trong prompt.",
     "",
-    "Flux schnell là mô hình guidance-distilled chạy ở CFG = 1, phần negative",
-    "bị bỏ qua hoàn toàn. Toàn bộ 'no thin lines, no shading, no gray' mà ta",
-    "viết bấy lâu đang bị Flux vứt đi. Với SDXL thì chúng mới thật sự chặn.",
+    "De TRONG truong 'lora' trong cong thuc sach thi studio TU GO node",
+    "LoraLoader ra va noi thang checkpoint vao sampler. Khong can hai file",
+    "workflow rieng.",
     "",
-    "Vì vậy map này có thêm khoá 'negative' — Flux không có.",
-    "",
-    "SDXL cần 25-30 bước và CFG 6-8, khác hẳn schnell chạy 4 bước CFG 1.",
-    "Hai con số đó đã đặt sẵn trong file .api.json. Để trống STUDIO_STEPS và",
-    "STUDIO_GUIDANCE trong .env thì studio dùng nguyên giá trị của workflow."
+    "SDXL can 25-30 buoc va CFG 6-8. Da dat san trong file .api.json.",
+    "De trong STUDIO_STEPS va STUDIO_GUIDANCE thi dung nguyen gia tri do."
   ],
-  "prompt":   { "node": "6", "field": "text" },
-  "negative": { "node": "7", "field": "text" },
-  "seed":     { "node": "3", "field": "seed" },
-  "width":    { "node": "5", "field": "width" },
-  "height":   { "node": "5", "field": "height" },
-  "steps":    { "node": "3", "field": "steps" },
-  "guidance": { "node": "3", "field": "cfg" }
+  "prompt": {
+    "node": "6",
+    "field": "text"
+  },
+  "negative": {
+    "node": "7",
+    "field": "text"
+  },
+  "seed": {
+    "node": "3",
+    "field": "seed"
+  },
+  "width": {
+    "node": "5",
+    "field": "width"
+  },
+  "height": {
+    "node": "5",
+    "field": "height"
+  },
+  "steps": {
+    "node": "3",
+    "field": "steps"
+  },
+  "guidance": {
+    "node": "3",
+    "field": "cfg"
+  },
+  "lora": {
+    "node": "10",
+    "field": "lora_name"
+  },
+  "lora_strength": {
+    "node": "10",
+    "field": "strength_model"
+  },
+  "lora_strength_clip": {
+    "node": "10",
+    "field": "strength_clip"
+  }
 }
