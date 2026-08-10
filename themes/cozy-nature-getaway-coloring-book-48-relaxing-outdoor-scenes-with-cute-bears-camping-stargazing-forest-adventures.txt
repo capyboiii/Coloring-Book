@@ -1,0 +1,25 @@
+# Cozy Nature Getaway Coloring Book – 48 Relaxing Outdoor Scenes with Cute Bears, Camping, Stargazing & Forest Adventures — 14 cảnh
+#
+# Sinh tự động bằng `studio.py subjects` ngày 2026-08-08
+# Model local: qwen2.5-7b-instruct-1m
+# Sửa tay thoải mái — đây là file văn bản thuần, mỗi dòng một trang.
+#
+# Công thức mỗi dòng: MỘT chủ thể chính + hành động + tối đa 2 thứ nền đơn giản.
+# Viết bằng tiếng Anh, vì Flux không hiểu tiếng Việt.
+#
+# Dùng: python studio.py generate "Cozy Nature Getaway Coloring Book – 48 Relaxing Outdoor Scenes with Cute Bears, Camping, Stargazing & Forest Adventures" --theme cozy-nature-getaway-coloring-book-48-relaxing-outdoor-scenes-with-cute-bears-camping-stargazing-forest-adventures --count 40
+
+a bear lying on the grass, lying_in_grass, a flower around it, a butterfly flying over it
+a squirrel perched on the branch, climbing_branch, a nut floating in the air, a acorn growing on the branch
+a rabbit sitting on the grass, munching grass, a clover beside it, a rock on top of the ground
+a fox sitting on the ground, digging in dirt, a burrow next to it, a leaf pile around it
+a deer standing on the ground, drinking from pond, a tree beside it, a grassy bank behind it
+a owl sitting on the ground, sitting on stump, a mushroom around it, a tree branch on top of it
+a cat lying on the path, sleeping on path, a moon above it, a tree beside the path
+a puppy lying on the ground, sleeping in a doghouse, a doghouse next to the grass
+a bunny sitting on the ground, hopping through flowers, a dandelion beside it, a clover growing in the ground
+a dog lying on the grass, lying in the grass, a firefly floating in the air, a blanket next to it
+a duck swimming in the water, swimming in a pond, a lily pad growing in the water, a reeds around the water
+a bird standing on the branch, standing_on branch, a branch growing on the tree, a birdhouse next to the tree
+a lamb sitting on the ground, munching grass, a clover beside it, a daisy near it
+a koala sitting on the tree branch, sleeping peacefully, a eucalyptus leaf on top of it

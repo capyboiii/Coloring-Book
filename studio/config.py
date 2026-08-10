@@ -162,6 +162,34 @@ def cover_size_in(page_count: int) -> tuple[float, float]:
 LEVELS_BLACK = 170   # <= giá trị này -> đen tuyền
 LEVELS_WHITE = 200   # >= giá trị này -> trắng tinh
 
+# NGƯỠNG CỤC BỘ — chữa lỗi "nét chỗ mờ chỗ đậm".
+#
+# Flux vẽ có phân cấp: chủ thể chính nét đen đậm, còn nền (cây, người ở xa,
+# hoa cỏ) nét xám nhạt. Đo trên ảnh thật: vùng con chó có 50.7% mực là đen
+# tuyền, vùng cậu bé phía sau chỉ 28.7%.
+#
+# NGƯỠNG TOÀN CỤC KHÔNG CHỮA ĐƯỢC, và đây là lý do:
+# nét mờ (215) và nền trắng ngà (240) nằm gần nhau trên thang xám. Hạ ngưỡng
+# đen xuống đủ thấp để bắt nét mờ thì cũng bắt luôn nền — bóng đổ mờ dưới
+# chân con vật biến thành vệt xám bẩn giữa trang. Đo được: với 170/200 thì
+# 29.6% lượng mực bị đẩy thành trắng, tức là XOÁ MẤT nét mờ chứ không làm
+# đậm nó.
+#
+# Ngưỡng cục bộ so mỗi điểm với TRUNG BÌNH VÙNG QUANH NÓ. Nét mờ vẫn là chỗ
+# tối hơn hẳn hàng xóm nên thành đen; còn mảng bóng mờ thì đổi rất từ từ nên
+# không đâu tối hơn hàng xóm, thành trắng sạch. Nó phân biệt bằng CẤU TRÚC
+# chứ không bằng độ sáng tuyệt đối — đúng thứ cần.
+#
+# Đo trên 10 ảnh thật:
+#     cách cũ  11.74% mực,  7.37% mực còn xám nhờ
+#     cách mới 11.26% mực,  0.00% mực còn xám nhờ
+#
+# Cửa sổ 101 px ở khổ in (~0.34 in): đủ rộng để một nét mảnh không tự kéo
+# trung bình vùng xuống theo mình.
+ADAPTIVE_INK = True     # False = quay lại ngưỡng toàn cục
+ADAPTIVE_WINDOW = 101   # px, phải là số lẻ
+ADAPTIVE_OFFSET = 12    # tối hơn hàng xóm chừng này thì tính là nét
+
 # Làm mịn TRƯỚC khi khử xám, để viền nét bớt lồi lõm.
 #
 # Thứ tự: phóng to -> làm mịn -> khử xám. Làm mịn trên ảnh đã phóng thì mới

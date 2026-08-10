@@ -595,6 +595,70 @@ def main() -> int:
     check("Có sẵn dạng thô để đo thử với Flux",
           "SUBJECT:" in ok.graph_text() and "-->" in ok.graph_text())
 
+    print("\n[0g] Nét đều — ngưỡng cục bộ")
+    # Flux ve co phan cap: chu the chinh net den dam, nen thi net xam nhat.
+    # Do tren anh that: vung con cho 50.7% muc la den tuyen, vung cau be phia
+    # sau chi 28.7%.
+    # NGUONG TOAN CUC KHONG CHUA DUOC: net mo (215) va nen trang nga (240) nam
+    # sat nhau tren thang xam. Ha nguong du thap de bat net mo thi bat luon
+    # nen - bong do mo duoi chan con vat thanh vet xam ban giua trang.
+    # Do duoc voi 170/200: 29.6% luong muc bi day thanh TRANG, tuc XOA MAT net
+    # mo chu khong lam dam no.
+    from studio.imageops import adaptive_ink, apply_levels as _levels
+
+    # Anh thu: mot net DAM va mot net MO tren cung nen trang
+    probe = Image.new("L", (600, 400), 252)
+    pd = ImageDraw.Draw(probe)
+    pd.line((60, 80, 540, 80), fill=20, width=6)      # net dam
+    pd.line((60, 200, 540, 200), fill=215, width=6)   # net mo
+    pd.ellipse((60, 300, 540, 380), fill=238)         # mang bong mo, KHONG phai net
+
+    ada = _np2.asarray(adaptive_ink(probe, window=101, offset=12,
+                                    hard_black=config.LEVELS_BLACK))
+    glo = _np2.asarray(_levels(probe, config.LEVELS_BLACK,
+                                    config.LEVELS_WHITE))
+    dam = (slice(78, 83), slice(100, 500))
+    mo = (slice(198, 203), slice(100, 500))
+    bong = (slice(320, 360), slice(150, 450))
+
+    check("Ngưỡng toàn cục XOÁ MẤT nét mờ (đây là lỗi đang sửa)",
+          (glo[mo] > 200).mean() > 0.5, f"{(glo[mo] > 200).mean():.0%} thành trắng")
+    check("Ngưỡng cục bộ giữ được nét mờ",
+          (ada[mo] < 50).mean() > 0.5, f"{(ada[mo] < 50).mean():.0%} thành đen")
+    check("Nét đậm vẫn đen",
+          (ada[dam] < 50).mean() > 0.5, f"{(ada[dam] < 50).mean():.0%}")
+    check("Nét mờ và nét đậm ra CÙNG một sắc độ",
+          abs((ada[dam] < 50).mean() - (ada[mo] < 50).mean()) < 0.1)
+    # Diem phan biet: mang bong doi rat tu tu nen khong dau toi hon hang xom
+    check("Mảng bóng mờ bị bỏ, không thành vệt xám bẩn",
+          (ada[bong] > 200).mean() > 0.95,
+          f"{(ada[bong] > 200).mean():.0%} sạch")
+    check("Nền trắng vẫn sạch",
+          (ada[10:40, 10:590] > 200).all())
+    check("Tắt được để quay lại ngưỡng cũ", hasattr(config, "ADAPTIVE_INK"))
+
+    print("\n[0h] Chặn nhân vật có bản quyền")
+    # Luat nay nam trong chi dan cho LM Studio tu dau (luat 7) nhung chua bao
+    # gio co code canh - va no DA LOT: themes/ co mot bo ten
+    # "sonic-the-hedgehog-franchise". May la 40 dong ben trong khong nhac ten
+    # nao. Nhung do la may, khong phai nho he thong.
+    # Day la rui ro DAT NHAT du an: sach ban ra dinh nhan vat Disney/SEGA thi
+    # khong chi bi go ma la kien.
+    from studio.llm import check_franchise
+    for bad in ("a happy sonic the hedgehog running", "Pikachu sitting on a rock",
+                "an elsa doll beside a tree", "a hello kitty plush"):
+        check(f"Bắt được: {bad[:34]}", bool(check_franchise(bad)))
+    for ok in ("a happy hedgehog running on grass", "a frozen pond in winter",
+               "a cheerful mouse beside a tree",
+               "a link between two flowers", "a fox with two tails"):
+        check(f"Không báo nhầm: {ok[:34]}", not check_franchise(ok),
+              str(check_franchise(ok)))
+
+    for path in sorted((ROOT / "themes").glob("*.txt")):
+        hits = check_franchise(path.read_text(encoding="utf-8"))
+        check(f"themes/{path.name[:44]} không có nhân vật bản quyền",
+              not hits, str(hits))
+
     print("\n[1] Cấu hình khổ giấy")
     check("Khổ file PDF 8.75 x 11.25 in",
           (config.PAGE_W_IN, config.PAGE_H_IN) == (8.75, 11.25),

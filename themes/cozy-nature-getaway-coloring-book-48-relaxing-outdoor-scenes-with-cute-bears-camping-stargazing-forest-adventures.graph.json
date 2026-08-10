@@ -1,0 +1,373 @@
+{
+  "topic": "Cozy Nature Getaway Coloring Book – 48 Relaxing Outdoor Scenes with Cute Bears, Camping, Stargazing & Forest Adventures",
+  "scenes": [
+    {
+      "subject": "bear",
+      "action": "lying_in_grass",
+      "objects": [
+        "flower",
+        "butterfly"
+      ],
+      "relations": [
+        {
+          "src": "bear",
+          "kind": "lying_on",
+          "dst": "grass"
+        },
+        {
+          "src": "flower",
+          "kind": "around",
+          "dst": "bear"
+        },
+        {
+          "src": "butterfly",
+          "kind": "flying_over",
+          "dst": "bear"
+        }
+      ],
+      "prompt": "a bear lying on the grass, lying_in_grass, a flower around it, a butterfly flying over it",
+      "problems": []
+    },
+    {
+      "subject": "squirrel",
+      "action": "climbing_branch",
+      "objects": [
+        "nut",
+        "acorn"
+      ],
+      "relations": [
+        {
+          "src": "squirrel",
+          "kind": "perched_on",
+          "dst": "branch"
+        },
+        {
+          "src": "nut",
+          "kind": "floating_in",
+          "dst": "air"
+        },
+        {
+          "src": "acorn",
+          "kind": "growing_on",
+          "dst": "branch"
+        }
+      ],
+      "prompt": "a squirrel perched on the branch, climbing_branch, a nut floating in the air, a acorn growing on the branch",
+      "problems": []
+    },
+    {
+      "subject": "rabbit",
+      "action": "munching grass",
+      "objects": [
+        "clover",
+        "rock"
+      ],
+      "relations": [
+        {
+          "src": "rabbit",
+          "kind": "sitting_on",
+          "dst": "grass"
+        },
+        {
+          "src": "clover",
+          "kind": "beside",
+          "dst": "rabbit"
+        },
+        {
+          "src": "rock",
+          "kind": "on_top_of",
+          "dst": "ground"
+        }
+      ],
+      "prompt": "a rabbit sitting on the grass, munching grass, a clover beside it, a rock on top of the ground",
+      "problems": []
+    },
+    {
+      "subject": "fox",
+      "action": "digging in dirt",
+      "objects": [
+        "burrow",
+        "leaf pile"
+      ],
+      "relations": [
+        {
+          "src": "fox",
+          "kind": "sitting_on",
+          "dst": "ground"
+        },
+        {
+          "src": "burrow",
+          "kind": "next_to",
+          "dst": "fox"
+        },
+        {
+          "src": "leaf_pile",
+          "kind": "around",
+          "dst": "fox"
+        }
+      ],
+      "prompt": "a fox sitting on the ground, digging in dirt, a burrow next to it, a leaf pile around it",
+      "problems": []
+    },
+    {
+      "subject": "deer",
+      "action": "drinking from pond",
+      "objects": [
+        "tree",
+        "grassy bank"
+      ],
+      "relations": [
+        {
+          "src": "deer",
+          "kind": "standing_on",
+          "dst": "ground"
+        },
+        {
+          "src": "tree",
+          "kind": "beside",
+          "dst": "deer"
+        },
+        {
+          "src": "grassy_bank",
+          "kind": "behind",
+          "dst": "deer"
+        }
+      ],
+      "prompt": "a deer standing on the ground, drinking from pond, a tree beside it, a grassy bank behind it",
+      "problems": []
+    },
+    {
+      "subject": "owl",
+      "action": "sitting on stump",
+      "objects": [
+        "mushroom",
+        "tree branch"
+      ],
+      "relations": [
+        {
+          "src": "owl",
+          "kind": "sitting_on",
+          "dst": "ground"
+        },
+        {
+          "src": "mushroom",
+          "kind": "around",
+          "dst": "owl"
+        },
+        {
+          "src": "tree_branch",
+          "kind": "on_top_of",
+          "dst": "owl"
+        }
+      ],
+      "prompt": "a owl sitting on the ground, sitting on stump, a mushroom around it, a tree branch on top of it",
+      "problems": []
+    },
+    {
+      "subject": "cat",
+      "action": "sleeping on path",
+      "objects": [
+        "moon",
+        "tree"
+      ],
+      "relations": [
+        {
+          "src": "cat",
+          "kind": "lying_on",
+          "dst": "path"
+        },
+        {
+          "src": "moon",
+          "kind": "above",
+          "dst": "cat"
+        },
+        {
+          "src": "tree",
+          "kind": "beside",
+          "dst": "path"
+        }
+      ],
+      "prompt": "a cat lying on the path, sleeping on path, a moon above it, a tree beside the path",
+      "problems": []
+    },
+    {
+      "subject": "puppy",
+      "action": "sleeping in a doghouse",
+      "objects": [
+        "grass",
+        "doghouse"
+      ],
+      "relations": [
+        {
+          "src": "puppy",
+          "kind": "lying_on",
+          "dst": "ground"
+        },
+        {
+          "src": "doghouse",
+          "kind": "next_to",
+          "dst": "grass"
+        }
+      ],
+      "prompt": "a puppy lying on the ground, sleeping in a doghouse, a doghouse next to the grass",
+      "problems": []
+    },
+    {
+      "subject": "bunny",
+      "action": "hopping through flowers",
+      "objects": [
+        "dandelion",
+        "clover"
+      ],
+      "relations": [
+        {
+          "src": "bunny",
+          "kind": "sitting_on",
+          "dst": "ground"
+        },
+        {
+          "src": "dandelion",
+          "kind": "beside",
+          "dst": "bunny"
+        },
+        {
+          "src": "clover",
+          "kind": "growing_in",
+          "dst": "ground"
+        }
+      ],
+      "prompt": "a bunny sitting on the ground, hopping through flowers, a dandelion beside it, a clover growing in the ground",
+      "problems": []
+    },
+    {
+      "subject": "dog",
+      "action": "lying in the grass",
+      "objects": [
+        "firefly",
+        "blanket"
+      ],
+      "relations": [
+        {
+          "src": "dog",
+          "kind": "lying_on",
+          "dst": "grass"
+        },
+        {
+          "src": "firefly",
+          "kind": "floating_in",
+          "dst": "air"
+        },
+        {
+          "src": "blanket",
+          "kind": "next_to",
+          "dst": "dog"
+        }
+      ],
+      "prompt": "a dog lying on the grass, lying in the grass, a firefly floating in the air, a blanket next to it",
+      "problems": []
+    },
+    {
+      "subject": "duck",
+      "action": "swimming in a pond",
+      "objects": [
+        "lily pad",
+        "reeds"
+      ],
+      "relations": [
+        {
+          "src": "duck",
+          "kind": "swimming_in",
+          "dst": "water"
+        },
+        {
+          "src": "lily_pad",
+          "kind": "growing_in",
+          "dst": "water"
+        },
+        {
+          "src": "reeds",
+          "kind": "around",
+          "dst": "water"
+        }
+      ],
+      "prompt": "a duck swimming in the water, swimming in a pond, a lily pad growing in the water, a reeds around the water",
+      "problems": []
+    },
+    {
+      "subject": "bird",
+      "action": "standing_on branch",
+      "objects": [
+        "tree",
+        "birdhouse"
+      ],
+      "relations": [
+        {
+          "src": "bird",
+          "kind": "standing_on",
+          "dst": "branch"
+        },
+        {
+          "src": "branch",
+          "kind": "growing_on",
+          "dst": "tree"
+        },
+        {
+          "src": "birdhouse",
+          "kind": "next_to",
+          "dst": "tree"
+        }
+      ],
+      "prompt": "a bird standing on the branch, standing_on branch, a branch growing on the tree, a birdhouse next to the tree",
+      "problems": []
+    },
+    {
+      "subject": "lamb",
+      "action": "munching grass",
+      "objects": [
+        "clover",
+        "daisy"
+      ],
+      "relations": [
+        {
+          "src": "lamb",
+          "kind": "sitting_on",
+          "dst": "ground"
+        },
+        {
+          "src": "clover",
+          "kind": "beside",
+          "dst": "lamb"
+        },
+        {
+          "src": "daisy",
+          "kind": "in_front_of",
+          "dst": "lamb"
+        }
+      ],
+      "prompt": "a lamb sitting on the ground, munching grass, a clover beside it, a daisy in front of it",
+      "problems": []
+    },
+    {
+      "subject": "koala",
+      "action": "sleeping peacefully",
+      "objects": [
+        "eucalyptus leaf",
+        "tree branch"
+      ],
+      "relations": [
+        {
+          "src": "koala",
+          "kind": "sitting_on",
+          "dst": "tree_branch"
+        },
+        {
+          "src": "eucalyptus_leaf",
+          "kind": "on_top_of",
+          "dst": "koala"
+        }
+      ],
+      "prompt": "a koala sitting on the tree branch, sleeping peacefully, a eucalyptus leaf on top of it",
+      "problems": []
+    }
+  ]
+}

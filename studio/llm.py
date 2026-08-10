@@ -321,6 +321,40 @@ def scrub_colour_and_light(line: str) -> tuple[str, list[str]]:
 # Sách trẻ em có thêm ràng buộc mà sách người lớn không có
 # Dùng biên từ chặt. Bản đầu viết `monster\w*` nên khớp luôn "monstera"
 # (cây trầu bà) trong themes/floral.txt — báo động giả.
+# NHÂN VẬT CÓ BẢN QUYỀN.
+#
+# Luật này nằm trong chỉ dẫn cho LM Studio từ đầu (luật 7), nhưng chưa bao giờ
+# có code canh — và nó đã lọt: trong themes/ có một bộ tên
+# "sonic-the-hedgehog-franchise". May là 40 dòng bên trong không nhắc tên nào,
+# chỉ phần chú thích ở đầu file mang tên đó. Nhưng chuyện đó là may, không
+# phải nhờ hệ thống.
+#
+# Đây là rủi ro ĐẮT NHẤT trong cả dự án. Sách bán ra mà dính nhân vật của
+# Disney/SEGA/Nintendo thì không chỉ bị gỡ, mà là kiện. Rẻ hơn nhiều nếu chặn
+# ngay lúc còn là một dòng chữ.
+# Bỏ khỏi danh sách những tên trùng từ thông dụng, dù chúng đúng là nhân vật
+# có bản quyền: link, tails, knuckles, anna, frozen, shadow. Chặn chúng thì
+# "a link between two flowers" hay "a frozen pond" cũng bị bắt — báo nhầm
+# nhiều thì người ta tắt cả bộ kiểm, mà tắt rồi thì mất luôn phần bắt đúng.
+FRANCHISES = re.compile(
+    r"\b(sonic the hedgehog|dr eggman|mario|luigi|bowser|zelda|"
+    r"pikachu|pokemon|charizard|eevee|"
+    r"disney|mickey mouse|minnie mouse|donald duck|goofy|elsa|olaf|moana|"
+    r"ariel|cinderella|rapunzel|simba|"
+    r"hello kitty|sanrio|kuromi|cinnamoroll|my melody|pompompurin|"
+    r"doraemon|totoro|pikmin|kirby|yoshi|"
+    r"peppa pig|paw patrol|bluey|spongebob|patrick star|"
+    r"batman|superman|spider-?man|marvel|avengers|iron man|"
+    r"star wars|yoda|baby yoda|grogu|darth vader|"
+    r"minecraft|creeper|roblox|fortnite|among us|"
+    r"barbie|lego|transformers|hot wheels)\b", re.I)
+
+
+def check_franchise(text: str) -> list[str]:
+    """Tên thương hiệu có bản quyền tìm thấy trong một đoạn chữ."""
+    return sorted({m.group(0).lower() for m in FRANCHISES.finditer(text)})
+
+
 SCARY = re.compile(
     r"\b(bats?|wolf|wolves|spiders?|snakes?|skeletons?|ghosts?|"
     r"witch(?:es)?|monsters?)\b", re.IGNORECASE)

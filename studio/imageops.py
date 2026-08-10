@@ -60,6 +60,42 @@ def apply_levels(
     return img.point(build_levels_lut(black_point, white_point))
 
 
+def adaptive_ink(img: Image.Image,
+                 window: int = config.ADAPTIVE_WINDOW,
+                 offset: int = config.ADAPTIVE_OFFSET,
+                 hard_black: int = config.LEVELS_BLACK) -> Image.Image:
+    """
+    Tách nét bằng cách so mỗi điểm với TRUNG BÌNH VÙNG QUANH NÓ.
+
+    Chữa lỗi "nét chỗ mờ chỗ đậm". Flux vẽ có phân cấp — chủ thể chính nét
+    đen đậm, nền thì nét xám nhạt. Ngưỡng toàn cục không chữa được vì nét mờ
+    (215) và nền trắng ngà (240) nằm sát nhau trên thang xám: hạ ngưỡng đủ
+    thấp để bắt nét mờ thì bắt luôn nền, và bóng đổ mờ dưới chân con vật biến
+    thành vệt xám bẩn giữa trang.
+
+    So với hàng xóm thì phân biệt được, vì hai thứ đó khác nhau ở CẤU TRÚC
+    chứ không ở độ sáng: nét mờ đổi đột ngột trong vài pixel, mảng bóng đổi
+    từ từ qua vài trăm pixel.
+
+    `hard_black` giữ lại lối thoát cho vùng đen đặc lớn — giữa một mảng đen
+    to thì không đâu tối hơn hàng xóm, nên chỉ dựa vào phép so vùng là thủng
+    ruột mảng đó.
+    """
+    import numpy as np
+
+    if img.mode != "L":
+        img = img.convert("L")
+    a = np.asarray(img).astype(np.float32)
+
+    # uniform_filter của scipy chạy tách trục nên O(n) theo kích thước cửa sổ.
+    # Cửa sổ 101px mà làm tích chập thẳng thì mỗi ảnh mất vài giây.
+    from scipy import ndimage
+    local = ndimage.uniform_filter(a, size=window, mode="nearest")
+
+    ink = (a < local - offset) | (a < hard_black)
+    return Image.fromarray(np.where(ink, 0, 255).astype(np.uint8))
+
+
 # --------------------------------------------------------------------------
 # Đo chất lượng
 # --------------------------------------------------------------------------
@@ -271,8 +307,17 @@ def prepare_page(
     if config.SMOOTH_RADIUS > 0:
         art = art.filter(ImageFilter.GaussianBlur(config.SMOOTH_RADIUS))
 
-    # 3. Khử xám sau cùng, ép lại thành nét đen dứt khoát chứ không mờ
-    art = apply_levels(art, black_point, white_point)
+    # 3. Khử xám. Mặc định dùng ngưỡng CỤC BỘ để nét mờ và nét đậm ra cùng
+    #    một sắc độ — xem adaptive_ink(). Đặt ADAPTIVE_INK=False trong
+    #    config để quay lại ngưỡng toàn cục.
+    #
+    #    Hai tham số black_point/white_point vẫn được tôn trọng: chúng đi vào
+    #    làm ngưỡng "đen chắc chắn" của phép cục bộ, nên các lệnh có cờ
+    #    --black-point vẫn có tác dụng như cũ.
+    if config.ADAPTIVE_INK:
+        art = adaptive_ink(art, hard_black=black_point)
+    else:
+        art = apply_levels(art, black_point, white_point)
 
     # 4. Đóng khe hở: giãn nét rồi co lại. Nối được chỗ đứt nhỏ mà không
     #    làm nét dày thêm.

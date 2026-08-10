@@ -1,0 +1,51 @@
+# Thú vật và người — 40 cảnh
+#
+# Sinh tự động bằng `studio.py subjects` ngày 2026-08-10
+# Model local: qwen2.5-7b-instruct-1m
+# Sửa tay thoải mái — đây là file văn bản thuần, mỗi dòng một trang.
+#
+# Công thức mỗi dòng: MỘT chủ thể chính + hành động + tối đa 2 thứ nền đơn giản.
+# Viết bằng tiếng Anh, vì Flux không hiểu tiếng Việt.
+#
+# Dùng: python studio.py generate "Thú vật và người" --theme thu-vat-va-nguoi --count 40
+
+a little girl reading, her pet lamb standing nearby
+an owl flying high, a moon and stars above it
+a squirrel munching nuts, some pinecones on the ground beside it
+a happy penguin swimming, two fish in the water with it
+a farmer planting seeds, rows of simple carrots behind him
+a puppy playing catch, its owner watching from afar
+a giraffe drinking water, a few leaves hanging nearby
+a friendly fairy walking beside her wand, a cloud above
+a little girl laughing, her pet lamb standing next to her
+a koala bear napping, eucalyptus leaves in the background
+a cheerful kangaroo hopping, two simple flowers behind it
+a puppy playing fetch, its owner watching from afar
+a happy fox chasing a butterfly, daisies at its feet
+an elephant drinking water, some bananas hanging nearby
+a giraffe looking up, some birds flying above it
+a lioness walking proudly, tall grasses beside her
+a lamb grazing, simple hills behind it
+a squirrel gathering nuts, two pine trees in the background
+a penguin waddling, a small iceberg nearby
+an owl perched on a branch, two small stars above
+a bear standing next to its cub, a snowflake floating
+a bunny hopping happily, dandelion seeds flying around
+a duck swimming leisurely, lily pads dotting the water
+a giraffe drinking from a stream, acacia trees surrounding it
+a piglet playing with mud, sunflowers nearby
+a lamb grazing in the field, two daisies by its side
+a llama standing calmly, a few cacti behind it
+a peacock spreading its feathers, flowers in a pot beside it
+a koala sitting on a branch, two simple leaves above it
+a rabbit jumping with a carrot, dandelions nearby
+a bird flying high, clouds floating above
+a fox digging a hole, grass and small stones around it
+a mouse nibbling cheese, a plain wooden fence behind
+a camel walking in the desert, two dunes to one side
+a friendly husky standing tall, snowflakes falling gently
+a duckling swimming, water lilies dotting the pond
+a bear eating honey, a simple log nearby
+a giraffe drinking water, grass beside it
+a lion lying down, an acacia tree behind it
+a tiger peering curiously, tall reeds in the background
