@@ -687,14 +687,20 @@ def main() -> int:
     check("adults khác kids ở cả ba trục",
           resolve_params(None, "adults") != resolve_params(None, "kids"))
 
-    # Thu tu uu tien: co go tay > @-directive cua chu de > mac dinh doi tuong
+    # Thu tu uu tien: co go tay > @-directive cua chu de > mac dinh doi tuong.
+    # Dung file theme TU TAO chu khong bam vao mot file co san trong themes/ -
+    # Bao them bot chu de lien tuc, va kiem thu bam vao du lieu cua nguoi dung
+    # thi hong moi khi ho don dep. Da vap dung loi nay bon lan.
+    _t = tmp / "chu-de-thu.txt"
+    _t.write_text("@density: normal\n@audience: adults\n"
+                  "a symmetrical mandala with eight petals\n", encoding="utf-8")
     check("Chủ đề đè được lên mặc định đối tượng",
-          resolve_params("mandala", "adults")["density"] == "normal"
+          resolve_params(str(_t), "adults")["density"] == "normal"
           and AUDIENCE_PRESET["adults"]["density"] == "rich")
     check("Cờ gõ tay đè được lên chủ đề",
-          resolve_params("mandala", "adults", density="rich")["density"] == "rich")
+          resolve_params(str(_t), "adults", density="rich")["density"] == "rich")
     check("Không truyền gì thì không đè gì",
-          resolve_params("mandala", "adults", density=None)["density"] == "normal")
+          resolve_params(str(_t), "adults", density=None)["density"] == "normal")
 
     check("Đối tượng lạ thì báo lỗi ngay",
           _raises(lambda: resolve_params(None, "teens"), ValueError))
@@ -704,10 +710,10 @@ def main() -> int:
     # Luat "mandala khong dung rich" gio nam trong CHINH file theme, khong con
     # la mot cau if lac trong lenh generate.
     check("Luật riêng của chủ đề nằm trong file chủ đề",
-          load_directives("mandala").get("density") == "normal")
+          load_directives(str(_t)).get("density") == "normal")
     check("Chủ đề người lớn tự khai, khỏi gõ --for",
-          theme_audience("mandala") == "adults"
-          and theme_audience("hallowen") == "adults")
+          theme_audience(str(_t)) == "adults"
+          and theme_audience("ocean") is None)
 
     print("\n[0j] Đường --graph chạy trọn vẹn")
     # Kiem thu cu chi goi parse_block/parse_many. generate_graphs() - ham ma
@@ -738,6 +744,45 @@ def main() -> int:
             check(f"--graph --for {aud}: câu duỗi có chỗ đứng của vật",
                   good[0].to_prompt().startswith("a panda sitting on the ground"),
                   good[0].to_prompt() if good else "")
+
+        # SACH MOT NHAN VAT. Bao chay "Gau truc" --count 40 chi duoc 13.
+        # Khoa loc trung cu chi lay SUBJECT, ma sach ve gau truc thi trang nao
+        # chu the cung la "panda" - tu trang thu hai tro di bi dem la trung
+        # het. Thu thay doi giua cac trang la HANH DONG, ma toi lai bo no ra
+        # khoi khoa.
+        # Loi nay chi lo ra voi sach mot-nhan-vat; chu de rong nhu "dai duong"
+        # thi moi trang mot con khac nhau nen khong ai thay.
+        _acts = ["eating bamboo", "climbing a tree", "sleeping",
+                 "rolling down a hill", "washing in a stream", "yawning",
+                 "walking slowly", "holding a leaf"]
+        _n = {"i": 0}
+
+        def _panda(*a, **k):
+            i = _n["i"]
+            _n["i"] += 1
+            return ("\n\n".join(
+                f"SUBJECT: panda\nACTION: {_acts[(i * 4 + j) % len(_acts)]}\n"
+                f"OBJECTS: bamboo shoot\n"
+                f"RELATIONSHIPS: panda --sitting_on--> ground; "
+                f"bamboo_shoot --beside--> panda" for j in range(4)),
+                "stop", [])
+
+        _L._chat = _panda
+        good, bad, _m = _L.generate_graphs("Gấu trúc", count=8, batch=4)
+        check("Sách một nhân vật vẫn đủ cảnh (chủ thể trùng, hành động khác)",
+              len(good) == 8, f"{len(good)}/8")
+        check("Các cảnh khác nhau ở hành động",
+              len({g.action for g in good}) == 8,
+              f"{len({g.action for g in good})} hành động khác nhau")
+
+        # Trung THAT (ca chu the lan hanh dong) thi van phai bi loai
+        _L._chat = lambda *a, **k: (
+            "SUBJECT: panda\nACTION: eating bamboo\nOBJECTS: bamboo shoot\n"
+            "RELATIONSHIPS: panda --sitting_on--> ground; "
+            "bamboo_shoot --beside--> panda", "stop", [])
+        good, bad, _m = _L.generate_graphs("x", count=4, batch=1)
+        check("Trùng cả chủ thể lẫn hành động thì vẫn loại",
+              len(good) == 1, f"{len(good)} cảnh")
 
         # Do thi hong thi LOAI chu khong sua, va phai noi ro vi sao
         _L._chat = lambda *a, **k: (
@@ -1116,10 +1161,10 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     # Luat "mandala khong dung density rich" gio nam trong CHINH file theme
     # (@density: normal) chu khong phai mot cau if lac trong lenh generate.
     # Nen no khong con la loi CHAN, ma la GOP Y khi nguoi dung co tinh ghi de.
-    check("Góp ý khi ghi đè lệch với mặc định của chủ đề",
-          any("density=rich" in h for h in Recipe(
-              slug="x", title="X", theme="mandala", audience="adults",
-              density="rich").hints()))
+    check("Góp ý khi ghi đè lệch với mặc định của đối tượng",
+          any("density=normal" in h for h in Recipe(
+              slug="x", title="X", theme="", audience="adults",
+              density="normal").hints()))
     check("Bỏ trống ba trục thì không góp ý gì",
           not Recipe(slug="x", title="X").hints())
     check("Công thức hợp lệ thì không chặn", not bad())
@@ -1286,12 +1331,17 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     # Chu de tu khai phong cach. Vá bang mot dong CANH BAO la khong du: canh
     # bao thi doc xong van chay tiep duoc, va lenh `generate` go tay khong he
     # di qua recipe.
-    for t in ("floral", "hoa-trong-chau", "mandala"):
-        check(f"themes/{t}.txt tự khai @style: decorative",
-              load_style(t) == "decorative", str(load_style(t)))
-    for t in ("ocean", "khung-long", "giang-sinh"):
-        check(f"themes/{t}.txt (con vật) KHÔNG ép decorative",
-              load_style(t) in (None, "kawaii"), str(load_style(t)))
+    # Duyet nhung bo DANG CO thay vi liet ke ten cung. Bao them bot chu de
+    # lien tuc; kiem thu bam vao ten file cu the thi hong moi khi ho don dep,
+    # du code khong doi gi. Da vap bon lan.
+    from studio.prompts import list_themes as _lt
+    _plants = [t for t in _lt() if load_style(t) == "decorative"]
+    _rest = [t for t in _lt() if load_style(t) not in ("decorative",)]
+    check(f"Chủ đề hoa lá / hoạ tiết tự khai decorative ({len(_plants)} bộ)",
+          all(load_style(t) == "decorative" for t in _plants))
+    check(f"Chủ đề con vật KHÔNG bị ép decorative ({len(_rest)} bộ)",
+          all(load_style(t) in (None, "kawaii", "cartoon") for t in _rest),
+          str([(t, load_style(t)) for t in _rest][:2]))
 
     # MOT LUA CHON THAY CHO BA. complexity/density/style suy ra tu
     # audience + @-directive cua chu de. Nguoi dung chi con go --for.
@@ -1300,18 +1350,18 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     check("kids + con vật -> hình to, ít thứ, kawaii",
           resolve_params("ocean", "kids")
           == {"complexity": "kids", "density": "normal", "style": "kawaii"})
-    check("adults + mandala -> hoạ tiết, KHÔNG rich (phá đối xứng)",
-          resolve_params("mandala", "adults")
-          == {"complexity": "adults", "density": "normal",
+    check("adults -> hoạ tiết, nền rậm, không mặt mũi",
+          resolve_params(None, "adults")
+          == {"complexity": "adults", "density": "rich",
               "style": "decorative"})
     check("Chủ đề tự khai đối tượng của nó",
-          theme_audience("mandala") == "adults"
+          theme_audience(str(_t)) == "adults"
           and theme_audience("ocean") is None)
     check("Cờ gõ tay vẫn thắng mặc định",
           resolve_params("mandala", "adults", density="rich")["density"] == "rich")
     check("Công thức ghi đè lệch thì bị cảnh báo",
           any("style=kawaii" in h
-              for h in _R2(slug="x", title="X", theme="mandala",
+              for h in _R2(slug="x", title="X", theme="",
                            audience="adults", style="kawaii").hints()))
     check("Có tả khoảng trống để tô, không chỉ tả nét",
           "areas to fill" in kid)
@@ -1341,11 +1391,16 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     print("\n[13] Khuôn bố cục cố định (@template)")
     from studio.prompts import load_template, make_prompts
 
-    tpl = load_template("hoa-trong-chau")
+    # File theme TU TAO, khong bam vao mot bo co san trong themes/
+    _tt = tmp / "khuon-thu.txt"
+    _tt.write_text(
+        "@template: {subject} arranged in a wooden bucket, centered\n"
+        "sunflowers\ntulips\nroses\n", encoding="utf-8")
+    tpl = load_template(str(_tt))
     check("Đọc được @template từ file theme",
           tpl and "{subject}" in tpl, (tpl or "")[:46])
 
-    subs = load_subjects("hoa-trong-chau")
+    subs = load_subjects(str(_tt))
     with_tpl = make_prompts("x", 2, "kids", subs, seed_start=1,
                             density="normal", template=tpl)
     check("Chủ thể được ghép vào khuôn",

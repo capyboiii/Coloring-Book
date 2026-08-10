@@ -1,0 +1,363 @@
+{
+  "topic": "Chihuahua Love – Relaxing Coloring Book for Dog Fans of All Ages",
+  "scenes": [
+    {
+      "subject": "chihuahua",
+      "action": "standing in grass",
+      "objects": [
+        "flower",
+        "butterfly"
+      ],
+      "relations": [
+        {
+          "src": "chihuahua",
+          "kind": "standing_on",
+          "dst": "grass"
+        },
+        {
+          "src": "flower",
+          "kind": "next_to",
+          "dst": "grass"
+        },
+        {
+          "src": "butterfly",
+          "kind": "floating_in",
+          "dst": "air"
+        }
+      ],
+      "prompt": "a chihuahua standing on the grass, standing in grass, a flower next to the grass, a butterfly floating in the air",
+      "problems": []
+    },
+    {
+      "subject": "cat",
+      "action": "lying on a cushion",
+      "objects": [
+        "cushion",
+        "lamp"
+      ],
+      "relations": [
+        {
+          "src": "cat",
+          "kind": "lying_on",
+          "dst": "cushion"
+        },
+        {
+          "src": "cushion",
+          "kind": "around",
+          "dst": "lamp"
+        }
+      ],
+      "prompt": "a cat lying on the cushion, lying on a cushion, a cushion around the lamp",
+      "problems": []
+    },
+    {
+      "subject": "sheep",
+      "action": "grazing peacefully",
+      "objects": [
+        "hillside",
+        "wooden fence"
+      ],
+      "relations": [
+        {
+          "src": "sheep",
+          "kind": "sitting_on",
+          "dst": "ground"
+        },
+        {
+          "src": "hillside",
+          "kind": "around",
+          "dst": "sheep"
+        },
+        {
+          "src": "wooden_fence",
+          "kind": "next_to",
+          "dst": "sheep"
+        }
+      ],
+      "prompt": "a sheep sitting on the ground, grazing peacefully, a hillside around it, a wooden fence next to it",
+      "problems": []
+    },
+    {
+      "subject": "rabbit",
+      "action": "hopping happily",
+      "objects": [
+        "dandelion",
+        "clover field"
+      ],
+      "relations": [
+        {
+          "src": "rabbit",
+          "kind": "floating_in",
+          "dst": "air"
+        },
+        {
+          "src": "dandelion",
+          "kind": "beside",
+          "dst": "rabbit"
+        },
+        {
+          "src": "clover_field",
+          "kind": "around",
+          "dst": "rabbit"
+        }
+      ],
+      "prompt": "a rabbit floating in the air, hopping happily, a dandelion beside it, a clover field around it",
+      "problems": []
+    },
+    {
+      "subject": "goat",
+      "action": "drinking from stream",
+      "objects": [
+        "rock",
+        "willow tree"
+      ],
+      "relations": [
+        {
+          "src": "goat",
+          "kind": "standing_on",
+          "dst": "ground"
+        },
+        {
+          "src": "rock",
+          "kind": "next_to",
+          "dst": "goat"
+        },
+        {
+          "src": "willow_tree",
+          "kind": "in_front_of",
+          "dst": "goat"
+        }
+      ],
+      "prompt": "a goat standing on the ground, drinking from stream, a rock next to it, a willow tree in front of it",
+      "problems": []
+    },
+    {
+      "subject": "dachshund",
+      "action": "lying in the sun",
+      "objects": [
+        "flowerpot",
+        "stone"
+      ],
+      "relations": [
+        {
+          "src": "dachshund",
+          "kind": "lying_on",
+          "dst": "grass"
+        },
+        {
+          "src": "flowerpot",
+          "kind": "beside",
+          "dst": "dachshund"
+        },
+        {
+          "src": "stone",
+          "kind": "on_top_of",
+          "dst": "ground"
+        }
+      ],
+      "prompt": "a dachshund lying on the grass, lying in the sun, a flowerpot beside it, a stone on top of the ground",
+      "problems": []
+    },
+    {
+      "subject": "puppy",
+      "action": "rolling in grass",
+      "objects": [
+        "butterfly",
+        "flower"
+      ],
+      "relations": [
+        {
+          "src": "puppy",
+          "kind": "lying_on",
+          "dst": "grass"
+        },
+        {
+          "src": "butterfly",
+          "kind": "flying_over",
+          "dst": "puppy"
+        },
+        {
+          "src": "flower",
+          "kind": "next_to",
+          "dst": "puppy"
+        }
+      ],
+      "prompt": "a puppy lying on the grass, rolling in grass, a butterfly flying over it, a flower next to it",
+      "problems": []
+    },
+    {
+      "subject": "beaver",
+      "action": "building a dam at the riverbank",
+      "objects": [
+        "reed",
+        "stone"
+      ],
+      "relations": [
+        {
+          "src": "beaver",
+          "kind": "standing_on",
+          "dst": "ground"
+        },
+        {
+          "src": "reed",
+          "kind": "floating_in",
+          "dst": "water"
+        },
+        {
+          "src": "stone",
+          "kind": "lying_on",
+          "dst": "ground"
+        }
+      ],
+      "prompt": "a beaver standing on the ground, building a dam at the riverbank, a reed floating in the water, a stone lying on the ground",
+      "problems": []
+    },
+    {
+      "subject": "dog",
+      "action": "sleeping on blanket",
+      "objects": [
+        "blanket",
+        "cushion"
+      ],
+      "relations": [
+        {
+          "src": "dog",
+          "kind": "lying_on",
+          "dst": "blanket"
+        },
+        {
+          "src": "blanket",
+          "kind": "next_to",
+          "dst": "cushion"
+        }
+      ],
+      "prompt": "a dog lying on the blanket, sleeping on blanket, a blanket next to the cushion",
+      "problems": []
+    },
+    {
+      "subject": "bird",
+      "action": "perched on fence post",
+      "objects": [
+        "fence",
+        "flower pot"
+      ],
+      "relations": [
+        {
+          "src": "bird",
+          "kind": "perched_on",
+          "dst": "fence"
+        },
+        {
+          "src": "fence",
+          "kind": "around",
+          "dst": "flower_pot"
+        }
+      ],
+      "prompt": "a bird perched on the fence, perched on fence post, a fence around the flower pot",
+      "problems": []
+    },
+    {
+      "subject": "kitten",
+      "action": "playing with feather toy",
+      "objects": [
+        "ball",
+        "feather toy"
+      ],
+      "relations": [
+        {
+          "src": "kitten",
+          "kind": "sitting_on",
+          "dst": "ground"
+        },
+        {
+          "src": "feather_toy",
+          "kind": "around",
+          "dst": "kitten"
+        },
+        {
+          "src": "ball",
+          "kind": "next_to",
+          "dst": "kitten"
+        }
+      ],
+      "prompt": "a kitten sitting on the ground, playing with feather toy, a feather toy around it, a ball next to it",
+      "problems": []
+    },
+    {
+      "subject": "mouse",
+      "action": "swimming in river",
+      "objects": [
+        "leaf",
+        "stone"
+      ],
+      "relations": [
+        {
+          "src": "mouse",
+          "kind": "swimming_in",
+          "dst": "river"
+        },
+        {
+          "src": "leaf",
+          "kind": "floating_in",
+          "dst": "river"
+        },
+        {
+          "src": "stone",
+          "kind": "lying_on",
+          "dst": "ground"
+        }
+      ],
+      "prompt": "a mouse swimming in the river, swimming in river, a leaf floating in the river, a stone lying on the ground",
+      "problems": []
+    },
+    {
+      "subject": "turtle",
+      "action": "sunbathing",
+      "objects": [
+        "rock",
+        "leaf"
+      ],
+      "relations": [
+        {
+          "src": "turtle",
+          "kind": "lying_on",
+          "dst": "rock"
+        },
+        {
+          "src": "leaf",
+          "kind": "floating_in",
+          "dst": "water"
+        }
+      ],
+      "prompt": "a turtle lying on the rock, sunbathing, a leaf floating in the water",
+      "problems": []
+    },
+    {
+      "subject": "lion",
+      "action": "roaring",
+      "objects": [
+        "tree",
+        "anthill"
+      ],
+      "relations": [
+        {
+          "src": "lion",
+          "kind": "standing_on",
+          "dst": "ground"
+        },
+        {
+          "src": "tree",
+          "kind": "next_to",
+          "dst": "lion"
+        },
+        {
+          "src": "anthill",
+          "kind": "behind",
+          "dst": "lion"
+        }
+      ],
+      "prompt": "a lion standing on the ground, roaring, a tree next to it, a anthill behind it",
+      "problems": []
+    }
+  ]
+}

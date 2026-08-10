@@ -191,7 +191,9 @@ HARD RULES
 4. At most two objects. English only. Lowercase names.
 5. NEVER name a colour and NEVER describe light. No red, golden, glowing,
    twinkling. The child chooses the colours; an outline cannot draw light.
-6. All {count} graphs must use a clearly different SUBJECT.
+6. All {count} graphs must be a clearly different SCENE. If the topic is one
+   animal, keep the same SUBJECT and vary the ACTION and the OBJECTS — a book
+   about pandas is forty pandas doing forty different things.
 {extra}
 
 EXAMPLE
@@ -667,7 +669,15 @@ def generate_graphs(topic: str, count: int = 24, audience: str = "kids",
     rejected: list[tuple] = []
     seen: set[str] = set()
     samples: list[str] = []      # trả lời thô của mẻ không đọc được mẻ nào
-    max_rounds = -(-count // batch) + 3
+
+    # Ngân sách mẻ rộng tay hơn, VÀ dừng sớm khi thật sự bí.
+    #
+    # Bản cũ để ceil(count/batch) + 3 — vừa đúng nếu mẻ nào cũng đủ, nhưng chỉ
+    # cần vài mẻ hụt là hết lượt giữa chừng. Đổi thành gấp đôi, nhưng thêm chốt
+    # dừng khi năm mẻ liền không thêm được gì: lúc đó mô hình đã cạn ý, chạy
+    # tiếp chỉ tốn thời gian.
+    max_rounds = -(-count // batch) * 2 + 4
+    barren = 0
 
     for rnd in range(1, max_rounds + 1):
         missing = count - len(good)
@@ -682,8 +692,12 @@ def generate_graphs(topic: str, count: int = 24, audience: str = "kids",
             position=", ".join(sorted(BESIDE)),
             extra=AUDIENCE_EXTRA[audience])
         if good:
-            prompt += ("\n\nDo not reuse these subjects: "
-                       + ", ".join(g.subject for g in good[-14:]))
+            # Gửi lại CẢ chủ thể lẫn hành động, và gửi nhiều hơn (24 thay vì
+            # 14). Danh sách ngắn quá thì tới mẻ thứ mười mô hình đề xuất lại
+            # đúng thứ đã dùng ở mẻ thứ hai mà không biết.
+            prompt += ("\n\nDo not reuse any of these scenes:\n"
+                       + "\n".join(f"- {g.subject}: {g.action}"
+                                    for g in good[-24:]))
 
         if on_progress:
             on_progress(rnd, len(good), count, ask)
@@ -708,8 +722,18 @@ def generate_graphs(topic: str, count: int = 24, audience: str = "kids",
 
         added = dupes = bad = 0
         for g in graphs:
-            key = g.subject.strip().lower()
-            if not key or key in seen:
+            # KHOÁ LỌC TRÙNG LÀ CHỦ THỂ + HÀNH ĐỘNG, không phải chủ thể không.
+            #
+            # Bao chạy `subjects "Gấu trúc" --count 40 --graph` và chỉ được 13.
+            # Nguyên nhân là khoá cũ chỉ lấy SUBJECT: một cuốn sách về gấu
+            # trúc thì trang nào chủ thể cũng là "panda", nên từ trang thứ hai
+            # trở đi bị đếm là trùng hết. Thứ thay đổi giữa các trang là HÀNH
+            # ĐỘNG, mà tôi lại bỏ nó ra khỏi khoá.
+            #
+            # Lỗi này chỉ lộ ra với sách một-nhân-vật. Chủ đề rộng như "đại
+            # dương" thì mỗi trang một con khác nhau nên không ai thấy.
+            key = f"{g.subject.strip().lower()}|{g.action.strip().lower()}"
+            if not g.subject.strip() or key in seen:
                 dupes += 1
                 continue
             issues = g.problems()
@@ -725,6 +749,10 @@ def generate_graphs(topic: str, count: int = 24, audience: str = "kids",
 
         if on_result:
             on_result(rnd, ask, added, dupes, bad, bool(graphs))
+
+        barren = 0 if added else barren + 1
+        if barren >= 5:
+            break
 
     if not good and samples:
         raise LLMError(
