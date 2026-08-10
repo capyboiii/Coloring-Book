@@ -1,0 +1,52 @@
+@audience: adults
+# Hallowen — 40 cảnh
+#
+# Sinh tự động bằng `studio.py subjects` ngày 2026-08-10
+# Model local: qwen2.5-7b-instruct-1m
+# Sửa tay thoải mái — đây là file văn bản thuần, mỗi dòng một trang.
+#
+# Công thức mỗi dòng: MỘT chủ thể chính + hành động + tối đa 2 thứ nền đơn giản.
+# Viết bằng tiếng Anh, vì Flux không hiểu tiếng Việt.
+#
+# Dùng: python studio.py generate "Hallowen" --theme hallowen --count 40
+
+a pumpkin lantern sitting on simple grass, two pumpkins nearby
+a witch flying on a broomstick, a moon and three stars above her
+a cheerful ghost standing beside a grave, two skulls at its feet
+a mummy holding an amulet, sand dunes behind it with two palm trees
+a skeleton dancing in a field, one simple cloud with a smiley face inside
+a scarecrow standing tall, one scarecrow's hat and a scarecrow's arm beside him
+an owl sitting on a tree branch, three round bubbles of light above its head
+a tiny witch casting a spell, a starry night sky and two shooting stars nearby
+a cheerful ghost wearing a wide grin, floating over simple grass with two pumpkins nearby
+a jack-o-lantern beaming brightly, sitting on a plain path beside one small scarecrow
+a friendly cat wearing a scarf, standing next to a tall pumpkin lantern
+a witch in a pointy hat waving her wand, flying above a clear sky with just one star
+a small dog wagging its tail, playing with two round pumpkins on simple grass
+an owl looking down from a tree branch, holding a carved moon-shaped sign
+a ghostly bat flying gracefully, against a backdrop of one crescent moon and two stars
+a skeleton twirling in delight, in an open field with just one cloud shaped like a smile above
+a jack-o-lantern grinning widely, sitting on simple grass beside one small scarecrow
+an elf decorating a tree with round ornaments, two wrapped boxes beside it
+a smiling pumpkin standing alone on plain earth, its mouth wide open
+bunny rabbit hopping happily, surrounded by two daisies
+dog chasing after a toy, on a clear field
+lioness drinking from a simple pond, birds flying nearby
+bear munching on an apple, sitting under a large oak tree
+cat wearing a hat, standing next to a round watermelon
+fox with a carrot in its mouth, looking at two small butterflies
+turkey walking confidently, feathers fluffed up on flat grass
+a witch walking beside a broomstick, clouds floating above her
+a cat wearing a Halloween hat, sitting next to a big pumpkin
+a dog chasing after a toy, running on simple grass
+a bunny rabbit hopping happily, surrounded by two daisies
+an owl perched on a tree branch, a round moon behind the tree
+a smiling turkey walking confidently, feathers fluffed up
+a bear munching on an apple, sitting under a large oak tree
+a piglet rooting in the dirt, finding some round acorns
+an owl perched on a simple branch, a round sun above it
+a witch walking beside a broomstick, clouds floating peacefully nearby
+a cat wearing a Halloween hat, standing next to a big pumpkin
+a turkey walking confidently, feathers fluffed up on flat grass
+a small ghost floating happily, holding a star-shaped lantern
+a friendly skeleton standing next to a simple jack-o-lantern

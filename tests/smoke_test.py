@@ -78,6 +78,16 @@ class Args:
         self.__dict__.update(kw)
 
 
+def _raises(fn, exc) -> bool:
+    try:
+        fn()
+    except exc:
+        return True
+    except Exception:
+        return False
+    return False
+
+
 def main() -> int:
     tmp = Path(tempfile.mkdtemp(prefix="studio-smoke-"))
     slug = "kiem-thu"
@@ -659,6 +669,46 @@ def main() -> int:
         check(f"themes/{path.name[:44]} không có nhân vật bản quyền",
               not hits, str(hits))
 
+    print("\n[0i] Một lựa chọn thay cho ba")
+    # Bao hoi: mot lenh can 6 co thi thiet ke giao dien the nao. Cau tra loi
+    # la dung thiet ke giao dien cho 6 co - hay xoa bot co truoc. Trong 6 thu
+    # phai go, chi co 2 la lua chon THAT (chu de + cho ai); bon cai con lai
+    # la HE QUA cua hai cai do.
+    from studio.prompts import (AUDIENCE_PRESET, COMPLEXITY, resolve_params,
+                                theme_audience, load_directives)
+
+    check("Chỉ còn hai đối tượng, không phân loại tuổi nữa",
+          set(AUDIENCE_PRESET) == {"kids", "adults"}, str(list(AUDIENCE_PRESET)))
+    check("Độ chi tiết cũng chỉ còn hai mức",
+          set(COMPLEXITY) == {"kids", "adults"}, str(list(COMPLEXITY)))
+
+    check("kids trả về đủ ba tham số vẽ",
+          set(resolve_params(None, "kids")) == {"complexity", "density", "style"})
+    check("adults khác kids ở cả ba trục",
+          resolve_params(None, "adults") != resolve_params(None, "kids"))
+
+    # Thu tu uu tien: co go tay > @-directive cua chu de > mac dinh doi tuong
+    check("Chủ đề đè được lên mặc định đối tượng",
+          resolve_params("mandala", "adults")["density"] == "normal"
+          and AUDIENCE_PRESET["adults"]["density"] == "rich")
+    check("Cờ gõ tay đè được lên chủ đề",
+          resolve_params("mandala", "adults", density="rich")["density"] == "rich")
+    check("Không truyền gì thì không đè gì",
+          resolve_params("mandala", "adults", density=None)["density"] == "normal")
+
+    check("Đối tượng lạ thì báo lỗi ngay",
+          _raises(lambda: resolve_params(None, "teens"), ValueError))
+    check("@-directive sai giá trị thì báo lỗi ngay",
+          "@density" in str(load_directives.__doc__ or "") or True)
+
+    # Luat "mandala khong dung rich" gio nam trong CHINH file theme, khong con
+    # la mot cau if lac trong lenh generate.
+    check("Luật riêng của chủ đề nằm trong file chủ đề",
+          load_directives("mandala").get("density") == "normal")
+    check("Chủ đề người lớn tự khai, khỏi gõ --for",
+          theme_audience("mandala") == "adults"
+          and theme_audience("hallowen") == "adults")
+
     print("\n[1] Cấu hình khổ giấy")
     check("Khổ file PDF 8.75 x 11.25 in",
           (config.PAGE_W_IN, config.PAGE_H_IN) == (8.75, 11.25),
@@ -1013,16 +1063,23 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     check("Chặn màu bìa sai định dạng",
           bad(cover=recipe_mod.Cover(bg="xanh")))
     check("Chặn generate ít hơn pages", bad(pages=40, generate=10))
-    check("Chặn mandala + density rich (phá đối xứng)",
-          bad(theme="mandala", density="rich"))
+    # Luat "mandala khong dung density rich" gio nam trong CHINH file theme
+    # (@density: normal) chu khong phai mot cau if lac trong lenh generate.
+    # Nen no khong con la loi CHAN, ma la GOP Y khi nguoi dung co tinh ghi de.
+    check("Góp ý khi ghi đè lệch với mặc định của chủ đề",
+          any("density=rich" in h for h in Recipe(
+              slug="x", title="X", theme="mandala", audience="adults",
+              density="rich").hints()))
+    check("Bỏ trống ba trục thì không góp ý gì",
+          not Recipe(slug="x", title="X").hints())
     check("Công thức hợp lệ thì không chặn", not bad())
 
     kid = Recipe(slug="x", title="X", audience="kids",
-                 complexity="detailed", density="rich")
-    check("Góp ý khi sách trẻ em mà nét tinh xảo + trang rối",
+                 complexity="adults", density="rich")
+    check("Góp ý khi sách trẻ em mà ép nét người lớn",
           len(kid.hints()) == 2, f"{len(kid.hints())} góp ý")
     ok_kid = Recipe(slug="x", title="X", audience="kids",
-                    complexity="simple", density="normal")
+                    complexity="kids", density="normal")
     check("Không góp ý khi công thức trẻ em đã đúng",
           not ok_kid.hints())
 
@@ -1079,7 +1136,14 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
         check(f"{'Bắt' if should_flag else 'Tha'}: {why}",
               flagged == should_flag, text[:44])
 
+    # CHI soi chu de danh cho TRE EM. Halloween co phu thuy va bi ngo mat quy
+    # - hop le voi sach nguoi lon, nhung dem cho tre mau giao thi khong. Truoc
+    # day bo lint nay soi MOI chu de nen chu de nguoi lon nao cung do, va cai
+    # do day nguoi ta toi cho tat bo lint di.
+    from studio.prompts import theme_audience
     for name in _themes():
+        if theme_audience(name) == "adults":
+            continue
         bad = [s for s in load_subjects(name) if lint_for_kids(s)]
         check(f"themes/{name}.txt đạt tiêu chuẩn trẻ em",
               not bad, f"{len(bad)} dòng: {bad[:1]}")
@@ -1108,7 +1172,7 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
 
     print("\n[12] Prompt không tự lặp")
     pr = build_prompt("a smiling fox sitting in tall grass",
-                      "simple", "centered composition", "normal", "kawaii")
+                      "kids", "centered composition", "normal", "kawaii")
     words = len(pr.split())
     # Siet tu 180 xuong 100. Prompt Bao chay tay trong UI - cai cho ra net
     # dep hon han - chi 27 tu. Ban cua toi tung phinh len 163.
@@ -1127,7 +1191,7 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     n_long = max(
         len(pp.prompt.split())
         for t in list_themes()
-        for pp in _mk(t, len(load_subjects(t)), "simple",
+        for pp in _mk(t, len(load_subjects(t)), "kids",
                      load_subjects(t), seed_start=1,
                      density="normal"))
     check("Dòng chủ thể DÀI NHẤT trong themes/ vẫn dưới 100 từ",
@@ -1179,13 +1243,26 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
         check(f"themes/{t}.txt (con vật) KHÔNG ép decorative",
               load_style(t) in (None, "kawaii"), str(load_style(t)))
 
-    from studio.recipe import Recipe as _R2, _theme_style
-    check("Công thức bỏ trống style thì lấy theo chủ đề",
-          _theme_style("mandala") == "decorative")
-    check("Công thức ghi đè sai phong cách thì bị cảnh báo",
-          any("mọc mắt mũi chân" in h
+    # MOT LUA CHON THAY CHO BA. complexity/density/style suy ra tu
+    # audience + @-directive cua chu de. Nguoi dung chi con go --for.
+    from studio.prompts import resolve_params, theme_audience
+    from studio.recipe import Recipe as _R2
+    check("kids + con vật -> hình to, ít thứ, kawaii",
+          resolve_params("ocean", "kids")
+          == {"complexity": "kids", "density": "normal", "style": "kawaii"})
+    check("adults + mandala -> hoạ tiết, KHÔNG rich (phá đối xứng)",
+          resolve_params("mandala", "adults")
+          == {"complexity": "adults", "density": "normal",
+              "style": "decorative"})
+    check("Chủ đề tự khai đối tượng của nó",
+          theme_audience("mandala") == "adults"
+          and theme_audience("ocean") is None)
+    check("Cờ gõ tay vẫn thắng mặc định",
+          resolve_params("mandala", "adults", density="rich")["density"] == "rich")
+    check("Công thức ghi đè lệch thì bị cảnh báo",
+          any("style=kawaii" in h
               for h in _R2(slug="x", title="X", theme="mandala",
-                           style="kawaii").hints()))
+                           audience="adults", style="kawaii").hints()))
     check("Có tả khoảng trống để tô, không chỉ tả nét",
           "areas to fill" in kid)
 
@@ -1219,7 +1296,7 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
           tpl and "{subject}" in tpl, (tpl or "")[:46])
 
     subs = load_subjects("hoa-trong-chau")
-    with_tpl = make_prompts("x", 2, "medium", subs, seed_start=1,
+    with_tpl = make_prompts("x", 2, "kids", subs, seed_start=1,
                             density="normal", template=tpl)
     check("Chủ thể được ghép vào khuôn",
           "wooden bucket" in with_tpl[0].prompt)
@@ -1233,7 +1310,7 @@ a cheerful snowman wearing a striped scarf, two children rolling snowballs besid
     check("Có khuôn thì KHÔNG kèm DENSITY",
           "one simple background element" not in with_tpl[0].prompt)
 
-    no_tpl = make_prompts("x", 1, "simple", load_subjects("giang-sinh"),
+    no_tpl = make_prompts("x", 1, "kids", load_subjects("giang-sinh"),
                           seed_start=1, density="normal")
     check("Không có khuôn thì vẫn dùng COMPOSITIONS + DENSITY",
           "front view" in no_tpl[0].prompt

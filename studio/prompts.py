@@ -139,14 +139,17 @@ STYLE = {
 
 # Bốn mức theo độ tuổi, khớp với AGE_DETAIL bên llm.py để chỉ dẫn cho
 # LM Studio và prompt cho Flux nói cùng một thứ.
+# HAI mức, không phải bốn.
+#
+# Trước đây trục này có simple/medium/detailed/intricate theo bốn khoảng tuổi.
+# Nghe thì tinh tế, nhưng trên thực tế Bao chỉ làm hai loại sách: cho trẻ con
+# và cho người lớn. Bốn mức chỉ tạo ra bốn chỗ để chọn sai — mà chọn sai thì
+# im lặng, phải nhìn 40 ảnh mới biết.
+#
+# Bớt lựa chọn giả là cách rẻ nhất để bớt lỗi.
 COMPLEXITY = {
-    # "few large shapes" chứ không phải "large shapes": số lượng mới là thứ
-    # quyết định. Hình to mà nhiều thì trang vẫn rối, và mỗi hình thêm vào là
-    # thêm một chỗ Flux có thể vẽ nét mảnh.
-    "simple": "few large shapes, minimal details, for ages 3 to 5",
-    "medium": "simple details, for ages 5 to 8",
-    "detailed": "moderately detailed, for ages 8 to 12",
-    "intricate": "intricate decorative detail, adult coloring book",
+    "kids": "few large shapes, minimal details, for young children",
+    "adults": "intricate decorative detail, adult coloring book",
 }
 
 # ⚠ FLUX BỎ QUA CHUỖI NÀY. Xem chú thích ở BASE_STYLE.
@@ -206,11 +209,22 @@ DENSITY = {
     "rich": "one subject with a simple decorative background",
 }
 
-# Bộ dành cho sách trẻ con. Ba trục này phải đi CÙNG NHAU mới ăn: hình to
-# (simple) + ít thứ trên trang (normal) + phong cách đầu tròn (kawaii).
-# Đặt tên ở đây để lệnh và công thức sách khỏi phải nhớ, và để sau đổi thì
-# đổi một chỗ.
-KIDS_PRESET = {"complexity": "simple", "density": "normal", "style": "kawaii"}
+# MỘT LỰA CHỌN THAY CHO BA.
+#
+# `complexity`, `density`, `style` không phải ba quyết định độc lập — chúng
+# được suy ra từ việc sách này cho ai. Bắt người dùng gõ cả ba là bắt họ nhớ
+# một bảng luật, và nhớ sai thì hệ thống im lặng cho qua.
+#
+# Giờ chỉ còn một câu hỏi: kids hay adults. Chủ đề có nhu cầu riêng thì tự
+# khai bằng @-directive trong file theme của nó (xem load_directives).
+AUDIENCE_PRESET = {
+    "kids": {"complexity": "kids", "density": "normal", "style": "kawaii"},
+    "adults": {"complexity": "adults", "density": "rich", "style": "decorative"},
+}
+AUDIENCES = tuple(AUDIENCE_PRESET)
+
+# Giữ tên cũ cho code cũ khỏi gãy
+KIDS_PRESET = AUDIENCE_PRESET["kids"]
 
 
 # Số từ tối đa cho phần CHỦ THỂ, theo độ tuổi.
@@ -231,10 +245,8 @@ KIDS_PRESET = {"complexity": "simple", "density": "normal", "style": "kawaii"}
 # Cắt bớt mệnh đề đuôi vì thế vừa làm bố cục hợp lý hơn, vừa bớt nét mảnh,
 # vừa kéo prompt về dưới ngưỡng 100 từ. Một thay đổi, ba cái lợi.
 SUBJECT_MAX_WORDS = {
-    "simple": 14,      # 3-5 tuổi: một chủ thể, một hành động
-    "medium": 18,
-    "detailed": 22,
-    "intricate": 22,
+    "kids": 14,      # một chủ thể, một hành động
+    "adults": 22,    # cảnh rậm hơn, nhưng vẫn một chủ thể chính
 }
 
 
@@ -711,6 +723,91 @@ def load_subjects(value: str) -> list[str]:
     lines = path.read_text(encoding="utf-8").splitlines()
     return [ln.strip() for ln in lines
             if ln.strip() and not ln.startswith(("#", "@"))]
+
+
+# Khoá @-directive mà file theme được phép khai, và giá trị hợp lệ của mỗi cái.
+DIRECTIVES = {
+    # Chủ đề tự khai nó dành cho ai. Halloween có phù thuỷ và bí ngô mặt quỷ —
+    # hợp lệ với sách người lớn, nhưng đem cho trẻ mẫu giáo thì không. Trước
+    # đây bộ lint trẻ em soi MỌI chủ đề nên chủ đề người lớn nào cũng đỏ.
+    "audience": lambda: set(AUDIENCE_PRESET),
+    "style": lambda: set(STYLE),
+    "density": lambda: set(DENSITY),
+    "complexity": lambda: set(COMPLEXITY),
+}
+
+
+def load_directives(value: str) -> dict:
+    """
+    Đọc mọi dòng `@khoá: giá trị` ở đầu file theme.
+
+    Tổng quát hoá cơ chế `@style:` đã chạy tốt. Ý tưởng vẫn thế: **chủ đề tự
+    biết nó cần gì**, và biết rõ hơn người gõ lệnh.
+
+    Ví dụ mandala vốn đối xứng và lấp kín trang, nên `density: rich` là phá
+    đối xứng. Trước đây studio xử lý bằng một câu `if theme == "mandala"` nằm
+    lẫn trong lệnh generate — luật đúng nhưng nằm sai chỗ, và chỉ áp cho đúng
+    một chủ đề. Giờ mandala tự khai `@density: normal`, còn code thì không
+    cần biết mandala là gì.
+    """
+    path = resolve_subjects_path(value)
+    out = {}
+    for ln in path.read_text(encoding="utf-8").splitlines():
+        ln = ln.strip()
+        if not ln.startswith("@"):
+            continue
+        key, _, val = ln[1:].partition(":")
+        key, val = key.strip().lower(), val.strip()
+        if key not in DIRECTIVES or not val:
+            continue
+        allowed = DIRECTIVES[key]()
+        if val not in allowed:
+            raise ValueError(
+                f"@{key} trong {path.name} là '{val}', "
+                f"phải là một trong {sorted(allowed)}")
+        out[key] = val
+    return out
+
+
+def theme_audience(theme: str | None) -> str | None:
+    """Chủ đề tự khai `@audience:`. Không khai thì trả None."""
+    if not theme:
+        return None
+    try:
+        return load_directives(theme).get("audience")
+    except (FileNotFoundError, ValueError):
+        return None
+
+
+def resolve_params(theme: str | None, audience: str,
+                   **overrides) -> dict:
+    """
+    Ba tham số vẽ, suy từ MỘT lựa chọn.
+
+    Thứ tự ưu tiên, từ mạnh xuống yếu:
+        1. cờ người dùng gõ tay        (biết mình làm gì thì cho phép)
+        2. @-directive của chủ đề      (chủ đề biết nhu cầu riêng của nó)
+        3. bộ mặc định theo đối tượng  (kids / adults)
+
+    Trả về dict có đủ complexity, density, style — nên nơi gọi không bao giờ
+    phải tự đoán giá trị nào.
+    """
+    if audience not in AUDIENCE_PRESET:
+        raise ValueError(
+            f"audience phải là một trong {list(AUDIENCE_PRESET)}, "
+            f"nhận '{audience}'")
+
+    params = dict(AUDIENCE_PRESET[audience])
+    if theme:
+        try:
+            d = load_directives(theme)
+        except FileNotFoundError:
+            d = {}
+        # `audience` ở đây là khoá CHỌN bộ mặc định, không phải tham số vẽ —
+        # nó đã được dùng ở trên rồi, đổ tiếp vào params là sai kiểu.
+        params.update({k: v for k, v in d.items() if k != "audience"})
+    params.update({k: v for k, v in overrides.items() if v is not None})
+    return params
 
 
 def load_style(value: str) -> str | None:

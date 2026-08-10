@@ -1,3 +1,4 @@
+@audience: adults
 @style: decorative
 # Hoa trong chậu — 24 loại hoa
 #

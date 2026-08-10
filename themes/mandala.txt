@@ -1,4 +1,6 @@
+@audience: adults
 @style: decorative
+@density: normal
 # Mandala thư giãn — 24 chủ thể, cho người lớn
 #
 # Dùng kèm --complexity detailed --density normal

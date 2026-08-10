@@ -207,19 +207,22 @@ CONSTRAINTS_LINE = ("objects are separate, no object overlaps the subject "
                     "unnaturally, all objects fully visible")
 
 
+# HAI đối tượng, không phải ba. "all" nghe như tiện nhưng thật ra là "không
+# nhắm ai" — mô hình viết cảnh nhàn nhạt, không đủ dễ thương cho trẻ mà cũng
+# không đủ tinh xảo cho người lớn.
 AUDIENCE = {
-    "kids": "children aged 3 to 7 — cheerful, cute, easy to recognise",
+    "kids": "children — cheerful, cute, easy to recognise",
     "adults": "adults — intricate, decorative, relaxing",
-    "all": "all ages",
 }
 
-# Ba mức chi tiết theo độ tuổi. Cùng một chủ đề nhưng cảnh viết cho bé 4 tuổi
-# phải khác hẳn cảnh viết cho bé 10 tuổi.
+# Mức chi tiết SUY RA từ đối tượng, không còn là một trục riêng.
+#
+# Trước đây có bốn mức theo khoảng tuổi và một cờ --detail riêng. Nhưng
+# audience đã nói gần hết rồi: sách trẻ em thì hình to ít chi tiết, sách người
+# lớn thì hoạ tiết dày. Hai cờ nói cùng một chuyện là hai chỗ để lệch nhau.
 AGE_DETAIL = {
-    "simple": "very simple, large shapes, minimal details, for ages 3 to 5",
-    "medium": "simple details and one cute accessory, for ages 5 to 8",
-    "detailed": "moderately detailed, for ages 8 to 12",
-    "intricate": "intricate and decorative, for adults",
+    "kids": "very simple, large shapes, minimal details",
+    "adults": "intricate and decorative",
 }
 
 # Luật riêng cho sách trẻ em. Rút từ nhận xét thật khi Bao xem mẻ ảnh đầu:
@@ -237,7 +240,6 @@ EXTRA RULES FOR YOUNG CHILDREN
 - Keep the scene sensible. Do not put objects where they do not belong.
 """,
     "adults": "",
-    "all": "",
 }
 
 
@@ -637,8 +639,8 @@ def clean_lines(text: str, count: int) -> tuple[list[str], list[str]]:
 # Gọi LM Studio
 # --------------------------------------------------------------------------
 
-def generate_graphs(topic: str, count: int = 24, audience: str = "all",
-                    detail: str = "simple", model: str | None = None,
+def generate_graphs(topic: str, count: int = 24, audience: str = "kids",
+                    detail: str = "kids", model: str | None = None,
                     temperature: float = 0.7, batch: int = 4,
                     timeout: int = 600, think: bool = False,
                     on_progress=None, on_result=None):
@@ -675,7 +677,7 @@ def generate_graphs(topic: str, count: int = 24, audience: str = "all",
 
         prompt = GRAPH_INSTRUCTIONS.format(
             topic=topic, count=ask, audience=AUDIENCE[audience],
-            detail=AGE_DETAIL.get(detail, AGE_DETAIL["simple"]),
+            detail=AGE_DETAIL.get(detail, AGE_DETAIL["kids"]),
             support=", ".join(sorted(SUPPORT)),
             position=", ".join(sorted(BESIDE)),
             extra=AUDIENCE_EXTRA[audience])
@@ -860,8 +862,8 @@ def _chat(model: str, prompt: str, timeout: int, temperature: float,
     return content, finish, warnings
 
 
-def generate_subjects(topic: str, count: int = 24, audience: str = "all",
-                      detail: str = "simple",
+def generate_subjects(topic: str, count: int = 24, audience: str = "kids",
+                      detail: str = "kids",
                       model: str | None = None, timeout: int = 600,
                       temperature: float = 0.85, batch: int = 8,
                       max_tokens: int | None = None, think: bool = False,
@@ -896,7 +898,7 @@ def generate_subjects(topic: str, count: int = 24, audience: str = "all",
         ask = min(batch, missing)
         base = INSTRUCTIONS.format(
             topic=topic, count=ask, audience=AUDIENCE[audience],
-            detail=AGE_DETAIL.get(detail, AGE_DETAIL["simple"]),
+            detail=AGE_DETAIL.get(detail, AGE_DETAIL["kids"]),
             extra=AUDIENCE_EXTRA[audience])
 
         if collected:

@@ -18,18 +18,12 @@ from typing import Any
 import yaml
 
 from .config import ROOT
+from .prompts import (AUDIENCES, COMPLEXITY, DENSITY, STYLE,
+                      resolve_params, theme_audience)
 from .util import slugify
 
 BOOKS_DIR = ROOT / "books"
 
-
-def _theme_style(theme: str) -> str | None:
-    """Đọc @style của chủ đề. Chủ đề không tồn tại thì kệ — _validate lo."""
-    from .prompts import load_style
-    try:
-        return load_style(theme)
-    except (FileNotFoundError, ValueError):
-        return None
 
 TEMPLATE = """\
 # Công thức sách — {slug}
@@ -44,8 +38,10 @@ subtitle: ""
 theme: ocean          # tên bộ trong themes/ (studio.py generate x --list-themes)
 pages: 40             # số hình trong sách. In một mặt nên số trang gấp đôi
 generate: 60          # sinh dư để còn chỗ loại. Tỷ lệ giữ lại thường 50-70%
-complexity: medium    # simple=3-5t | medium=5-8t | detailed=8-12t | intricate=NL
-density: rich         # single | normal | rich      — số ĐỐI TƯỢNG mỗi trang
+# BA DÒNG DƯỚI ĐÂY NÊN ĐỂ TRỐNG. Studio suy ra từ audience + chủ đề.
+# Chỉ điền khi muốn ép khác mặc định.
+complexity:           # kids | adults
+density:              # single | normal | rich
 style:                # BỎ TRỐNG là tốt nhất — chủ đề tự khai (@style trong
                       # themes/*.txt). Hoa lá tự chọn decorative, con vật tự
                       # chọn kawaii. Ghi đè bằng: kawaii | cartoon | decorative
@@ -60,7 +56,7 @@ cover:
 
 # ---- Thông tin bán hàng (web đọc từ đây) ----
 collection: relaxation
-audience: all         # kids | adults | all
+audience:             # kids | adults. Bỏ trống là lấy theo chủ đề
 price_usd: 14.99
 tags: []
 description: |
@@ -82,15 +78,17 @@ class Recipe:
     theme: str = "ocean"
     pages: int = 40
     generate: int = 60
-    complexity: str = "medium"
-    density: str = "rich"
-    style: str = "kawaii"
+    # Ba trục này để RỖNG là tốt nhất — studio suy ra từ audience + theme.
+    # Điền tay chỉ khi biết rõ mình đang làm gì.
+    complexity: str = ""
+    density: str = ""
+    style: str = ""
     lora: str | None = None
     lora_strength: float = 0.9
     seed: int | None = None
     cover: Cover = field(default_factory=Cover)
     collection: str = ""
-    audience: str = "all"
+    audience: str = "kids"
     price_usd: float | None = None
     tags: list[str] = field(default_factory=list)
     description: str = ""
@@ -99,29 +97,18 @@ class Recipe:
     def hints(self) -> list[str]:
         """Góp ý, không chặn — chỉ là kinh nghiệm hay sai."""
         out = []
-        # Chủ đề hoa lá / hoạ tiết + kawaii = CẢNH VẬT MỌC MẮT MŨI CHÂN.
-        # Soi ảnh thật: hướng dương có mặt, tulip mỗi bông hai con mắt,
-        # mandala mọc mặt và hai cái chân.
-        declared = _theme_style(self.theme)
-        if declared and self.style != declared:
-            out.append(
-                f"theme '{self.theme}' tự khai @style: {declared}, nhưng "
-                f"công thức ghi style={self.style}. Hoa lá và hoạ tiết mà vẽ "
-                f"kiểu kawaii sẽ mọc mắt mũi chân — bỏ trống dòng style: "
-                f"trong YAML là tự lấy đúng")
-        if self.audience == "kids" and self.complexity in ("detailed", "intricate"):
-            out.append(
-                f"audience=kids nhưng complexity={self.complexity}. "
-                f"Trẻ nhỏ cần hình to, ít chi tiết — dùng simple (3-5 tuổi) "
-                f"hoặc medium (5-8 tuổi)")
-        if self.audience == "kids" and self.density == "rich":
-            out.append(
-                "audience=kids nhưng density=rich. Trang quá rối, trẻ nhỏ khó "
-                "tô — dùng density=normal")
-        if self.audience == "adults" and self.complexity in ("simple", "medium"):
-            out.append(
-                f"audience=adults với complexity={self.complexity} sẽ ra sách "
-                f"quá đơn giản so với kỳ vọng — cân nhắc intricate")
+        # Ba trục vẽ giờ SUY RA từ audience, nên mấy góp ý kiểu "kids mà
+        # complexity=intricate" không còn chỗ để xảy ra: người dùng không gõ
+        # complexity nữa. Chỉ còn cảnh báo khi họ CỐ TÌNH ghi đè lệch với
+        # bộ mặc định — lúc đó mới đáng nói.
+        want = resolve_params(self.theme, self.audience)
+        for key in ("complexity", "density", "style"):
+            got = getattr(self, key)
+            if got and got != want[key]:
+                out.append(
+                    f"{key}={got} khác mặc định của audience={self.audience}"
+                    + (f" / theme={self.theme}" if self.theme else "")
+                    + f" ({want[key]}). Bỏ trống dòng đó là tự lấy đúng")
         return out
 
     def sale_info(self) -> dict[str, Any]:
@@ -190,14 +177,9 @@ def load(slug: str) -> Recipe:
         theme=str(data.get("theme") or "ocean"),
         pages=int(data.get("pages") or 40),
         generate=int(data.get("generate") or 0),
-        complexity=str(data.get("complexity") or "medium"),
-        density=str(data.get("density") or "rich"),
-        # Để trống `style` trong YAML thì lấy theo @style chủ đề tự khai.
-        # Không có khai gì thì mới về kawaii. Nhờ vậy sách hoa lá không bao
-        # giờ vô tình chạy kawaii rồi ra bông hoa có mặt người.
-        style=str(data.get("style")
-                  or _theme_style(str(data.get("theme") or "ocean"))
-                  or "kawaii"),
+        complexity=str(data.get("complexity") or ""),
+        density=str(data.get("density") or ""),
+        style=str(data.get("style") or ""),
         lora=(str(data["lora"]) if data.get("lora") else None),
         lora_strength=float(data.get("lora_strength") or 0.9),
         seed=data.get("seed") if data.get("seed") not in ("", None) else None,
@@ -206,7 +188,8 @@ def load(slug: str) -> Recipe:
             bg=str(cover_raw.get("bg") or "#1B7A8C"),
         ),
         collection=str(data.get("collection") or ""),
-        audience=str(data.get("audience") or "all"),
+        audience=str(data.get("audience")
+                     or theme_audience(str(data.get("theme") or "")) or "kids"),
         price_usd=data.get("price_usd"),
         tags=list(data.get("tags") or []),
         description=str(data.get("description") or ""),
@@ -224,19 +207,19 @@ def load(slug: str) -> Recipe:
 def _validate(r: Recipe) -> None:
     problems = []
 
-    if r.complexity not in ("simple", "medium", "detailed", "intricate"):
+    # Rỗng = "để studio suy ra", hợp lệ. Chỉ kiểm khi có điền.
+    if r.complexity and r.complexity not in COMPLEXITY:
         problems.append(
-            f"complexity '{r.complexity}' không hợp lệ "
-            f"(simple | medium | detailed | intricate)")
-    if r.density not in ("single", "normal", "rich"):
+            f"complexity '{r.complexity}' không hợp lệ ({' | '.join(COMPLEXITY)})")
+    if r.density and r.density not in DENSITY:
         problems.append(
-            f"density '{r.density}' không hợp lệ (single | normal | rich)")
-    if r.style not in ("kawaii", "cartoon", "decorative"):
+            f"density '{r.density}' không hợp lệ ({' | '.join(DENSITY)})")
+    if r.style and r.style not in STYLE:
         problems.append(
-            f"style '{r.style}' không hợp lệ (kawaii | cartoon | decorative)")
-    if r.audience not in ("kids", "adults", "all"):
+            f"style '{r.style}' không hợp lệ ({' | '.join(STYLE)})")
+    if r.audience not in AUDIENCES:
         problems.append(
-            f"audience '{r.audience}' không hợp lệ (kids | adults | all)")
+            f"audience '{r.audience}' không hợp lệ ({' | '.join(AUDIENCES)})")
     if r.pages < 1:
         problems.append("pages phải >= 1")
     if r.generate < r.pages:
@@ -251,12 +234,6 @@ def _validate(r: Recipe) -> None:
     bg = r.cover.bg.lstrip("#")
     if len(bg) != 6 or any(c not in "0123456789abcdefABCDEF" for c in bg):
         problems.append(f"cover.bg '{r.cover.bg}' phải dạng #RRGGBB")
-
-    # Cảnh báo chứ không chặn: mandala vốn đã lấp kín trang, thêm rich vào
-    # sẽ phá đối xứng
-    if r.theme == "mandala" and r.density == "rich":
-        problems.append(
-            "theme mandala với density rich sẽ phá đối xứng — dùng normal")
 
     if problems:
         raise RecipeError(

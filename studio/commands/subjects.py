@@ -36,13 +36,12 @@ def register(subparsers) -> None:
                    help="Liệt kê model LM Studio đang nạp rồi thoát")
     p.add_argument("--name", default=None,
                    help="Tên bộ. Mặc định suy ra từ chủ đề")
-    p.add_argument("--detail", default="simple",
-                   choices=["simple", "medium", "detailed", "intricate"],
-                   help="Mức chi tiết theo tuổi: simple=3-5, medium=5-8, "
-                        "detailed=8-12, intricate=người lớn")
-    p.add_argument("--audience", default="all",
-                   choices=["kids", "adults", "all"],
-                   help="Nhắm tới ai — ảnh hưởng cách viết cảnh")
+    # MỘT cờ thay cho hai. `--detail` cũ nói cùng một chuyện với `--audience`,
+    # mà hai cờ nói cùng một chuyện là hai chỗ để lệch nhau.
+    p.add_argument("--for", dest="audience", default="kids",
+                   choices=["kids", "adults"],
+                   help="Sách này cho ai. Quyết định luôn mức chi tiết của "
+                        "cảnh và các luật an toàn cho trẻ")
     p.add_argument("--model", default=None,
                    help="Tên model trong LM Studio. Mặc định lấy model "
                         "đang nạp")
@@ -112,7 +111,7 @@ def run(args) -> int:
 
     info(f"Chủ đề    : {args.topic}")
     info(f"Bộ        : {name}")
-    info(f"Đối tượng : {args.audience} · chi tiết {args.detail}")
+    info(f"Sách cho  : {args.audience}")
     info(f"Số cảnh   : {args.count}")
     info(f"Mỗi mẻ   : {args.batch} cảnh")
     info(f"Suy luận : {'bật' if args.think else 'tắt'}")
@@ -139,7 +138,7 @@ def run(args) -> int:
             topic=args.topic,
             count=args.count,
             audience=args.audience,
-            detail=args.detail,
+            detail=args.audience,
             model=args.model,
             temperature=args.temperature,
             batch=args.batch,
@@ -240,7 +239,7 @@ def _run_graph(args, name: str, path) -> int:
     try:
         graphs, rejected, model = generate_graphs(
             topic=args.topic, count=args.count, audience=args.audience,
-            detail=args.detail, model=args.model,
+            detail=args.audience, model=args.model,
             temperature=min(args.temperature, 0.7), batch=min(args.batch, 4),
             think=args.think, on_progress=progress, on_result=result)
     except LLMError as exc:

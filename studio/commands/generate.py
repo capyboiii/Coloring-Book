@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import argparse
 import random
 import time
 from datetime import datetime, timezone
 
 from .. import config
-from ..prompts import (build_cover_prompt, has_non_ascii, list_themes,
-                       summarise_scenes,
-                       load_style, load_subjects, load_template,
-                       make_prompts)
+from ..prompts import (AUDIENCES, COMPLEXITY, build_cover_prompt,
+                       has_non_ascii, list_themes, load_subjects,
+                       load_template, make_prompts, resolve_params,
+                       theme_audience,
+                       summarise_scenes)
 from ..providers import GenRequest, ProviderError, get_provider
 from ..util import human_duration, info, slugify, warn, write_json
 
@@ -63,19 +65,23 @@ def register(subparsers) -> None:
                    help="Tên thư mục. Mặc định suy ra từ chủ đề")
     p.add_argument("--title", default=None,
                    help="Tên sách hiển thị. Mặc định lấy chủ đề")
-    p.add_argument("--complexity", default="medium",
-                   choices=["simple", "medium", "detailed", "intricate"],
-                   help="Chi tiết theo TUỔI: simple=3-5, medium=5-8, "
-                        "detailed=8-12, intricate=người lớn")
-    p.add_argument("--density", default="rich",
+    # MỘT lựa chọn thay cho ba. Xem prompts.resolve_params().
+    p.add_argument("--for", dest="audience", default=None,
+                   choices=list(AUDIENCES),
+                   help="Sách này cho ai (kids | adults). Quyết định luôn độ "
+                        "chi tiết, mật độ và phong cách vẽ. Bỏ trống thì lấy "
+                        "theo chủ đề, không có thì mặc định kids")
+    # Ba cờ dưới đây giữ lại làm lối thoát cho trường hợp cá biệt, mặc định
+    # None nghĩa là "để studio suy ra". Không đưa vào --help chính để chúng
+    # không trông như thứ phải điền.
+    p.add_argument("--complexity", default=None, choices=list(COMPLEXITY),
+                   help=argparse.SUPPRESS)
+    p.add_argument("--density", default=None,
                    choices=["single", "normal", "rich"],
-                   help="Bao nhiêu ĐỐI TƯỢNG trên một trang. "
-                        "rich (mặc định) lấp đầy trang; "
-                        "single chỉ một chủ thể trên nền trắng")
+                   help=argparse.SUPPRESS)
     p.add_argument("--style", default=None,
                    choices=["kawaii", "cartoon", "decorative"],
-                   help="PHONG CÁCH vẽ. kawaii = đầu tròn to, mắt chấm, "
-                        "đồ vật vẽ như icon phẳng (mặc định)")
+                   help=argparse.SUPPRESS)
     p.add_argument("--theme", "--subjects", dest="theme", default=None,
                    metavar="<tên|file>",
                    help="Bộ chủ thể dựng sẵn (ocean, mandala, floral, "
@@ -123,10 +129,6 @@ def run(args) -> int:
 
     subjects = None
     template = None
-    # None = chua chon. Phai phan biet duoc 'khong go --style'
-    # voi 'go --style kawaii', vi truong hop dau thi chu de
-    # duoc quyen tu khai, truong hop sau thi khong.
-    style = args.style
     if args.theme:
         try:
             subjects = load_subjects(args.theme)
@@ -142,40 +144,41 @@ def run(args) -> int:
         if template:
             info(f"Khuôn bố cục: {template}")
 
-        # Chủ đề tự khai phong cách. Xem load_style() để biết vì sao.
-        try:
-            theme_style = load_style(args.theme)
-        except ValueError as exc:
-            print(f"LỖI: {exc}")
-            return 1
-        if theme_style:
-            if args.style is None:
-                style = theme_style
-                info(f"Phong cách   : {style} (chủ đề '{args.theme}' tự khai)")
-            elif args.style != theme_style:
-                warn(f"Chủ đề '{args.theme}' khai @style: {theme_style}, "
-                     f"nhưng ông gõ --style {args.style}.")
-                warn(f"Hoa lá và hoạ tiết mà vẽ kiểu kawaii thì sẽ mọc mắt "
-                     f"mũi chân — bông hướng dương có mặt, mandala có chân.")
+    # BA THAM SỐ SUY RA TỪ MỘT LỰA CHỌN.
+    #
+    # Trước đây người dùng phải gõ --complexity, --density, --style và tự nhớ
+    # tổ hợp nào hợp với chủ đề nào. Gõ sai thì không ai báo, phải nhìn hết
+    # 40 ảnh mới biết. Giờ chỉ cần --for kids|adults; chủ đề nào có nhu cầu
+    # riêng thì tự khai trong file theme của nó.
+    audience = args.audience or theme_audience(args.theme) or "kids"
+    try:
+        params = resolve_params(
+            args.theme, audience,
+            complexity=args.complexity, density=args.density,
+            style=args.style)
+    except ValueError as exc:
+        print(f"LỖI: {exc}")
+        return 1
 
-    if style is None:
-        style = "kawaii"
+    manual = [k for k in ("complexity", "density", "style")
+              if getattr(args, k) is not None]
+    info(f"Sách cho  : {audience}"
+         + ("" if args.audience else "  (theo chủ đề)"))
+    info(f"Kiểu vẽ   : {params['complexity']} · density {params['density']} "
+         f"· {params['style']}"
+         + (f"  (gõ tay: {', '.join(manual)})" if manual else "  (tự suy ra)"))
 
     if not _check_language(args, subjects):
         return 1
 
-    if args.theme == "mandala" and args.density == "rich":
-        warn("Mandala vốn đã đối xứng và lấp kín trang. --density rich sẽ "
-             "phá đối xứng, ra một mớ hỗn độn. Nên dùng --density normal.")
-
     plan = make_prompts(
         topic=args.topic,
         count=args.count,
-        complexity=args.complexity,
+        complexity=params["complexity"],
         subjects=subjects,
         seed_start=args.seed,
-        density=args.density,
-        style=style,
+        density=params["density"],
+        style=params["style"],
         template=template,
     )
 
@@ -210,9 +213,10 @@ def run(args) -> int:
             "slug": slug,
             "title": args.title or args.topic,
             "topic": args.topic,
-            "complexity": args.complexity,
-            "density": args.density,
-            "style": style,
+            "audience": audience,
+            "complexity": params["complexity"],
+            "density": params["density"],
+            "style": params["style"],
             "lora": args.lora,
             "theme": args.theme,
             "subject_count": len(subjects) if subjects else 0,

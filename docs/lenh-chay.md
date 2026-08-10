@@ -33,7 +33,7 @@ sống không. Chạy cái này trước khi nghi ngờ bất cứ điều gì k
 Chỉ cần khi muốn chủ đề **chưa có sẵn** trong `themes/`.
 
 ```bash
-python studio.py subjects "Ngày hội biển" --count 40 --audience kids --detail simple
+python studio.py subjects "Ngày hội biển" --count 40 --for kids
 ```
 
 Ra file `themes/ngay-hoi-bien.txt`. **Mở ra đọc trước khi vẽ** — sửa một dòng
@@ -56,29 +56,31 @@ python studio.py generate x --list-themes
 
 ## ② Flux vẽ
 
-**Sách trẻ con** — bộ ba này phải đi cùng nhau:
+**Sách trẻ con:**
 
 ```bash
 python studio.py generate "Đại dương kỳ thú" --theme ocean --count 60 \
-    --slug dai-duong --complexity simple --density normal
+    --slug dai-duong --for kids
 ```
 
-**Sách người lớn** (mandala, hoa):
+**Sách người lớn:**
 
 ```bash
 python studio.py generate "Mandala thư giãn" --theme mandala --count 60 \
-    --slug mandala-1 --complexity intricate --density normal
+    --slug mandala-1 --for adults
 ```
 
-Không gõ `--style`. Chủ đề tự khai — hoa lá và mandala tự chọn `decorative`,
-con vật tự chọn `kawaii`. Gõ đè thì hoa sẽ mọc mắt mũi chân.
+`--for` quyết định luôn độ chi tiết, mật độ và phong cách vẽ. Chủ đề nào có
+nhu cầu riêng thì tự khai trong file của nó — mandala khai `@density: normal`
+vì `rich` sẽ phá đối xứng, hoa lá khai `@style: decorative` vì `kawaii` làm
+hoa mọc mặt người. Chủ đề đã khai `@audience: adults` thì gõ `--for` cũng
+không cần.
 
 Sinh **dư 50%** so với số trang cần: tỷ lệ giữ lại thực tế 50-70%.
 
 | Nút vặn | Chọn |
 |---|---|
-| `--complexity` | `simple` 3-5t · `medium` 5-8t · `detailed` 8-12t · `intricate` người lớn |
-| `--density` | `single` một mình · `normal` một chủ thể + một thứ nền · `rich` nền trang trí |
+| `--for` | `kids` hoặc `adults` — quyết định cả ba trục vẽ |
 | `--count` | số ảnh sinh |
 | `--seed 12345` | cố định để sinh lại y hệt |
 | `--overwrite` | vẽ đè ảnh đã có (mặc định bỏ qua, để chạy tiếp được) |

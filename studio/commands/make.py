@@ -96,8 +96,8 @@ def _write_package(settings, r, slug: str) -> None:
         "source": {
             "recipe": str(r.path.name) if r.path else None,
             "theme": r.theme,
-            "complexity": r.complexity,
-            "density": r.density,
+            "complexity": r.complexity or None,
+            "density": r.density or None,
             "style": r.style,
             "lora": r.lora,
             "seed": r.seed,
@@ -111,6 +111,9 @@ def _write_package(settings, r, slug: str) -> None:
 
 
 def _do_generate(settings, r, args) -> int:
+    from ..prompts import resolve_params
+    _p = resolve_params(r.theme, r.audience, complexity=r.complexity or None,
+                        density=r.density or None, style=r.style or None)
     return generate_cmd.run(SimpleNamespace(
         list_themes=False,
         topic=r.title,
@@ -118,9 +121,10 @@ def _do_generate(settings, r, args) -> int:
         slug=r.slug,
         title=r.title,
         count=r.generate,
-        complexity=r.complexity,
-        density=r.density,
-        style=r.style,
+        complexity=_p["complexity"],
+        density=_p["density"],
+        style=_p["style"],
+        audience=r.audience,
         lora=r.lora,
         lora_strength=r.lora_strength,
         seed=r.seed,
@@ -196,7 +200,12 @@ def run(args) -> int:
 
     info(f"Công thức : {recipe_path(r.slug).name}")
     info(f"Sách      : {r.title}")
-    info(f"Chủ đề    : {r.theme} · {r.style} · {r.complexity} · density {r.density}")
+    from ..prompts import resolve_params
+    _p = resolve_params(r.theme, r.audience, complexity=r.complexity or None,
+                        density=r.density or None, style=r.style or None)
+    info(f"Chủ đề    : {r.theme}")
+    info(f"Kiểu vẽ   : {_p['complexity']} · density {_p['density']} "
+         f"· {_p['style']}")
     info(f"Trang      : {r.pages} hình (sinh {r.generate} để còn chỗ loại)")
     info(f"Đối tượng  : {r.audience}")
     info(f"Trạng thái : {state}")

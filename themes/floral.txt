@@ -1,3 +1,4 @@
+@audience: adults
 @style: decorative
 # Hoa lá — 24 cảnh
 #
