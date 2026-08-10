@@ -709,6 +709,56 @@ def main() -> int:
           theme_audience("mandala") == "adults"
           and theme_audience("hallowen") == "adults")
 
+    print("\n[0j] Đường --graph chạy trọn vẹn")
+    # Kiem thu cu chi goi parse_block/parse_many. generate_graphs() - ham ma
+    # lenh THAT SU chay - chua bao gio duoc goi trong kiem thu. Do dung la lo
+    # hong da lam Bao mat 13 me: parse_block chay tot, parse_many rong, khong
+    # ai biet.
+    # Gia lap LM Studio de chay het duong ma khong can model.
+    import studio.llm as _L
+    _reply = ("SUBJECT: panda\nACTION: eating bamboo\n"
+              "OBJECTS: bamboo shoot\n"
+              "RELATIONSHIPS: panda --sitting_on--> ground; "
+              "bamboo_shoot --behind--> panda\n\n"
+              "SUBJECT: otter\nACTION: floating on its back\n"
+              "OBJECTS: pebble\n"
+              "RELATIONSHIPS: otter --floating_in--> water; "
+              "pebble --beside--> otter")
+    _chat, _res = _L._chat, _L._resolve_model
+    try:
+        _L._resolve_model = lambda m: "gia-lap"
+        _L._chat = lambda *a, **k: (_reply, "stop", [])
+        for aud in ("kids", "adults"):
+            good, bad, _m = _L.generate_graphs("Thú rừng", count=2,
+                                               audience=aud, detail=aud,
+                                               batch=2)
+            check(f"--graph --for {aud}: đọc và duỗi được cả mẻ",
+                  len(good) == 2 and not bad,
+                  f"{len(good)} đạt, {len(bad)} loại")
+            check(f"--graph --for {aud}: câu duỗi có chỗ đứng của vật",
+                  good[0].to_prompt().startswith("a panda sitting on the ground"),
+                  good[0].to_prompt() if good else "")
+
+        # Do thi hong thi LOAI chu khong sua, va phai noi ro vi sao
+        _L._chat = lambda *a, **k: (
+            "SUBJECT: rabbit\nACTION: hopping\nOBJECTS: basket, tree\n"
+            "RELATIONSHIPS: rabbit --hugging--> tree", "stop", [])
+        good, bad, _m = _L.generate_graphs("x", count=1, batch=1)
+        check("Đồ thị hỏng thì bị loại kèm lý do",
+              not good and bad and bad[0][1],
+              str(bad[0][1][:1]) if bad else "không loại gì")
+
+        # Khong doc noi dinh dang -> nem loi KEM tra loi tho, khong im lang
+        _L._chat = lambda *a, **k: ("Tôi nghĩ nên vẽ con gấu.", "stop", [])
+        try:
+            _L.generate_graphs("x", count=1, batch=1)
+            ok = False
+        except _L.LLMError as exc:
+            ok = "Tôi nghĩ" in str(exc)
+        check("Không đọc được thì báo lỗi kèm trả lời thô của model", ok)
+    finally:
+        _L._chat, _L._resolve_model = _chat, _res
+
     print("\n[1] Cấu hình khổ giấy")
     check("Khổ file PDF 8.75 x 11.25 in",
           (config.PAGE_W_IN, config.PAGE_H_IN) == (8.75, 11.25),

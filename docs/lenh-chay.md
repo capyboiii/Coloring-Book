@@ -46,6 +46,23 @@ python studio.py subjects --list-models                 # xem LM Studio đang n�
 
 Model hay trả về rỗng thì hạ `--batch 4`.
 
+**Chế độ đồ thị** (`--graph`) bắt model khai rõ chỗ đứng của từng vật:
+
+```bash
+python studio.py subjects "Gấu trúc" --count 40 --graph --for kids
+```
+
+```
+SUBJECT: panda / ACTION: eating bamboo / OBJECTS: bamboo shoot
+RELATIONSHIPS: panda --sitting_on--> ground; bamboo_shoot --behind--> panda
+
+→ a panda sitting on the ground, eating bamboo, a bamboo shoot behind it
+```
+
+Chậm hơn, nhưng vật lơ lửng và hai con vật dính nhau bị chặn **bằng code** chứ
+không phải trông chờ model nhớ. Đồ thị không qua kiểm thì bị loại kèm lý do,
+và ghi thêm `themes/<tên>.graph.json` để tra lại sau.
+
 Đã có sẵn 8 bộ, bỏ qua bước này được:
 
 ```bash
